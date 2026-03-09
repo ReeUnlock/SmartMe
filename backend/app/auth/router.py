@@ -49,7 +49,19 @@ def reset_account(db: Session = Depends(get_db)):
     """Delete all users and related data so setup can be run again."""
     from app.shopping.models import ShoppingItem, ShoppingList, ShoppingCategory
     from app.calendar.models import Event
+    from app.expenses.models import (
+        Expense, RecurringExpense, MonthlyBudget, ExpenseCategory, HouseholdMember,
+    )
+    from app.plans.models import Milestone, Goal, BucketItem
 
+    db.query(Milestone).delete()
+    db.query(Goal).delete()
+    db.query(BucketItem).delete()
+    db.query(Expense).delete()
+    db.query(RecurringExpense).delete()
+    db.query(MonthlyBudget).delete()
+    db.query(ExpenseCategory).delete()
+    db.query(HouseholdMember).delete()
     db.query(ShoppingItem).delete()
     db.query(ShoppingList).delete()
     db.query(ShoppingCategory).delete()

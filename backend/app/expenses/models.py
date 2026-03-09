@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, Boolean, Date, ForeignKey, UniqueConstraint,
+    Column, Index, Integer, String, Float, Boolean, Date, ForeignKey, UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -8,6 +8,9 @@ from app.common.models import TimestampMixin
 
 class HouseholdMember(Base, TimestampMixin):
     __tablename__ = "household_members"
+    __table_args__ = (
+        Index("ix_household_members_user_id", "user_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -19,6 +22,9 @@ class HouseholdMember(Base, TimestampMixin):
 
 class ExpenseCategory(Base, TimestampMixin):
     __tablename__ = "expense_categories"
+    __table_args__ = (
+        Index("ix_expense_categories_user_id", "user_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -33,6 +39,11 @@ class ExpenseCategory(Base, TimestampMixin):
 
 class Expense(Base, TimestampMixin):
     __tablename__ = "expenses"
+    __table_args__ = (
+        Index("ix_expenses_user_id", "user_id"),
+        Index("ix_expenses_date", "date"),
+        Index("ix_expenses_user_date", "user_id", "date"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Float, nullable=False)
@@ -49,6 +60,9 @@ class Expense(Base, TimestampMixin):
 
 class RecurringExpense(Base, TimestampMixin):
     __tablename__ = "recurring_expenses"
+    __table_args__ = (
+        Index("ix_recurring_expenses_user_id", "user_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
@@ -67,6 +81,7 @@ class MonthlyBudget(Base, TimestampMixin):
     __tablename__ = "monthly_budgets"
     __table_args__ = (
         UniqueConstraint("user_id", "year", "month", name="uq_budget_user_year_month"),
+        Index("ix_monthly_budgets_user_id", "user_id"),
     )
 
     id = Column(Integer, primary_key=True, index=True)

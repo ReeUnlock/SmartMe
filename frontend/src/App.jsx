@@ -15,6 +15,7 @@ import ExpensesPage from "./components/expenses/ExpensesPage";
 import PlansPage from "./components/plans/PlansPage";
 import SettingsPage from "./components/common/SettingsPage";
 import DashboardPage from "./components/common/DashboardPage";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,12 +58,14 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <ChakraProvider value={system}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ChakraProvider>
+    <ErrorBoundary>
+      <ChakraProvider value={system}>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ChakraProvider>
+    </ErrorBoundary>
   );
 }

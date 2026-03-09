@@ -6,6 +6,7 @@ import {
   LuWallet,
   LuTarget,
 } from "react-icons/lu";
+import AffirmationCloud from "./AffirmationCloud";
 
 const modules = [
   {
@@ -54,6 +55,8 @@ export default function DashboardPage() {
       px={{ base: "3", md: "4" }}
       py={{ base: "2", md: "4" }}
     >
+      <AffirmationCloud />
+
       <SimpleGrid
         columns={2}
         gap={{ base: "3", md: "4" }}

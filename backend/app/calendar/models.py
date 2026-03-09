@@ -1,10 +1,15 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Index, Integer, String, Text, Boolean, DateTime, ForeignKey
 from app.database import Base
 from app.common.models import TimestampMixin
 
 
 class Event(Base, TimestampMixin):
     __tablename__ = "events"
+    __table_args__ = (
+        Index("ix_events_user_id", "user_id"),
+        Index("ix_events_start_at", "start_at"),
+        Index("ix_events_user_start", "user_id", "start_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)

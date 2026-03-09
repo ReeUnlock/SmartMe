@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey
+from sqlalchemy import Column, Index, Integer, String, Boolean, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.common.models import TimestampMixin
@@ -6,6 +6,9 @@ from app.common.models import TimestampMixin
 
 class ShoppingList(Base, TimestampMixin):
     __tablename__ = "shopping_lists"
+    __table_args__ = (
+        Index("ix_shopping_lists_user_id", "user_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
@@ -17,6 +20,9 @@ class ShoppingList(Base, TimestampMixin):
 
 class ShoppingCategory(Base, TimestampMixin):
     __tablename__ = "shopping_categories"
+    __table_args__ = (
+        Index("ix_shopping_categories_user_id", "user_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -29,6 +35,10 @@ class ShoppingCategory(Base, TimestampMixin):
 
 class ShoppingItem(Base, TimestampMixin):
     __tablename__ = "shopping_items"
+    __table_args__ = (
+        Index("ix_shopping_items_user_id", "user_id"),
+        Index("ix_shopping_items_list_id", "list_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)

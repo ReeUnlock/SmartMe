@@ -95,5 +95,6 @@ export function useCategories() {
   return useQuery({
     queryKey: ["shopping-categories"],
     queryFn: getCategories,
+    staleTime: 5 * 60_000,
   });
 }

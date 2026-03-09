@@ -69,6 +69,7 @@ export function useExpenseCategories() {
   return useQuery({
     queryKey: [KEYS.categories],
     queryFn: getExpenseCategories,
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -78,6 +79,7 @@ export function useMembers() {
   return useQuery({
     queryKey: [KEYS.members],
     queryFn: getMembers,
+    staleTime: 5 * 60_000,
   });
 }
 

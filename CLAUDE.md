@@ -20,9 +20,9 @@ Personalny hub zarządzania życiem dla jednej kobiety. Mobile-first, ciepłe pa
 ## Struktura backendu
 ```
 backend/app/
-  main.py           — FastAPI app, rejestracja routerów
-  config.py         — pydantic Settings (env vars)
-  database.py       — SQLAlchemy engine, session, Base
+  main.py           — FastAPI app, rejestracja routerów, GZip, CORS, health check
+  config.py         — Settings (env vars, CORS_ORIGINS)
+  database.py       — SQLAlchemy engine (pool_pre_ping, pool_recycle), session, Base
   auth/             — JWT auth (setup, login, me)
   calendar/         — wydarzenia, recurrence (RRULE), duplikaty per dzień
   shopping/         — listy zakupów, kategorie, itemy
@@ -38,7 +38,7 @@ backend/alembic/    — migracje DB
 ## Struktura frontendu
 ```
 frontend/src/
-  App.jsx           — Router + ChakraProvider + QueryClientProvider
+  App.jsx           — Router + ChakraProvider + QueryClientProvider + ErrorBoundary
   theme.js          — pastelowa paleta kolorów
   api/              — fetch wrapper z JWT, pliki per moduł
   hooks/            — useAuth (zustand), useCalendar, useEventHistory
@@ -60,7 +60,7 @@ frontend/src/
     plans/          — Plany (kolor: rose/róż)
     ai/             — AiChatDrawer, podpowiedzi
     voice/          — VoiceFab (mikrofon), VoiceConfirmationDialog
-    common/         — EmptyState, LoadingSpinner, SettingsPage
+    common/         — EmptyState, LoadingSpinner, SettingsPage, ErrorBoundary
 ```
 
 ## Routing (polskie ścieżki)
@@ -95,20 +95,27 @@ Wszystkie endpointy pod `/api/`. Wymagają JWT oprócz `/api/auth/setup`, `/api/
 - **Auth**: single-user, pierwszy zarejestrowany = właściciel, potem setup zablokowany
 - **Domownicy**: tylko imiona/etykiety (nie osobne konta), 2 osoby
 - **Migracje**: Alembic (nie `Base.metadata.create_all`), auto-uruchamiane przy starcie kontenera
-- **Nowe modele**: dodaj import w `alembic/env.py` + stwórz migrację
+- **Nowe modele**: dodaj import w `alembic/env.py` + stwórz migrację + dodaj `Index` na `user_id` i FK
+- **Indeksy DB**: każda tabela ma `Index` na `user_id` i kluczowych kolumnach zapytań (date, start_at, list_id, goal_id)
 - **Style**: Chakra UI v3, custom tokens w theme.js, każdy moduł ma swój kolor
 - **State**: zustand dla auth/UI/eventHistory, TanStack Query dla server state
 - **Porty zajęte**: jeśli port jest zajęty, automatycznie wybierz inny bez pytania
 - **Docker HMR (Windows)**: Vite wymaga `usePolling: true` w `vite.config.js` → `server.watch`
+- **CORS**: konfigurowalne przez env var `CORS_ORIGINS` (lista origins oddzielona przecinkami)
+- **Health check**: `/api/health` weryfikuje połączenie z DB, zwraca 503 gdy baza niedostępna
+- **ErrorBoundary**: globalny komponent w App.jsx łapie nieoczekiwane błędy React
+- **Caching**: kategorie i members mają `staleTime: 5min`, reszta 30s (domyślne)
+- **Kompresja**: GZip na backendzie (FastAPI) + nginx (gzip on)
+- **Security headers**: nginx dodaje X-Content-Type-Options, X-Frame-Options, Referrer-Policy
 
 ## Fazy implementacji
 - [x] Faza 0: Fundament (auth, layout, routing, Alembic)
 - [ ] Faza 1: Obowiązki (chores + household_members)
-- [ ] Faza 2: Zakupy (shopping lists + categories + items)
+- [x] Faza 2: Zakupy (shopping lists + categories + items)
 - [x] Faza 3: Kalendarz (events + recurrence + undo/redo + quick-add + duplikaty)
-- [ ] Faza 4: Wydatki (expenses + categories + summary)
+- [x] Faza 4: Wydatki (expenses + categories + summary + recurring + budget)
 - [ ] Faza 5: OCR paragonów (Tesseract)
-- [ ] Faza 6: Plany (goals, bucket list, planer)
+- [x] Faza 6: Plany (goals, milestones, bucket list)
 - [ ] Faza 7: Push Notifications (VAPID, service worker)
 - [ ] Faza 8: AI (OpenAI, sugestie, chat)
 - [ ] Faza 9: Polish (Google Calendar, PWA, streaming AI)
