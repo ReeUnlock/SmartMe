@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from calendar import monthrange
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, extract
@@ -16,9 +17,12 @@ from app.expenses.schemas import (
     ExpenseCategoryCreate, ExpenseCategoryUpdate, ExpenseCategoryOut,
     MemberCreate, MemberUpdate, MemberOut,
     RecurringExpenseCreate, RecurringExpenseUpdate, RecurringExpenseOut,
+    GenerateRecurringRequest, GenerateRecurringResponse,
     BudgetSet, BudgetOut,
     MonthSummary, MonthComparison, CategorySummary, MemberSummary, DailySummary,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"])
 
@@ -34,7 +38,7 @@ DEFAULT_CATEGORIES = [
     {"name": "Ubrania", "icon": "shirt", "color": "#FBBF24", "sort_order": 5},
     {"name": "Rachunki", "icon": "receipt", "color": "#FB923C", "sort_order": 6},
     {"name": "Edukacja", "icon": "book-open", "color": "#38BDF8", "sort_order": 7},
-    {"name": "Inne", "icon": "ellipsis", "color": "#9CA3AF", "sort_order": 99},
+    {"name": "Inne", "icon": "ellipsis", "color": "#C4B5FD", "sort_order": 99},
 ]
 
 DEFAULT_MEMBERS = [
@@ -201,6 +205,8 @@ def list_expenses(
     month: int = Query(None),
     category_id: int = Query(None),
     paid_by_id: int = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(500, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -217,7 +223,7 @@ def list_expenses(
         q = q.filter(Expense.category_id == category_id)
     if paid_by_id:
         q = q.filter(Expense.paid_by_id == paid_by_id)
-    return q.order_by(Expense.date.desc(), Expense.id.desc()).all()
+    return q.order_by(Expense.date.desc(), Expense.id.desc()).offset(skip).limit(limit).all()
 
 
 @router.post("/", response_model=ExpenseOut, status_code=status.HTTP_201_CREATED)
@@ -375,6 +381,94 @@ def delete_recurring(
     db.commit()
 
 
+# ─── Generate Recurring ────────────────────────────────────
+
+def generate_recurring_expenses(db: Session, user_id: int, year: int, month: int) -> tuple[list[Expense], int]:
+    """Generate real Expense records from RecurringExpense templates for a given month.
+    Returns (created_expenses, skipped_count). Never creates duplicates."""
+    templates = (
+        db.query(RecurringExpense)
+        .filter(RecurringExpense.user_id == user_id)
+        .all()
+    )
+
+    days_in_month = monthrange(year, month)[1]
+    month_start = date(year, month, 1)
+    month_end = date(year, month, days_in_month)
+
+    created = []
+    skipped = 0
+
+    for tmpl in templates:
+        # Check if already generated for this month
+        existing = (
+            db.query(Expense)
+            .filter(
+                Expense.recurring_id == tmpl.id,
+                Expense.date >= month_start,
+                Expense.date <= month_end,
+            )
+            .first()
+        )
+        if existing:
+            skipped += 1
+            continue
+
+        # Clamp day_of_month to last day of month
+        day = min(tmpl.day_of_month, days_in_month)
+        expense_date = date(year, month, day)
+
+        expense = Expense(
+            amount=tmpl.amount,
+            description=tmpl.name,
+            date=expense_date,
+            is_shared=tmpl.is_shared,
+            category_id=tmpl.category_id,
+            paid_by_id=tmpl.paid_by_id,
+            user_id=user_id,
+            source="recurring",
+            source_id=tmpl.id,
+            recurring_id=tmpl.id,
+        )
+        db.add(expense)
+        created.append(expense)
+
+    if created:
+        db.commit()
+        for e in created:
+            db.refresh(e)
+        logger.info(f"Generated {len(created)} recurring expenses for {year}-{month:02d} (user={user_id})")
+
+    return created, skipped
+
+
+@router.post("/recurring/generate", response_model=GenerateRecurringResponse)
+def generate_recurring(
+    data: GenerateRecurringRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    created, skipped = generate_recurring_expenses(db, current_user.id, data.year, data.month)
+
+    # Re-query with joins for full response
+    expense_ids = [e.id for e in created]
+    expenses = []
+    if expense_ids:
+        expenses = (
+            db.query(Expense)
+            .options(joinedload(Expense.category), joinedload(Expense.paid_by))
+            .filter(Expense.id.in_(expense_ids))
+            .order_by(Expense.date)
+            .all()
+        )
+
+    return GenerateRecurringResponse(
+        generated=len(created),
+        skipped=skipped,
+        expenses=expenses,
+    )
+
+
 # ─── Monthly Budget ─────────────────────────────────────────
 
 @router.get("/budget/{year}/{month}", response_model=BudgetOut | None)
@@ -447,19 +541,41 @@ def _build_month_summary(db: Session, user_id: int, year: int, month: int) -> Mo
 
     total = sum(e.amount for e in expenses)
 
-    # By category
+    # By category — merge NULL and "Inne" into a single "Inne" bucket
+    inne_cat = (
+        db.query(ExpenseCategory)
+        .filter(ExpenseCategory.user_id == user_id, ExpenseCategory.name == "Inne")
+        .first()
+    )
+    inne_id = inne_cat.id if inne_cat else None
+
     cat_map: dict[int | None, dict] = {}
     for e in expenses:
-        key = e.category_id
+        # Treat uncategorized expenses as "Inne"
+        if e.category_id is None and inne_id is not None:
+            key = inne_id
+        else:
+            key = e.category_id
+
         if key not in cat_map:
-            cat_map[key] = {
-                "category_id": key,
-                "category_name": e.category.name if e.category else "Bez kategorii",
-                "category_icon": e.category.icon if e.category else None,
-                "category_color": e.category.color if e.category else None,
-                "total": 0.0,
-                "count": 0,
-            }
+            if key == inne_id and inne_cat:
+                cat_map[key] = {
+                    "category_id": inne_id,
+                    "category_name": inne_cat.name,
+                    "category_icon": inne_cat.icon,
+                    "category_color": inne_cat.color,
+                    "total": 0.0,
+                    "count": 0,
+                }
+            else:
+                cat_map[key] = {
+                    "category_id": key,
+                    "category_name": e.category.name if e.category else "Inne",
+                    "category_icon": e.category.icon if e.category else None,
+                    "category_color": e.category.color if e.category else None,
+                    "total": 0.0,
+                    "count": 0,
+                }
         cat_map[key]["total"] += e.amount
         cat_map[key]["count"] += 1
     by_category = [CategorySummary(**v) for v in cat_map.values()]

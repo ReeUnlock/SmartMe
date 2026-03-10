@@ -1,9 +1,10 @@
 import { apiUpload } from "./client";
 import { apiFetch } from "./client";
+import { resolveStartEnd } from "../services/calendarNormalizer";
 
-export async function processVoiceCommand(audioBlob, chatHistory = []) {
+export async function processVoiceCommand(audioBlob, chatHistory = [], fileExt = "webm") {
   const formData = new FormData();
-  formData.append("audio", audioBlob, "recording.webm");
+  formData.append("audio", audioBlob, `recording.${fileExt}`);
   if (chatHistory.length > 0) {
     formData.append("history", JSON.stringify(chatHistory));
   }
@@ -15,6 +16,10 @@ export async function processVoiceCommand(audioBlob, chatHistory = []) {
     action_type: a.action,
     transcript: response.transcript,
     confidence_note: a.confidence_note || null,
+    // Temporal interpretation metadata (calendar)
+    temporal_interpretation: a.temporal_interpretation || null,
+    // Validation errors from backend
+    validation_errors: a.validation_errors || null,
     params: {
       // Calendar fields
       title: a.title || "",
@@ -43,6 +48,20 @@ export async function processVoiceCommand(audioBlob, chatHistory = []) {
       budget_amount: a.budget_amount || null,
       budget_year: a.budget_year || null,
       budget_month: a.budget_month || null,
+      // Plans fields
+      goal_title: a.goal_title || "",
+      goal_description: a.goal_description || "",
+      goal_category: a.goal_category || "",
+      goal_color: a.goal_color || "",
+      goal_target_value: a.goal_target_value || null,
+      goal_current_value: a.goal_current_value || null,
+      goal_unit: a.goal_unit || "",
+      goal_deadline: a.goal_deadline || "",
+      goal_id: a.goal_id || null,
+      bucket_title: a.bucket_title || "",
+      bucket_description: a.bucket_description || "",
+      bucket_category: a.bucket_category || "",
+      bucket_id: a.bucket_id || null,
     },
   }));
 
@@ -53,42 +72,56 @@ export async function processVoiceCommand(audioBlob, chatHistory = []) {
 }
 
 export async function executeVoiceAction(action) {
+  const p = action.params || {};
+  // Centralized date resolution — single source of truth
+  const { startAt, endAt, isAllDay } = resolveStartEnd(p);
+
   // Map frontend format back to backend format
   const payload = {
     action: action.action_type,
     transcript: action.transcript,
     confidence_note: action.confidence_note,
     // Calendar fields
-    title: action.params?.title || null,
-    start_at: action.params?.all_day
-      ? action.params?.start_date || null
-      : action.params?.start_datetime || null,
-    end_at: action.params?.all_day
-      ? action.params?.end_date || null
-      : action.params?.end_datetime || null,
-    all_day: action.params?.all_day || false,
-    description: action.params?.description || null,
-    location: action.params?.location || null,
-    category: action.params?.category || null,
-    event_id: action.params?.event_id || null,
-    date_query: action.params?.date_query || null,
-    color: action.params?.color || null,
-    icon: action.params?.icon || null,
+    title: p.title || null,
+    start_at: startAt,
+    end_at: endAt,
+    all_day: isAllDay,
+    description: p.description || null,
+    location: p.location || null,
+    category: p.category || null,
+    event_id: p.event_id || null,
+    date_query: p.date_query || null,
+    color: p.color || null,
+    icon: p.icon || null,
     // Shopping fields
-    list_name: action.params?.list_name || null,
-    items: action.params?.items?.length ? action.params.items : null,
+    list_name: p.list_name || null,
+    items: p.items?.length ? p.items : null,
     // Expense fields
-    amount: action.params?.amount || null,
-    expense_date: action.params?.expense_date || null,
-    expense_category: action.params?.expense_category || null,
-    paid_by: action.params?.paid_by || null,
-    is_shared: action.params?.is_shared || false,
-    expense_description: action.params?.expense_description || null,
-    recurring_name: action.params?.recurring_name || null,
-    day_of_month: action.params?.day_of_month || null,
-    budget_amount: action.params?.budget_amount || null,
-    budget_year: action.params?.budget_year || null,
-    budget_month: action.params?.budget_month || null,
+    amount: p.amount || null,
+    expense_date: p.expense_date || null,
+    expense_category: p.expense_category || null,
+    paid_by: p.paid_by || null,
+    is_shared: p.is_shared || false,
+    expense_description: p.expense_description || null,
+    recurring_name: p.recurring_name || null,
+    day_of_month: p.day_of_month || null,
+    budget_amount: p.budget_amount || null,
+    budget_year: p.budget_year || null,
+    budget_month: p.budget_month || null,
+    // Plans fields
+    goal_title: p.goal_title || null,
+    goal_description: p.goal_description || null,
+    goal_category: p.goal_category || null,
+    goal_color: p.goal_color || null,
+    goal_target_value: p.goal_target_value || null,
+    goal_current_value: p.goal_current_value || null,
+    goal_unit: p.goal_unit || null,
+    goal_deadline: p.goal_deadline || null,
+    goal_id: p.goal_id || null,
+    bucket_title: p.bucket_title || null,
+    bucket_description: p.bucket_description || null,
+    bucket_category: p.bucket_category || null,
+    bucket_id: p.bucket_id || null,
   };
   const result = await apiFetch("/voice/execute", {
     method: "POST",

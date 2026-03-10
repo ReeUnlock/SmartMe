@@ -9,7 +9,7 @@ from openai import AsyncOpenAI
 
 from app.config import settings
 from app.voice.prompts import VOICE_SYSTEM_PROMPT
-from app.voice.schemas import ShoppingItemParam, VoiceActionType, VoiceProposedAction
+from app.voice.schemas import ShoppingItemParam, TemporalInterpretation, VoiceActionType, VoiceProposedAction
 
 logger = logging.getLogger(__name__)
 
@@ -99,10 +99,28 @@ async def parse_intent(
                 if si.get("name")
             ]
 
+        # Parse temporal_interpretation if present
+        raw_ti = item.get("temporal_interpretation")
+        temporal_interp = None
+        if raw_ti and isinstance(raw_ti, dict):
+            temporal_interp = TemporalInterpretation(
+                source_text=raw_ti.get("source_text"),
+                pattern_type=raw_ti.get("pattern_type"),
+                resolved_dates=raw_ti.get("resolved_dates"),
+                range_start=raw_ti.get("range_start"),
+                range_end=raw_ti.get("range_end"),
+                weekdays=raw_ti.get("weekdays"),
+                interval=raw_ti.get("interval"),
+                needs_clarification=raw_ti.get("needs_clarification"),
+                clarification_reason=raw_ti.get("clarification_reason"),
+                default_assumption=raw_ti.get("default_assumption"),
+            )
+
         results.append(VoiceProposedAction(
             action=action,
             transcript=transcript,
             confidence_note=item.get("confidence_note"),
+            # Calendar fields
             title=item.get("title"),
             start_at=item.get("start_at"),
             end_at=item.get("end_at"),
@@ -114,8 +132,36 @@ async def parse_intent(
             date_query=item.get("date_query"),
             color=item.get("color"),
             icon=item.get("icon"),
+            temporal_interpretation=temporal_interp,
+            # Shopping fields
             list_name=item.get("list_name"),
             items=shopping_items,
+            # Expense fields
+            amount=item.get("amount"),
+            expense_date=item.get("expense_date"),
+            expense_category=item.get("expense_category"),
+            paid_by=item.get("paid_by"),
+            is_shared=item.get("is_shared"),
+            expense_description=item.get("expense_description"),
+            recurring_name=item.get("recurring_name"),
+            day_of_month=item.get("day_of_month"),
+            budget_amount=item.get("budget_amount"),
+            budget_year=item.get("budget_year"),
+            budget_month=item.get("budget_month"),
+            # Plans fields
+            goal_title=item.get("goal_title"),
+            goal_description=item.get("goal_description"),
+            goal_category=item.get("goal_category"),
+            goal_color=item.get("goal_color"),
+            goal_target_value=item.get("goal_target_value"),
+            goal_current_value=item.get("goal_current_value"),
+            goal_unit=item.get("goal_unit"),
+            goal_deadline=item.get("goal_deadline"),
+            goal_id=item.get("goal_id"),
+            bucket_title=item.get("bucket_title"),
+            bucket_description=item.get("bucket_description"),
+            bucket_category=item.get("bucket_category"),
+            bucket_id=item.get("bucket_id"),
         ))
 
     return results

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Box, Flex, Text, VStack, Input, Spinner, Icon } from "@chakra-ui/react";
-import { LuPlus, LuTrash2, LuRepeat, LuCalendarDays } from "react-icons/lu";
+import { LuPlus, LuTrash2, LuRepeat, LuCalendarDays, LuZap, LuCheck } from "react-icons/lu";
 import {
   useRecurring, useCreateRecurring, useDeleteRecurring,
+  useGenerateRecurring,
   useExpenseCategories, useMembers,
 } from "../../hooks/useExpenses";
 
@@ -10,10 +11,10 @@ function RecurringRow({ item, onDelete }) {
   return (
     <Flex
       bg="white"
-      borderRadius="xl"
+      borderRadius="2xl"
       p={3}
-      shadow="xs"
-      border="1px solid"
+      shadow="0 1px 8px 0 rgba(0,0,0,0.04)"
+      borderWidth="1px"
       borderColor="gray.100"
       align="center"
       gap={3}
@@ -26,7 +27,7 @@ function RecurringRow({ item, onDelete }) {
         flexShrink={0}
       />
       <Box flex={1} minW={0}>
-        <Text fontSize="sm" fontWeight="600" color="gray.800" truncate>
+        <Text fontSize="sm" fontWeight="600" color="textPrimary" truncate>
           {item.name}
         </Text>
         <Flex gap={2} fontSize="xs" color="gray.400">
@@ -57,12 +58,18 @@ function RecurringRow({ item, onDelete }) {
   );
 }
 
-export default function RecurringExpenses() {
+const MONTH_NAMES = [
+  "", "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
+  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
+];
+
+export default function RecurringExpenses({ year, month }) {
   const { data: recurring, isLoading } = useRecurring();
   const { data: categories } = useExpenseCategories();
   const { data: members } = useMembers();
   const createRecurring = useCreateRecurring();
   const deleteRecurring = useDeleteRecurring();
+  const generateRecurring = useGenerateRecurring();
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -70,25 +77,42 @@ export default function RecurringExpenses() {
   const [dayOfMonth, setDayOfMonth] = useState("1");
   const [categoryId, setCategoryId] = useState(null);
   const [paidById, setPaidById] = useState(null);
+  const [generateResult, setGenerateResult] = useState(null);
+
+  const handleGenerate = async () => {
+    setGenerateResult(null);
+    try {
+      const result = await generateRecurring.mutateAsync({ year, month });
+      setGenerateResult(result);
+      // Auto-hide after 4 seconds
+      setTimeout(() => setGenerateResult(null), 4000);
+    } catch {
+      // mutation error handled by TanStack Query
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const val = parseFloat(amount);
     if (!name.trim() || !val || val <= 0) return;
 
-    await createRecurring.mutateAsync({
-      name: name.trim(),
-      amount: val,
-      day_of_month: parseInt(dayOfMonth) || 1,
-      category_id: categoryId,
-      paid_by_id: paidById,
-    });
-    setName("");
-    setAmount("");
-    setDayOfMonth("1");
-    setCategoryId(null);
-    setPaidById(null);
-    setShowForm(false);
+    try {
+      await createRecurring.mutateAsync({
+        name: name.trim(),
+        amount: val,
+        day_of_month: parseInt(dayOfMonth) || 1,
+        category_id: categoryId,
+        paid_by_id: paidById,
+      });
+      setName("");
+      setAmount("");
+      setDayOfMonth("1");
+      setCategoryId(null);
+      setPaidById(null);
+      setShowForm(false);
+    } catch {
+      // mutation error handled by TanStack Query
+    }
   };
 
   const totalMonthly = recurring?.reduce((s, r) => s + r.amount, 0) || 0;
@@ -103,20 +127,20 @@ export default function RecurringExpenses() {
       <Flex justify="space-between" align="center">
         <Flex align="center" gap={2}>
           <Icon as={LuRepeat} boxSize={5} color="peach.500" />
-          <Text fontWeight="600" color="gray.700">Stałe koszty</Text>
+          <Text fontWeight="600" color="textSecondary">Stałe koszty</Text>
         </Flex>
         <Flex
           align="center"
           gap={2}
           px={3}
           py={2}
-          bg="peach.500"
+          bg="peach.400"
           color="white"
           borderRadius="xl"
           cursor="pointer"
           fontWeight="600"
           fontSize="sm"
-          _hover={{ bg: "peach.600" }}
+          _hover={{ bg: "peach.500" }}
           _active={{ transform: "scale(0.97)" }}
           transition="all 0.2s"
           onClick={() => setShowForm(!showForm)}
@@ -127,10 +151,68 @@ export default function RecurringExpenses() {
       </Flex>
 
       {/* Monthly total */}
-      <Box bg="peach.50" borderRadius="xl" p={3} textAlign="center">
+      <Box bg="peach.50" borderRadius="2xl" p={3} textAlign="center" borderWidth="1px" borderColor="peach.100">
         <Text fontSize="xs" color="peach.600">Suma stałych kosztów miesięcznych</Text>
         <Text fontSize="2xl" fontWeight="700" color="peach.700">{totalMonthly.toFixed(0)} zł</Text>
       </Box>
+
+      {/* Generate button */}
+      {recurring?.length > 0 && (
+        <Flex direction="column" gap={2}>
+          <Flex
+            as="button"
+            align="center"
+            justify="center"
+            gap={2}
+            py={3}
+            bg={generateRecurring.isPending ? "gray.100" : "peach.100"}
+            color={generateRecurring.isPending ? "gray.500" : "peach.700"}
+            borderRadius="2xl"
+            fontWeight="600"
+            fontSize="sm"
+            cursor={generateRecurring.isPending ? "wait" : "pointer"}
+            border="1px dashed"
+            borderColor={generateRecurring.isPending ? "gray.300" : "peach.300"}
+            _hover={generateRecurring.isPending ? {} : { bg: "peach.200" }}
+            _active={generateRecurring.isPending ? {} : { transform: "scale(0.98)" }}
+            transition="all 0.2s"
+            onClick={handleGenerate}
+            disabled={generateRecurring.isPending}
+          >
+            {generateRecurring.isPending ? (
+              <Spinner size="xs" color="peach.500" />
+            ) : (
+              <Icon as={LuZap} boxSize={4} />
+            )}
+            <Text>
+              {generateRecurring.isPending
+                ? "Generuję..."
+                : `Generuj koszty na ${MONTH_NAMES[month]} ${year}`}
+            </Text>
+          </Flex>
+          {generateResult && (
+            <Flex
+              align="center"
+              justify="center"
+              gap={2}
+              py={2}
+              px={3}
+              bg={generateResult.generated > 0 ? "green.50" : "gray.50"}
+              color={generateResult.generated > 0 ? "green.700" : "gray.500"}
+              borderRadius="lg"
+              fontSize="sm"
+              fontWeight="500"
+            >
+              <Icon as={LuCheck} boxSize={4} />
+              <Text>
+                {generateResult.generated > 0
+                  ? `Utworzono ${generateResult.generated} stałych kosztów`
+                  : "Wszystkie koszty zostały już wygenerowane"}
+              </Text>
+            </Flex>
+          )}
+        </Flex>
+      )}
 
       {/* Add form */}
       {showForm && (
@@ -138,13 +220,13 @@ export default function RecurringExpenses() {
           as="form"
           onSubmit={handleSubmit}
           bg="white"
-          borderRadius="xl"
+          borderRadius="2xl"
           p={4}
-          shadow="xs"
-          border="1px solid"
+          shadow="0 1px 8px 0 rgba(0,0,0,0.04)"
+          borderWidth="1px"
           borderColor="peach.200"
         >
-          <Text fontSize="sm" fontWeight="600" color="gray.700" mb={3}>Nowy stały koszt</Text>
+          <Text fontSize="sm" fontWeight="600" color="textSecondary" mb={3}>Nowy stały koszt</Text>
 
           <VStack gap={2} align="stretch">
             <Input
@@ -196,7 +278,7 @@ export default function RecurringExpenses() {
                       px={2}
                       py={1}
                       borderRadius="md"
-                      bg={categoryId === cat.id ? "peach.500" : "gray.100"}
+                      bg={categoryId === cat.id ? "peach.400" : "peach.50"}
                       color={categoryId === cat.id ? "white" : "gray.600"}
                       cursor="pointer"
                       fontWeight="500"
@@ -222,7 +304,7 @@ export default function RecurringExpenses() {
                       px={2}
                       py={1}
                       borderRadius="md"
-                      bg={paidById === m.id ? "peach.500" : "gray.100"}
+                      bg={paidById === m.id ? "peach.400" : "peach.50"}
                       color={paidById === m.id ? "white" : "gray.600"}
                       cursor="pointer"
                       fontWeight="500"
@@ -244,22 +326,22 @@ export default function RecurringExpenses() {
                 fontWeight="500"
                 cursor="pointer"
                 fontSize="sm"
-                _hover={{ color: "gray.700" }}
+                _hover={{ color: "textSecondary" }}
               >
                 Anuluj
               </Text>
               <Text
                 as="button"
                 type="submit"
-                bg="peach.500"
+                bg="peach.400"
                 color="white"
                 fontWeight="600"
                 px={4}
                 py={1}
-                borderRadius="lg"
+                borderRadius="xl"
                 cursor="pointer"
                 fontSize="sm"
-                _hover={{ bg: "peach.600" }}
+                _hover={{ bg: "peach.500" }}
                 opacity={!name.trim() || !amount || createRecurring.isPending ? 0.5 : 1}
               >
                 {createRecurring.isPending ? "Dodaję…" : "Dodaj"}
@@ -271,10 +353,10 @@ export default function RecurringExpenses() {
 
       {/* List */}
       {!recurring?.length ? (
-        <VStack py={12} gap={3} color="gray.400">
-          <Icon as={LuRepeat} boxSize={12} strokeWidth={1} />
-          <Text fontSize="lg" fontWeight="600">Brak stałych kosztów</Text>
-          <Text fontSize="sm">Dodaj np. Netflix, czynsz, Spotify</Text>
+        <VStack py={16} gap={3}>
+          <Icon as={LuRepeat} boxSize={16} strokeWidth={1} color="peach.200" />
+          <Text fontSize="lg" fontWeight="600" color="gray.500">{"Brak stałych kosztów"}</Text>
+          <Text fontSize="sm" textAlign="center" color="gray.400">{"Dodaj swój pierwszy stały koszt, np. Netflix, czynsz"}</Text>
         </VStack>
       ) : (
         <VStack gap={2} align="stretch">

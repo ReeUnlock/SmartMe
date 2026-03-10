@@ -18,6 +18,7 @@ from app.voice.schemas import (
     VoiceProposedAction,
 )
 from app.voice.service import transcribe_audio, parse_intent
+from app.voice.calendar_validator import validate_calendar_actions
 from app.voice.executor import (
     execute_add_event,
     execute_update_event,
@@ -29,6 +30,8 @@ from app.voice.shopping_executor import (
     execute_create_shopping_list,
     execute_add_shopping_items,
     execute_delete_shopping_items,
+    execute_check_shopping_items,
+    execute_uncheck_shopping_items,
 )
 from app.voice.expense_executor import (
     execute_add_expense,
@@ -36,6 +39,18 @@ from app.voice.expense_executor import (
     execute_delete_recurring_expense,
     execute_set_budget,
     execute_list_expenses,
+    execute_generate_recurring_expenses,
+    execute_save_shopping_as_expense,
+)
+from app.voice.plans_executor import (
+    execute_add_goal,
+    execute_update_goal,
+    execute_delete_goal,
+    execute_toggle_goal,
+    execute_add_bucket_item,
+    execute_delete_bucket_item,
+    execute_toggle_bucket_item,
+    execute_list_goals,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,6 +71,8 @@ ALLOWED_AUDIO_TYPES = {
 }
 
 ALLOWED_EXTENSIONS = {".webm", ".mp3", ".wav", ".ogg", ".m4a"}
+
+MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
 def _check_openai_key():
@@ -92,11 +109,17 @@ async def process_voice(
     _check_openai_key()
     _validate_audio_file(audio)
 
-    audio_bytes = await audio.read()
+    # Read with size limit to prevent memory exhaustion
+    audio_bytes = await audio.read(MAX_AUDIO_SIZE + 1)
     if not audio_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Plik audio jest pusty.",
+        )
+    if len(audio_bytes) > MAX_AUDIO_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Plik audio jest za duży. Maksymalny rozmiar to {MAX_AUDIO_SIZE // (1024 * 1024)} MB.",
         )
 
     filename = audio.filename or "audio.webm"
@@ -144,6 +167,19 @@ async def process_voice(
             detail="Błąd podczas analizy komendy. Spróbuj ponownie.",
         )
 
+    # Validate and potentially re-expand calendar dates
+    try:
+        actions = validate_calendar_actions(actions, now.date())
+    except Exception as e:
+        logger.error(f"Calendar validation error: {e}", exc_info=True)
+        # Don't block — but annotate all calendar actions so user sees the failure
+        for action in actions:
+            if action.action in {VoiceActionType.add_event}:
+                action.validation_errors = action.validation_errors or []
+                action.validation_errors.append(
+                    "Walidacja dat nie powiodła się — sprawdź daty ręcznie przed potwierdzeniem."
+                )
+
     return VoiceProcessResponse(transcript=transcript, actions=actions)
 
 
@@ -153,7 +189,25 @@ def execute_voice(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Execute a confirmed voice action against the database."""
+    """Execute a confirmed voice action against the database.
+
+    If execution fails with an unexpected exception, roll back
+    the session to prevent partial commits from persisting.
+    """
+    try:
+        result = _execute_voice_inner(action, db, current_user)
+        return result
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _execute_voice_inner(
+    action: VoiceConfirmAction,
+    db: Session,
+    current_user: User,
+) -> VoiceExecuteResult:
+    """Inner execution logic — wrapped in savepoint by execute_voice."""
     executors = {
         VoiceActionType.add_event: execute_add_event,
         VoiceActionType.update_event: execute_update_event,
@@ -237,6 +291,30 @@ def execute_voice(
             logger.error(f"Voice execute delete_shopping_items error: {e}", exc_info=True)
             return VoiceExecuteResult(success=False, message=f"Błąd podczas usuwania produktów: {str(e)}")
 
+    if action.action == VoiceActionType.check_shopping_items:
+        try:
+            result = execute_check_shopping_items(db, current_user, action)
+            item_count = len(action.items or [])
+            msg = f"Oznaczono {item_count} produktów jako kupione na liście \u201E{result['name']}\u201D."
+            return VoiceExecuteResult(success=True, message=msg, data={"shopping_list": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute check_shopping_items error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd podczas oznaczania produktów: {str(e)}")
+
+    if action.action == VoiceActionType.uncheck_shopping_items:
+        try:
+            result = execute_uncheck_shopping_items(db, current_user, action)
+            item_count = len(action.items or [])
+            msg = f"Odznaczono {item_count} produktów na liście \u201E{result['name']}\u201D."
+            return VoiceExecuteResult(success=True, message=msg, data={"shopping_list": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute uncheck_shopping_items error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd podczas odznaczania produktów: {str(e)}")
+
     # ─── Expense actions ──────────────────────────────────────────
     if action.action == VoiceActionType.add_expense:
         try:
@@ -292,6 +370,121 @@ def execute_voice(
         except Exception as e:
             logger.error(f"Voice execute list_expenses error: {e}", exc_info=True)
             return VoiceExecuteResult(success=False, message=f"Błąd podczas wczytywania wydatków: {str(e)}")
+
+    if action.action == VoiceActionType.generate_recurring_expenses:
+        try:
+            result = execute_generate_recurring_expenses(db, current_user, action)
+            if result["generated"] > 0:
+                msg = f"Utworzono {result['generated']} stałych kosztów na {result['month_name']} {result['year']} ({result['total']:.2f} zł)"
+            else:
+                msg = "Wszystkie stałe koszty zostały już wygenerowane."
+            return VoiceExecuteResult(success=True, message=msg, data={"recurring_generation": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute generate_recurring error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd podczas generowania stałych kosztów: {str(e)}")
+
+    # ─── Shopping → Expense bridge ─────────────────────────────────
+    if action.action == VoiceActionType.save_shopping_as_expense:
+        try:
+            result = execute_save_shopping_as_expense(db, current_user, action)
+            msg = f"Zapisano zakupy jako wydatek {result['amount']:.2f} zł \u2014 {result['description']}"
+            return VoiceExecuteResult(success=True, message=msg, data={"expense": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute save_shopping_as_expense error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd podczas zapisywania zakupów jako wydatek: {str(e)}")
+
+    # ─── Plans actions ───────────────────────────────────────────
+    if action.action == VoiceActionType.add_goal:
+        try:
+            result = execute_add_goal(db, current_user, action)
+            msg = f"Dodano cel: {result['title']}"
+            return VoiceExecuteResult(success=True, message=msg, data={"goal": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute add_goal error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd podczas dodawania celu: {str(e)}")
+
+    if action.action == VoiceActionType.update_goal:
+        try:
+            result = execute_update_goal(db, current_user, action)
+            msg = f"Zaktualizowano cel: {result['title']}"
+            return VoiceExecuteResult(success=True, message=msg, data={"goal": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute update_goal error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd podczas aktualizacji celu: {str(e)}")
+
+    if action.action == VoiceActionType.delete_goal:
+        try:
+            result = execute_delete_goal(db, current_user, action)
+            msg = f"Usunięto cel: {result['title']}"
+            return VoiceExecuteResult(success=True, message=msg, data={"goal": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute delete_goal error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd podczas usuwania celu: {str(e)}")
+
+    if action.action == VoiceActionType.toggle_goal:
+        try:
+            result = execute_toggle_goal(db, current_user, action)
+            status = "ukończony" if result["is_completed"] else "aktywny"
+            msg = f"Cel \u201E{result['title']}\u201D oznaczony jako {status}."
+            return VoiceExecuteResult(success=True, message=msg, data={"goal": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute toggle_goal error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd: {str(e)}")
+
+    if action.action == VoiceActionType.add_bucket_item:
+        try:
+            result = execute_add_bucket_item(db, current_user, action)
+            msg = f"Dodano na listę marzeń: {result['title']}"
+            return VoiceExecuteResult(success=True, message=msg, data={"bucket_item": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute add_bucket_item error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd: {str(e)}")
+
+    if action.action == VoiceActionType.delete_bucket_item:
+        try:
+            result = execute_delete_bucket_item(db, current_user, action)
+            msg = f"Usunięto z listy marzeń: {result['title']}"
+            return VoiceExecuteResult(success=True, message=msg, data={"bucket_item": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute delete_bucket_item error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd: {str(e)}")
+
+    if action.action == VoiceActionType.toggle_bucket_item:
+        try:
+            result = execute_toggle_bucket_item(db, current_user, action)
+            status = "zrealizowane" if result["is_completed"] else "niezrealizowane"
+            msg = f"\u201E{result['title']}\u201D oznaczone jako {status}."
+            return VoiceExecuteResult(success=True, message=msg, data={"bucket_item": result})
+        except ValueError as e:
+            return VoiceExecuteResult(success=False, message=str(e))
+        except Exception as e:
+            logger.error(f"Voice execute toggle_bucket_item error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd: {str(e)}")
+
+    if action.action == VoiceActionType.list_goals:
+        try:
+            result = execute_list_goals(db, current_user, action)
+            msg = f"Cele: {result['goals_count']}, Lista marzeń: {result['bucket_count']}"
+            return VoiceExecuteResult(success=True, message=msg, data={"plans_summary": result})
+        except Exception as e:
+            logger.error(f"Voice execute list_goals error: {e}", exc_info=True)
+            return VoiceExecuteResult(success=False, message=f"Błąd: {str(e)}")
 
     if action.action == VoiceActionType.unknown:
         return VoiceExecuteResult(

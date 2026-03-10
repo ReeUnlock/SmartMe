@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { Box, Spinner, Flex } from "@chakra-ui/react";
+import { Spinner, Flex } from "@chakra-ui/react";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function ProtectedRoute({ children }) {
@@ -7,7 +7,7 @@ export default function ProtectedRoute({ children }) {
 
   if (isLoading) {
     return (
-      <Flex minH="100vh" align="center" justify="center">
+      <Flex minH="100dvh" align="center" justify="center">
         <Spinner size="lg" color="rose.400" />
       </Flex>
     );
@@ -15,6 +15,10 @@ export default function ProtectedRoute({ children }) {
 
   if (!token || !user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!user.onboarding_completed) {
+    return <Navigate to="/witaj" replace />;
   }
 
   return children;

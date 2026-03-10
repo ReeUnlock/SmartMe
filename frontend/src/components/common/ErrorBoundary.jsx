@@ -12,14 +12,14 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught:", error, errorInfo);
+    if (import.meta.env.DEV) console.error("ErrorBoundary caught:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
         <Box
-          minH="100vh"
+          minH="100dvh"
           display="flex"
           flexDirection="column"
           alignItems="center"

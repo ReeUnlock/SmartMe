@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Box, Flex, Text, Input, Heading } from "@chakra-ui/react";
-import { LuChevronLeft, LuChevronRight, LuCalendar, LuX } from "react-icons/lu";
+import { useState, useEffect } from "react";
+import { Box, Flex, Text, Input, Heading, Spinner } from "@chakra-ui/react";
+import { useExpenseCategories } from "../../hooks/useExpenses";
+import DateInput from "../common/DateInput";
 
 const CATEGORIES = [
   { value: "finanse", label: "Finanse" },
@@ -11,196 +12,174 @@ const CATEGORIES = [
   { value: "inne", label: "Inne" },
 ];
 
-const MONTH_NAMES = [
-  "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-  "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień",
+const GOAL_TYPES = [
+  { value: "manual", label: "Ręczny" },
+  { value: "savings", label: "Oszczędności" },
+  { value: "spending_limit", label: "Limit wydatków" },
 ];
-const DAY_LABELS = ["Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"];
 
-function toDateStr(y, m, d) {
-  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
 
-function MiniCalendar({ value, onChange }) {
-  const today = new Date();
-  const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goal }) {
+  const isEdit = !!goal;
 
-  const initial = value ? new Date(value) : today;
-  const [viewYear, setViewYear] = useState(initial.getFullYear());
-  const [viewMonth, setViewMonth] = useState(initial.getMonth());
-
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
-    else setViewMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
-    else setViewMonth((m) => m + 1);
-  };
-
-  // Build calendar grid
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  const startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < startDow; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
-  return (
-    <Box
-      bg="rose.50"
-      borderRadius="xl"
-      p={3}
-      mb={4}
-      borderWidth="1px"
-      borderColor="rose.200"
-    >
-      {/* Month nav */}
-      <Flex align="center" justify="space-between" mb={2}>
-        <Box
-          as="button" type="button" onClick={prevMonth}
-          p={1} borderRadius="md" cursor="pointer"
-          _hover={{ bg: "rose.100" }}
-        >
-          <Box as={LuChevronLeft} boxSize={4} color="rose.500" />
-        </Box>
-        <Text fontSize="sm" fontWeight="700" color="rose.700">
-          {MONTH_NAMES[viewMonth]} {viewYear}
-        </Text>
-        <Box
-          as="button" type="button" onClick={nextMonth}
-          p={1} borderRadius="md" cursor="pointer"
-          _hover={{ bg: "rose.100" }}
-        >
-          <Box as={LuChevronRight} boxSize={4} color="rose.500" />
-        </Box>
-      </Flex>
-
-      {/* Day labels */}
-      <Flex mb={1}>
-        {DAY_LABELS.map((dl, i) => (
-          <Text
-            key={dl}
-            flex={1}
-            textAlign="center"
-            fontSize="2xs"
-            fontWeight="600"
-            color={i >= 5 ? "rose.400" : "gray.400"}
-          >
-            {dl}
-          </Text>
-        ))}
-      </Flex>
-
-      {/* Day cells */}
-      <Flex flexWrap="wrap">
-        {cells.map((day, i) => {
-          if (day === null) {
-            return <Box key={`e${i}`} flex="0 0 14.2857%" h={8} />;
-          }
-          const dateStr = toDateStr(viewYear, viewMonth, day);
-          const isSelected = dateStr === value;
-          const isToday = dateStr === todayStr;
-          const dow = i % 7;
-          const isWeekend = dow >= 5;
-
-          return (
-            <Flex
-              key={day}
-              flex="0 0 14.2857%"
-              h={8}
-              align="center"
-              justify="center"
-            >
-              <Flex
-                as="button"
-                type="button"
-                align="center"
-                justify="center"
-                w={7}
-                h={7}
-                borderRadius="full"
-                cursor="pointer"
-                fontSize="xs"
-                fontWeight={isSelected || isToday ? "700" : "500"}
-                bg={isSelected ? "rose.400" : "transparent"}
-                color={isSelected ? "white" : isToday ? "rose.500" : isWeekend ? "rose.400" : "gray.600"}
-                borderWidth={isToday && !isSelected ? "1.5px" : "0"}
-                borderColor="rose.300"
-                _hover={{ bg: isSelected ? "rose.500" : "rose.100" }}
-                transition="all 0.15s"
-                onClick={() => onChange(dateStr)}
-              >
-                {day}
-              </Flex>
-            </Flex>
-          );
-        })}
-      </Flex>
-    </Box>
-  );
-}
-
-export default function GoalFormDialog({ open, onClose, onSubmit, isLoading }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [goalType, setGoalType] = useState("manual");
+  const [linkedCategoryId, setLinkedCategoryId] = useState(null);
   const [deadline, setDeadline] = useState("");
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [targetValue, setTargetValue] = useState("");
+  const [unit, setUnit] = useState("");
+
+  const { data: expenseCategories, isLoading: catLoading } = useExpenseCategories();
+
+  const isFinancial = goalType === "savings" || goalType === "spending_limit";
+
+  useEffect(() => {
+    if (open && goal) {
+      setTitle(goal.title || "");
+      setDescription(goal.description || "");
+      setCategory(goal.category || "");
+      setGoalType(goal.goal_type || "manual");
+      setLinkedCategoryId(goal.linked_category_id || null);
+      setDeadline(goal.deadline || "");
+      setTargetValue(goal.target_value ? String(goal.target_value) : "");
+      setUnit(goal.unit || "");
+    } else if (open && !goal) {
+      setTitle("");
+      setDescription("");
+      setCategory("");
+      setGoalType("manual");
+      setLinkedCategoryId(null);
+      setDeadline("");
+      setTargetValue("");
+      setUnit("");
+    }
+  }, [open, goal]);
+
+  // Auto-set unit for financial goals
+  useEffect(() => {
+    if (isFinancial) {
+      setUnit("zł");
+    }
+  }, [goalType]);
+
+  // Clear linked category when switching away from spending_limit
+  useEffect(() => {
+    if (goalType !== "spending_limit") {
+      setLinkedCategoryId(null);
+    }
+  }, [goalType]);
 
   if (!open) return null;
-
-  const reset = () => { setTitle(""); setDescription(""); setCategory(""); setDeadline(""); setShowCalendar(false); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onSubmit({
+    if (goalType === "spending_limit" && !linkedCategoryId) return;
+
+    const data = {
       title: title.trim(),
       description: description.trim() || null,
       category: category || null,
+      goal_type: goalType,
       deadline: deadline || null,
-    });
-    reset();
+      linked_category_id: goalType === "spending_limit" ? linkedCategoryId : null,
+    };
+
+    const tv = parseFloat(targetValue);
+    if (!isNaN(tv) && tv > 0) {
+      data.target_value = tv;
+      data.unit = isFinancial ? "zł" : (unit.trim() || null);
+    } else if (isEdit) {
+      data.target_value = null;
+      data.unit = null;
+    }
+
+    onSubmit(data);
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
-  };
+
+  const canSubmit = title.trim() && !isLoading &&
+    (goalType !== "spending_limit" || linkedCategoryId);
 
   return (
-    <Box
-      position="fixed"
-      inset={0}
-      zIndex={2000}
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-    >
+    <Box position="fixed" inset={0} zIndex={2000} display="flex" alignItems="center" justifyContent="center">
       <Box position="absolute" inset={0} bg="blackAlpha.400" onClick={onClose} />
       <Box
-        as="form"
-        onSubmit={handleSubmit}
-        bg="white"
-        borderRadius="2xl"
-        p={6}
-        w="90%"
-        maxW="420px"
-        shadow="xl"
-        position="relative"
-        zIndex={1}
-        maxH="90vh"
-        overflowY="auto"
+        as="form" onSubmit={handleSubmit} bg="white" borderRadius="2xl" p={6}
+        w="90%" maxW="420px" shadow="xl" position="relative" zIndex={1}
+        maxH="90vh" overflowY="auto"
       >
         <Heading size="md" mb={4} color="rose.700" fontFamily="'Nunito', sans-serif">
-          {"Nowy cel"}
+          {isEdit ? "Edytuj cel" : "Nowy cel"}
         </Heading>
+
+        {/* Goal type selector */}
+        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Typ celu"}</Text>
+        <Flex gap={2} mb={3} flexWrap="wrap">
+          {GOAL_TYPES.map((gt) => (
+            <Text
+              key={gt.value}
+              as="button"
+              type="button"
+              fontSize="xs"
+              fontWeight="600"
+              px={3}
+              py={1.5}
+              borderRadius="full"
+              cursor="pointer"
+              bg={goalType === gt.value ? "rose.300" : "rose.50"}
+              color={goalType === gt.value ? "white" : "rose.500"}
+              _hover={{ bg: goalType === gt.value ? "rose.400" : "rose.100" }}
+              transition="all 0.2s"
+              onClick={() => setGoalType(gt.value)}
+            >
+              {gt.label}
+            </Text>
+          ))}
+        </Flex>
+
+        {/* Expense category picker — only for spending_limit */}
+        {goalType === "spending_limit" && (
+          <>
+            <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Kategoria wydatków *"}</Text>
+            {catLoading ? (
+              <Flex py={2} mb={3}><Spinner size="sm" color="peach.400" /></Flex>
+            ) : (
+              <Flex gap={2} mb={3} flexWrap="wrap">
+                {expenseCategories?.map((ec) => (
+                  <Text
+                    key={ec.id}
+                    as="button"
+                    type="button"
+                    fontSize="xs"
+                    fontWeight="600"
+                    px={3}
+                    py={1.5}
+                    borderRadius="full"
+                    cursor="pointer"
+                    bg={linkedCategoryId === ec.id ? "peach.400" : "peach.50"}
+                    color={linkedCategoryId === ec.id ? "white" : "peach.600"}
+                    _hover={{ bg: linkedCategoryId === ec.id ? "peach.500" : "peach.100" }}
+                    transition="all 0.2s"
+                    onClick={() => setLinkedCategoryId(linkedCategoryId === ec.id ? null : ec.id)}
+                  >
+                    {ec.name}
+                  </Text>
+                ))}
+              </Flex>
+            )}
+          </>
+        )}
 
         <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Tytuł *"}</Text>
         <Input
-          placeholder={"np. Zaoszczędzić na wakacje"}
+          placeholder={goalType === "spending_limit"
+            ? "np. Limit na jedzenie w marcu"
+            : goalType === "savings"
+              ? "np. Zaoszczędzić na wakacje"
+              : "np. Przebiec 100 km"}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           autoFocus
@@ -219,7 +198,7 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading }) {
           _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
         />
 
-        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Kategoria"}</Text>
+        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Kategoria celu"}</Text>
         <Flex gap={2} mb={3} flexWrap="wrap">
           {CATEGORIES.map((cat) => (
             <Text
@@ -232,9 +211,9 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading }) {
               py={1.5}
               borderRadius="full"
               cursor="pointer"
-              bg={category === cat.value ? "rose.400" : "rose.50"}
+              bg={category === cat.value ? "rose.300" : "rose.50"}
               color={category === cat.value ? "white" : "rose.500"}
-              _hover={{ bg: category === cat.value ? "rose.500" : "rose.100" }}
+              _hover={{ bg: category === cat.value ? "rose.400" : "rose.100" }}
               transition="all 0.2s"
               onClick={() => setCategory(category === cat.value ? "" : cat.value)}
             >
@@ -243,75 +222,70 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading }) {
           ))}
         </Flex>
 
-        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Termin"}</Text>
-        {/* Date picker trigger */}
-        <Flex
-          align="center"
-          gap={2}
-          px={3}
-          py={2}
-          mb={showCalendar ? 2 : 4}
-          borderRadius="lg"
-          borderWidth="1px"
-          borderColor={showCalendar ? "rose.400" : "rose.200"}
-          cursor="pointer"
-          transition="all 0.2s"
-          _hover={{ borderColor: "rose.300" }}
-          onClick={() => setShowCalendar(!showCalendar)}
-        >
-          <Box as={LuCalendar} boxSize={4} color="rose.400" />
-          <Text flex={1} fontSize="sm" color={deadline ? "gray.700" : "gray.400"}>
-            {deadline ? formatDate(deadline) : "Wybierz termin"}
-          </Text>
-          {deadline && (
-            <Box
-              as="button"
-              type="button"
-              p={0.5}
-              borderRadius="full"
-              _hover={{ bg: "rose.100" }}
-              onClick={(e) => { e.stopPropagation(); setDeadline(""); }}
-            >
-              <Box as={LuX} boxSize={3.5} color="gray.400" />
-            </Box>
+        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>
+          {goalType === "spending_limit" ? "Limit miesięczny *" : "Cel liczbowy"}
+        </Text>
+        <Flex gap={2} mb={3}>
+          <Input
+            placeholder={isFinancial ? "np. 500" : "np. 10000"}
+            type="number"
+            step="any"
+            min="0"
+            value={targetValue}
+            onChange={(e) => setTargetValue(e.target.value)}
+            flex={2}
+            borderColor="rose.200"
+            _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+          />
+          {isFinancial ? (
+            <Flex align="center" px={3} bg="gray.50" borderRadius="md" flex={1}>
+              <Text fontSize="sm" color="gray.500" fontWeight="500">{"zł"}</Text>
+            </Flex>
+          ) : (
+            <Input
+              placeholder={"Jednostka, np. zł"}
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              flex={1}
+              borderColor="rose.200"
+              _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+            />
           )}
         </Flex>
 
-        {showCalendar && (
-          <MiniCalendar
-            value={deadline}
-            onChange={(d) => { setDeadline(d); setShowCalendar(false); }}
-          />
+        {/* Info text for spending_limit */}
+        {goalType === "spending_limit" && (
+          <Text fontSize="2xs" color="gray.400" mb={3}>
+            {"Postęp będzie automatycznie liczony z wydatków w bieżącym miesiącu."}
+          </Text>
         )}
+
+        <DateInput
+          value={deadline}
+          onChange={setDeadline}
+          accentColor="rose"
+          label="Termin"
+          placeholder="Wybierz termin"
+          clearable
+          mb={4}
+        />
 
         <Flex gap={3} justify="flex-end">
           <Text
-            as="button"
-            type="button"
-            onClick={() => { onClose(); reset(); }}
-            color="gray.500"
-            fontWeight="500"
-            cursor="pointer"
-            px={4}
-            py={2}
-            _hover={{ color: "gray.700" }}
+            as="button" type="button" onClick={onClose}
+            color="gray.500" fontWeight="500" cursor="pointer" px={4} py={2}
+            _hover={{ color: "textSecondary" }}
           >
             {"Anuluj"}
           </Text>
           <Text
-            as="button"
-            type="submit"
-            bg="rose.400"
-            color="white"
-            fontWeight="600"
-            px={5}
-            py={2}
-            borderRadius="lg"
-            cursor="pointer"
-            opacity={!title.trim() || isLoading ? 0.5 : 1}
-            _hover={{ bg: "rose.500" }}
+            as="button" type="submit" bg="rose.300" color="white" fontWeight="600"
+            px={5} py={2} borderRadius="xl" cursor="pointer"
+            opacity={canSubmit ? 1 : 0.5} _hover={{ bg: "rose.400" }}
           >
-            {isLoading ? "Tworzę…" : "Utwórz"}
+            {isLoading
+              ? (isEdit ? "Zapisuję…" : "Tworzę…")
+              : (isEdit ? "Zapisz" : "Utwórz")}
           </Text>
         </Flex>
       </Box>

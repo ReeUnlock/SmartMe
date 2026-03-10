@@ -15,9 +15,11 @@ export default function CalendarHeader({ currentMonth, onPrev, onNext }) {
         aria-label="Poprzedni miesi\u0105c"
         variant="ghost"
         size="sm"
-        color="sky.500"
+        color="#C9A0A8"
         onClick={onPrev}
         borderRadius="full"
+        _hover={{ bg: "#FFF3F6", color: "#E8879A" }}
+        transition="all 0.15s"
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
           <path
@@ -28,7 +30,7 @@ export default function CalendarHeader({ currentMonth, onPrev, onNext }) {
         </svg>
       </IconButton>
 
-      <Heading size="md" color="sky.600" fontWeight="600">
+      <Heading size="md" color="textSecondary" fontWeight="800" fontFamily="'Nunito', sans-serif">
         {displayLabel}
       </Heading>
 
@@ -36,9 +38,11 @@ export default function CalendarHeader({ currentMonth, onPrev, onNext }) {
         aria-label="Nast\u0119pny miesi\u0105c"
         variant="ghost"
         size="sm"
-        color="sky.500"
+        color="#C9A0A8"
         onClick={onNext}
         borderRadius="full"
+        _hover={{ bg: "#FFF3F6", color: "#E8879A" }}
+        transition="all 0.15s"
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
           <path

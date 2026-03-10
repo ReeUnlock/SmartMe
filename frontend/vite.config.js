@@ -12,4 +12,16 @@ export default defineConfig({
       interval: 1000,
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-chakra": ["@chakra-ui/react", "@emotion/react"],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-utils": ["zustand", "dayjs"],
+        },
+      },
+    },
+  },
 });

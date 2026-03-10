@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { Box, Flex, Text, Icon, Input, VStack, Spinner } from "@chakra-ui/react";
 import {
-  LuArrowLeft, LuPlus, LuTrash2, LuPencil, LuCheck, LuClock, LuTarget,
+  LuArrowLeft, LuPlus, LuTrash2, LuPencil, LuCheck, LuClock, LuTarget, LuWallet,
 } from "react-icons/lu";
 import {
   useGoal, useUpdateGoal, useDeleteGoal,
   useAddMilestone, useToggleMilestone, useDeleteMilestone,
 } from "../../hooks/usePlans";
+import useRewards from "../../hooks/useRewards";
+import useAchievements from "../../hooks/useAchievements";
+import useChallenges from "../../hooks/useChallenges";
+import useAvatarReaction from "../../hooks/useAvatarReaction";
 
 const CATEGORY_LABELS = {
   finanse: "Finanse",
@@ -17,6 +21,16 @@ const CATEGORY_LABELS = {
   inne: "Inne",
 };
 
+const GOAL_TYPE_LABELS = {
+  spending_limit: "Limit wydatków",
+  savings: "Oszczędności",
+};
+
+const MONTH_NAMES = [
+  "", "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
+  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
+];
+
 function daysUntil(deadline) {
   if (!deadline) return null;
   const now = new Date();
@@ -25,13 +39,16 @@ function daysUntil(deadline) {
   return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
 }
 
-export default function GoalDetail({ goalId, onBack }) {
+export default function GoalDetail({ goalId, onBack, onEdit }) {
   const { data: goal, isLoading } = useGoal(goalId);
   const updateGoal = useUpdateGoal();
   const deleteGoal = useDeleteGoal();
   const addMilestone = useAddMilestone();
   const toggleMilestone = useToggleMilestone();
   const deleteMilestone = useDeleteMilestone();
+  const addBonusSparks = useRewards((s) => s.addBonusSparks);
+  const trackProgress = useAchievements((s) => s.trackProgress);
+  const trackChallenge = useChallenges((s) => s.trackAction);
 
   const [newMilestone, setNewMilestone] = useState("");
   const [editingValue, setEditingValue] = useState(false);
@@ -45,11 +62,20 @@ export default function GoalDetail({ goalId, onBack }) {
     );
   }
 
+  const isSpendingLimit = goal.goal_type === "spending_limit";
   const milestonesDone = goal.milestones?.filter((m) => m.is_completed).length || 0;
   const milestonesTotal = goal.milestones?.length || 0;
 
   let progress = 0;
-  if (goal.target_value && goal.target_value > 0) {
+  let progressColor = "rose.400";
+  let progressBg = "rose.100";
+
+  if (isSpendingLimit && goal.target_value > 0) {
+    const spent = goal.computed_expense_total ?? 0;
+    progress = Math.min((spent / goal.target_value) * 100, 100);
+    progressColor = progress >= 90 ? "red.400" : progress >= 70 ? "orange.400" : "peach.400";
+    progressBg = "peach.100";
+  } else if (goal.target_value && goal.target_value > 0) {
     progress = Math.min((goal.current_value / goal.target_value) * 100, 100);
   } else if (milestonesTotal > 0) {
     progress = (milestonesDone / milestonesTotal) * 100;
@@ -60,29 +86,50 @@ export default function GoalDetail({ goalId, onBack }) {
   const handleAddMilestone = async (e) => {
     e.preventDefault();
     if (!newMilestone.trim()) return;
-    await addMilestone.mutateAsync({
-      goalId,
-      data: { title: newMilestone.trim(), sort_order: milestonesTotal },
-    });
-    setNewMilestone("");
+    try {
+      await addMilestone.mutateAsync({
+        goalId,
+        data: { title: newMilestone.trim(), sort_order: milestonesTotal },
+      });
+      setNewMilestone("");
+    } catch {
+      // mutation error handled by TanStack Query
+    }
   };
 
   const handleUpdateValue = async () => {
     const val = parseFloat(currentVal);
     if (isNaN(val)) return;
-    await updateGoal.mutateAsync({ id: goalId, data: { current_value: val } });
-    setEditingValue(false);
+    try {
+      await updateGoal.mutateAsync({ id: goalId, data: { current_value: val } });
+      setEditingValue(false);
+    } catch {
+      // mutation error handled by TanStack Query
+    }
   };
 
   const handleToggleComplete = async () => {
-    await updateGoal.mutateAsync({
-      id: goalId,
-      data: { is_completed: !goal.is_completed },
-    });
+    const willComplete = !goal.is_completed;
+    try {
+      await updateGoal.mutateAsync({
+        id: goalId,
+        data: { is_completed: willComplete },
+      });
+      if (willComplete) {
+        trackProgress("goals_completed", 1, addBonusSparks);
+        trackChallenge("goal_complete", addBonusSparks);
+        useAvatarReaction.getState().react("goal_completed");
+      }
+    } catch {
+      // mutation error handled by TanStack Query
+    }
   };
 
+  const now = new Date();
+  const currentMonthName = MONTH_NAMES[now.getMonth() + 1];
+
   return (
-    <Box>
+    <Box className="sm-slide-right">
       {/* Header */}
       <Flex align="center" gap={3} mb={5}>
         <Icon
@@ -90,7 +137,7 @@ export default function GoalDetail({ goalId, onBack }) {
           boxSize={5}
           color="gray.500"
           cursor="pointer"
-          _hover={{ color: "gray.700" }}
+          _hover={{ color: "textSecondary" }}
           onClick={onBack}
         />
         <Box flex={1}>
@@ -98,6 +145,16 @@ export default function GoalDetail({ goalId, onBack }) {
             {goal.title}
           </Text>
           <Flex gap={2} align="center" flexWrap="wrap">
+            {goal.goal_type !== "manual" && (
+              <Text fontSize="xs" color={isSpendingLimit ? "peach.500" : "rose.400"} fontWeight="600">
+                {GOAL_TYPE_LABELS[goal.goal_type]}
+              </Text>
+            )}
+            {goal.linked_category_name && (
+              <Text fontSize="xs" color="gray.400">
+                {"· "}{goal.linked_category_name}
+              </Text>
+            )}
             {goal.category && (
               <Text fontSize="xs" color="rose.400">
                 {CATEGORY_LABELS[goal.category] || goal.category}
@@ -117,6 +174,16 @@ export default function GoalDetail({ goalId, onBack }) {
             )}
           </Flex>
         </Box>
+
+        <Icon
+          as={LuPencil}
+          boxSize={4.5}
+          color="gray.400"
+          cursor="pointer"
+          _hover={{ color: "rose.400" }}
+          transition="color 0.2s"
+          onClick={() => onEdit(goal)}
+        />
 
         <Flex
           align="center"
@@ -144,11 +211,56 @@ export default function GoalDetail({ goalId, onBack }) {
         </Text>
       )}
 
-      {/* Progress section */}
-      {goal.target_value > 0 && (
+      {/* Spending limit progress section */}
+      {isSpendingLimit && goal.target_value > 0 && (
         <Box
           bg="white"
-          borderRadius="xl"
+          borderRadius="2xl"
+          borderWidth="1px"
+          borderColor={progress >= 90 ? "red.100" : "peach.100"}
+          p={4}
+          mb={4}
+        >
+          <Flex justify="space-between" align="center" mb={2}>
+            <Flex align="center" gap={2}>
+              <Icon as={LuWallet} boxSize={4} color="peach.500" />
+              <Text fontSize="sm" fontWeight="600" color="gray.600">
+                {"Wydatki — "}{currentMonthName}
+              </Text>
+            </Flex>
+            <Text fontSize="lg" fontWeight="700" color={progressColor}>
+              {Math.round(progress)}%
+            </Text>
+          </Flex>
+
+          <Box bg={progressBg} borderRadius="full" h="8px" overflow="hidden" mb={3}>
+            <Box
+              bg={progress >= 100 ? "red.400" : progressColor}
+              h="100%"
+              borderRadius="full"
+              w={`${progress}%`}
+              transition="width 0.4s ease"
+            />
+          </Box>
+
+          <Flex justify="space-between" align="center">
+            <Text fontSize="sm" color="gray.600">
+              {Math.round(goal.computed_expense_total ?? 0)} / {Math.round(goal.target_value)} {"zł"}
+            </Text>
+            {goal.target_value > (goal.computed_expense_total ?? 0) && (
+              <Text fontSize="xs" color="gray.400">
+                {"Zostało "}{Math.round(goal.target_value - (goal.computed_expense_total ?? 0))} {"zł"}
+              </Text>
+            )}
+          </Flex>
+        </Box>
+      )}
+
+      {/* Manual / savings progress section */}
+      {!isSpendingLimit && goal.target_value > 0 && (
+        <Box
+          bg="white"
+          borderRadius="2xl"
           borderWidth="1px"
           borderColor="gray.100"
           p={4}
@@ -222,7 +334,7 @@ export default function GoalDetail({ goalId, onBack }) {
       {/* Milestones */}
       <Box
         bg="white"
-        borderRadius="xl"
+        borderRadius="2xl"
         borderWidth="1px"
         borderColor="gray.100"
         p={4}
@@ -254,7 +366,7 @@ export default function GoalDetail({ goalId, onBack }) {
                 cursor="pointer"
                 transition="all 0.2s"
                 flexShrink={0}
-                onClick={() => toggleMilestone.mutateAsync(ms.id)}
+                onClick={() => toggleMilestone.mutate(ms.id)}
               >
                 {ms.is_completed && (
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
@@ -265,7 +377,7 @@ export default function GoalDetail({ goalId, onBack }) {
               <Text
                 flex={1}
                 fontSize="sm"
-                color={ms.is_completed ? "gray.400" : "gray.700"}
+                color={ms.is_completed ? "gray.400" : "textPrimary"}
                 textDecoration={ms.is_completed ? "line-through" : "none"}
               >
                 {ms.title}
@@ -276,7 +388,7 @@ export default function GoalDetail({ goalId, onBack }) {
                 color="gray.300"
                 cursor="pointer"
                 _hover={{ color: "red.400" }}
-                onClick={() => deleteMilestone.mutateAsync(ms.id)}
+                onClick={() => deleteMilestone.mutate(ms.id)}
               />
             </Flex>
           ))}

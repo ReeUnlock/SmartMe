@@ -89,9 +89,9 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
               py={1.5}
               borderRadius="full"
               cursor="pointer"
-              bg={category === cat.value ? "rose.400" : "rose.50"}
+              bg={category === cat.value ? "rose.300" : "rose.50"}
               color={category === cat.value ? "white" : "rose.500"}
-              _hover={{ bg: category === cat.value ? "rose.500" : "rose.100" }}
+              _hover={{ bg: category === cat.value ? "rose.400" : "rose.100" }}
               transition="all 0.2s"
               onClick={() => setCategory(category === cat.value ? "" : cat.value)}
             >
@@ -110,22 +110,22 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
             cursor="pointer"
             px={4}
             py={2}
-            _hover={{ color: "gray.700" }}
+            _hover={{ color: "textSecondary" }}
           >
             {"Anuluj"}
           </Text>
           <Text
             as="button"
             type="submit"
-            bg="rose.400"
+            bg="rose.300"
             color="white"
             fontWeight="600"
             px={5}
             py={2}
-            borderRadius="lg"
+            borderRadius="xl"
             cursor="pointer"
             opacity={!title.trim() || isLoading ? 0.5 : 1}
-            _hover={{ bg: "rose.500" }}
+            _hover={{ bg: "rose.400" }}
           >
             {isLoading ? "Dodaję…" : "Dodaj"}
           </Text>

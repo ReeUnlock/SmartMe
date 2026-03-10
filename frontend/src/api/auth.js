@@ -22,6 +22,23 @@ export function getMe() {
   return apiFetch("/auth/me");
 }
 
-export function resetAccount() {
-  return apiFetch("/auth/reset", { method: "DELETE" });
+export function changePassword(currentPassword, newPassword) {
+  return apiFetch("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+}
+
+export function completeOnboarding() {
+  return apiFetch("/auth/complete-onboarding", { method: "POST" });
+}
+
+export function resetAccount(password) {
+  return apiFetch("/auth/reset", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
 }

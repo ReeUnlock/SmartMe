@@ -38,7 +38,7 @@ function PieChart({ data }) {
           <path key={i} d={s.path} fill={s.category_color || "#9CA3AF"} opacity={0.85} />
         ))}
         <circle cx={cx} cy={cy} r={35} fill="white" />
-        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="14" fontWeight="700" fill="#374151">
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="14" fontWeight="700" fill="#3B4A63">
           {total.toFixed(0)}
         </text>
         <text x={cx} y={cy + 10} textAnchor="middle" fontSize="10" fill="#9CA3AF">
@@ -98,9 +98,9 @@ function BudgetProgress({ total, budget, recurring }) {
   const warning = pct >= 80;
 
   return (
-    <Box bg="white" borderRadius="xl" p={4} shadow="xs" border="1px solid" borderColor="gray.100">
+    <Box bg="white" borderRadius="2xl" p={4} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100">
       <Flex justify="space-between" mb={2}>
-        <Text fontSize="sm" fontWeight="600" color="gray.700">Budżet miesięczny</Text>
+        <Text fontSize="sm" fontWeight="600" color="textSecondary">Budżet miesięczny</Text>
         <Text fontSize="sm" fontWeight="700" color={overBudget ? "red.500" : warning ? "orange.500" : "green.500"}>
           {spent.toFixed(0)} / {budget.toFixed(0)} zł
         </Text>
@@ -128,12 +128,12 @@ function BudgetProgress({ total, budget, recurring }) {
 
 function StatCard({ icon, label, value, color = "peach.500" }) {
   return (
-    <Box bg="white" borderRadius="xl" p={3} shadow="xs" border="1px solid" borderColor="gray.100" flex={1}>
+    <Box bg="white" borderRadius="2xl" p={3} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100" flex={1}>
       <Flex align="center" gap={2} mb={1}>
         <Icon as={icon} boxSize={4} color={color} />
         <Text fontSize="xs" color="gray.500">{label}</Text>
       </Flex>
-      <Text fontSize="lg" fontWeight="700" color="gray.800">{value}</Text>
+      <Text fontSize="lg" fontWeight="700" color="textPrimary">{value}</Text>
     </Box>
   );
 }
@@ -176,7 +176,7 @@ export default function ExpensesDashboard({ year, month }) {
             boxSize={5}
             color={comparison.diff_total > 0 ? "red.500" : "green.500"}
           />
-          <Text fontSize="sm" color="gray.700">
+          <Text fontSize="sm" color="textSecondary">
             {comparison.diff_total > 0 ? "Więcej" : "Mniej"} o{" "}
             <Text as="span" fontWeight="700">
               {Math.abs(comparison.diff_total).toFixed(0)} zł
@@ -198,26 +198,26 @@ export default function ExpensesDashboard({ year, month }) {
 
       {/* Category pie chart */}
       {summary.by_category.length > 0 && (
-        <Box bg="white" borderRadius="xl" p={4} shadow="xs" border="1px solid" borderColor="gray.100">
-          <Text fontSize="sm" fontWeight="600" color="gray.700" mb={3}>Podział na kategorie</Text>
+        <Box bg="white" borderRadius="2xl" p={4} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100">
+          <Text fontSize="sm" fontWeight="600" color="textSecondary" mb={3}>Podział na kategorie</Text>
           <PieChart data={summary.by_category} />
         </Box>
       )}
 
       {/* Daily bar chart */}
       {summary.daily.length > 0 && (
-        <Box bg="white" borderRadius="xl" p={4} shadow="xs" border="1px solid" borderColor="gray.100">
-          <Text fontSize="sm" fontWeight="600" color="gray.700" mb={3}>Wydatki dzienne</Text>
+        <Box bg="white" borderRadius="2xl" p={4} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100">
+          <Text fontSize="sm" fontWeight="600" color="textSecondary" mb={3}>Wydatki dzienne</Text>
           <BarChart data={summary.daily} />
         </Box>
       )}
 
       {/* By member */}
       {summary.by_member.length > 0 && (
-        <Box bg="white" borderRadius="xl" p={4} shadow="xs" border="1px solid" borderColor="gray.100">
+        <Box bg="white" borderRadius="2xl" p={4} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100">
           <Flex align="center" gap={2} mb={3}>
             <Icon as={LuUsers} boxSize={4} color="peach.500" />
-            <Text fontSize="sm" fontWeight="600" color="gray.700">Kto płacił</Text>
+            <Text fontSize="sm" fontWeight="600" color="textSecondary">Kto płacił</Text>
           </Flex>
           <VStack gap={2} align="stretch">
             {summary.by_member.map((m, i) => {
@@ -226,7 +226,7 @@ export default function ExpensesDashboard({ year, month }) {
                 <Box key={i}>
                   <Flex justify="space-between" mb={1}>
                     <Text fontSize="sm" color="gray.600">{m.member_name}</Text>
-                    <Text fontSize="sm" fontWeight="600" color="gray.700">
+                    <Text fontSize="sm" fontWeight="600" color="textSecondary">
                       {m.total.toFixed(0)} zł ({pct.toFixed(0)}%)
                     </Text>
                   </Flex>

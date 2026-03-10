@@ -1,12 +1,15 @@
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getExpenses, createExpense, updateExpense, deleteExpense,
   getExpenseCategories,
   getMembers, createMember, updateMember, deleteMember,
-  getRecurring, createRecurring, updateRecurring, deleteRecurring,
+  getRecurring, createRecurring, updateRecurring, deleteRecurring, generateRecurring,
   getBudget, setBudget,
   getSummary, getComparison,
 } from "../api/expenses";
+import useExpenseUndo from "./useExpenseUndo";
+import { useSuccessToast } from "../components/common/SuccessToast";
 
 const KEYS = {
   expenses: "expenses",
@@ -35,6 +38,7 @@ export function useCreateExpense() {
       qc.invalidateQueries({ queryKey: [KEYS.expenses] });
       qc.invalidateQueries({ queryKey: [KEYS.summary] });
       qc.invalidateQueries({ queryKey: [KEYS.comparison] });
+      useSuccessToast.getState().show("Wydatek dodany");
     },
   });
 }
@@ -149,6 +153,18 @@ export function useDeleteRecurring() {
   });
 }
 
+export function useGenerateRecurring() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: generateRecurring,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEYS.expenses] });
+      qc.invalidateQueries({ queryKey: [KEYS.summary] });
+      qc.invalidateQueries({ queryKey: [KEYS.recurring] });
+    },
+  });
+}
+
 // ─── Budget ─────────────────────────────────────────────────
 
 export function useBudget(year, month) {
@@ -186,4 +202,39 @@ export function useComparison(year, month) {
     queryFn: () => getComparison(year, month),
     enabled: !!year && !!month,
   });
+}
+
+// ─── Undo ────────────────────────────────────────────────────
+
+function invalidateExpenseQueries(qc) {
+  qc.invalidateQueries({ queryKey: [KEYS.expenses] });
+  qc.invalidateQueries({ queryKey: [KEYS.summary] });
+  qc.invalidateQueries({ queryKey: [KEYS.comparison] });
+}
+
+export function useUndoExpense() {
+  const qc = useQueryClient();
+  const pop = useExpenseUndo((s) => s.pop);
+
+  return useCallback(async () => {
+    const action = pop();
+    if (!action) return null;
+
+    try {
+      if (action.type === "create") {
+        await deleteExpense(action.expense.id);
+      } else if (action.type === "delete") {
+        const { id, category, paid_by, ...data } = action.expense;
+        await createExpense(data);
+      } else if (action.type === "update") {
+        const { id, category, paid_by, ...data } = action.prev;
+        await updateExpense(action.expense.id, data);
+      }
+      invalidateExpenseQueries(qc);
+      return action;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Undo failed:", err);
+      return null;
+    }
+  }, [qc, pop]);
 }

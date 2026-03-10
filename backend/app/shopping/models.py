@@ -12,6 +12,7 @@ class ShoppingList(Base, TimestampMixin):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
+    store_name = Column(String(100), nullable=True)
     is_completed = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 

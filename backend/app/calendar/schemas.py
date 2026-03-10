@@ -1,7 +1,18 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from dateutil.rrule import rrulestr
+from pydantic import BaseModel, Field, field_validator
+
+
+def _validate_rrule(value: str | None) -> str | None:
+    if value is None:
+        return None
+    try:
+        rrulestr(value, ignoretz=True)
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Nieprawidłowy format RRULE: {e}")
+    return value
 
 
 class EventCreate(BaseModel):
@@ -11,10 +22,15 @@ class EventCreate(BaseModel):
     all_day: bool = False
     description: Optional[str] = None
     color: Optional[str] = Field(default=None, max_length=20)
-    icon: Optional[str] = Field(default=None, max_length=10)
+    icon: Optional[str] = Field(default=None, max_length=30)
     category: Optional[str] = Field(default=None, max_length=50)
     location: Optional[str] = Field(default=None, max_length=255)
     rrule: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("rrule")
+    @classmethod
+    def validate_rrule(cls, v):
+        return _validate_rrule(v)
 
 
 class EventUpdate(BaseModel):
@@ -24,10 +40,15 @@ class EventUpdate(BaseModel):
     all_day: Optional[bool] = None
     description: Optional[str] = None
     color: Optional[str] = Field(default=None, max_length=20)
-    icon: Optional[str] = Field(default=None, max_length=10)
+    icon: Optional[str] = Field(default=None, max_length=30)
     category: Optional[str] = Field(default=None, max_length=50)
     location: Optional[str] = Field(default=None, max_length=255)
     rrule: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("rrule")
+    @classmethod
+    def validate_rrule(cls, v):
+        return _validate_rrule(v)
 
 
 class EventOut(BaseModel):

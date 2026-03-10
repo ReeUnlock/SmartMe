@@ -95,6 +95,13 @@ export function deleteRecurring(id) {
   return apiFetch(`/expenses/recurring/${id}`, { method: "DELETE" });
 }
 
+export function generateRecurring(data) {
+  return apiFetch("/expenses/recurring/generate", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 // ─── Budget ─────────────────────────────────────────────────
 
 export function getBudget(year, month) {

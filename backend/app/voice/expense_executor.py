@@ -7,6 +7,7 @@ from app.auth.models import User
 from app.expenses.models import (
     Expense, ExpenseCategory, HouseholdMember, RecurringExpense, MonthlyBudget,
 )
+from app.shopping.models import ShoppingList
 from app.voice.schemas import VoiceConfirmAction
 
 logger = logging.getLogger(__name__)
@@ -225,4 +226,122 @@ def execute_list_expenses(db: Session, user: User, action: VoiceConfirmAction) -
             }
             for e in expenses
         ],
+    }
+
+
+def execute_generate_recurring_expenses(db: Session, user: User, action: VoiceConfirmAction) -> dict:
+    """Generate recurring expenses for a given month via voice command."""
+    from app.expenses.router import generate_recurring_expenses
+
+    today = date.today()
+    year = action.budget_year or today.year
+    month = action.budget_month or today.month
+
+    created, skipped = generate_recurring_expenses(db, user.id, year, month)
+
+    MONTH_NAMES = [
+        "", "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
+        "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
+    ]
+
+    logger.info(f"Voice: generated {len(created)} recurring expenses for {year}-{month:02d}")
+    return {
+        "generated": len(created),
+        "skipped": skipped,
+        "year": year,
+        "month": month,
+        "month_name": MONTH_NAMES[month],
+        "total": round(sum(e.amount for e in created), 2),
+    }
+
+
+def execute_save_shopping_as_expense(db: Session, user: User, action: VoiceConfirmAction) -> dict:
+    """Create an expense from a shopping list via voice command."""
+    _ensure_defaults(db, user)
+
+    if not action.amount or action.amount <= 0:
+        raise ValueError("Brak kwoty wydatku za zakupy.")
+
+    # Find shopping list by name (fuzzy match) or use most recently updated
+    sl = None
+    if action.list_name:
+        sl = (
+            db.query(ShoppingList)
+            .filter(
+                ShoppingList.user_id == user.id,
+                ShoppingList.name.ilike(f"%{action.list_name}%"),
+            )
+            .order_by(ShoppingList.updated_at.desc())
+            .first()
+        )
+        if not sl:
+            # Try matching store_name
+            sl = (
+                db.query(ShoppingList)
+                .filter(
+                    ShoppingList.user_id == user.id,
+                    ShoppingList.store_name.ilike(f"%{action.list_name}%"),
+                )
+                .order_by(ShoppingList.updated_at.desc())
+                .first()
+            )
+
+    if not sl:
+        # Fallback: most recently updated list
+        sl = (
+            db.query(ShoppingList)
+            .filter(ShoppingList.user_id == user.id)
+            .order_by(ShoppingList.updated_at.desc())
+            .first()
+        )
+
+    if not sl:
+        raise ValueError("Nie znaleziono żadnej listy zakupów.")
+
+    # Build description
+    store = (sl.store_name or "").strip()
+    name = (sl.name or "").strip()
+    if store and name and store.lower() != name.lower():
+        description = f"Zakupy: {store} \u2014 {name}"
+    elif store:
+        description = f"Zakupy: {store}"
+    elif name:
+        description = f"Zakupy: {name}"
+    else:
+        description = "Zakupy"
+
+    # Resolve date
+    expense_date = date.today()
+    if action.expense_date:
+        try:
+            expense_date = date.fromisoformat(action.expense_date)
+        except ValueError:
+            pass
+
+    # Default category = Jedzenie
+    category_id = _resolve_category(db, user, "Jedzenie")
+
+    expense = Expense(
+        amount=action.amount,
+        description=description,
+        date=expense_date,
+        is_shared=action.is_shared or False,
+        category_id=category_id,
+        paid_by_id=None,
+        user_id=user.id,
+        source="shopping_list",
+        source_id=sl.id,
+    )
+    db.add(expense)
+    db.commit()
+    db.refresh(expense)
+
+    logger.info(f"Voice: saved shopping list '{sl.name}' as expense {expense.amount} zł (id={expense.id})")
+    return {
+        "id": expense.id,
+        "amount": expense.amount,
+        "description": description,
+        "date": str(expense.date),
+        "list_name": sl.name,
+        "list_id": sl.id,
     }

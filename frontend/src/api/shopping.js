@@ -52,6 +52,13 @@ export function deleteItem(id) {
   return apiFetch(`/shopping/items/${id}`, { method: "DELETE" });
 }
 
+export function reorderItems(listId, items) {
+  return apiFetch(`/shopping/lists/${listId}/reorder`, {
+    method: "PUT",
+    body: JSON.stringify(items),
+  });
+}
+
 // ─── Categories ────────────────────────────────────
 
 export function getCategories() {
@@ -60,6 +67,15 @@ export function getCategories() {
 
 export function createCategory(data) {
   return apiFetch("/shopping/categories", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Shopping → Expense bridge ─────────────────────
+
+export function saveListAsExpense(listId, data) {
+  return apiFetch(`/shopping/lists/${listId}/to-expense`, {
     method: "POST",
     body: JSON.stringify(data),
   });

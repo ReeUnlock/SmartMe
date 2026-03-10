@@ -15,6 +15,7 @@ from app.voice.router import router as voice_router
 from app.shopping.router import router as shopping_router
 from app.expenses.router import router as expenses_router
 from app.plans.router import router as plans_router
+from app.feedback.router import router as feedback_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ app.include_router(voice_router)
 app.include_router(shopping_router)
 app.include_router(expenses_router)
 app.include_router(plans_router)
+app.include_router(feedback_router)
 
 
 @app.exception_handler(Exception)

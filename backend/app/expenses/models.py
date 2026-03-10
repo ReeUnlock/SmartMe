@@ -43,6 +43,9 @@ class Expense(Base, TimestampMixin):
         Index("ix_expenses_user_id", "user_id"),
         Index("ix_expenses_date", "date"),
         Index("ix_expenses_user_date", "user_id", "date"),
+        Index("ix_expenses_source", "source", "source_id"),
+        Index("ix_expenses_recurring_id", "recurring_id"),
+        Index("ix_expenses_user_category_date", "user_id", "category_id", "date"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -53,6 +56,9 @@ class Expense(Base, TimestampMixin):
     category_id = Column(Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"), nullable=True)
     paid_by_id = Column(Integer, ForeignKey("household_members.id", ondelete="SET NULL"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    source = Column(String(50), nullable=True)
+    source_id = Column(Integer, nullable=True)
+    recurring_id = Column(Integer, nullable=True)
 
     category = relationship("ExpenseCategory", back_populates="expenses")
     paid_by = relationship("HouseholdMember", back_populates="expenses")

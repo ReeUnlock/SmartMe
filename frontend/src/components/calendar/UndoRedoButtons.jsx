@@ -39,11 +39,11 @@ export default function UndoRedoButtons() {
   };
 
   const safeDelete = async (id) => {
-    try { await deleteEvent(id); } catch (e) { console.warn("Undo delete skipped:", id, e.message); }
+    try { await deleteEvent(id); } catch (e) { if (import.meta.env.DEV) console.warn("Undo delete skipped:", id, e.message); }
   };
 
   const safeCreate = async (data) => {
-    try { await createEvent(data); } catch (e) { console.warn("Undo create skipped:", e.message); }
+    try { await createEvent(data); } catch (e) { if (import.meta.env.DEV) console.warn("Undo create skipped:", e.message); }
   };
 
   const handleUndo = async () => {
@@ -67,7 +67,7 @@ export default function UndoRedoButtons() {
       }
       invalidate();
     } catch (e) {
-      console.error("Undo failed:", e);
+      if (import.meta.env.DEV) console.error("Undo failed:", e);
     }
   };
 
@@ -92,14 +92,14 @@ export default function UndoRedoButtons() {
       }
       invalidate();
     } catch (e) {
-      console.error("Redo failed:", e);
+      if (import.meta.env.DEV) console.error("Redo failed:", e);
     }
   };
 
   return (
     <Flex
       position="fixed"
-      bottom={{ base: "90px", md: "24px" }}
+      bottom={{ base: "calc(80px + env(safe-area-inset-bottom, 0px))", md: "24px" }}
       left="50%"
       transform="translateX(-50%)"
       gap="2"
@@ -107,48 +107,48 @@ export default function UndoRedoButtons() {
     >
       <Box
         as="button"
-        w="40px"
-        h="40px"
+        w="44px"
+        h="44px"
         borderRadius="full"
-        bg={canUndo ? "white" : "gray.100"}
-        color={canUndo ? "sky.500" : "gray.300"}
-        shadow={canUndo ? "0 2px 8px 0 rgba(0,0,0,0.1)" : "none"}
+        bg={canUndo ? "white" : "gray.50"}
+        color={canUndo ? "#FF8FA3" : "gray.300"}
+        shadow={canUndo ? "0 2px 12px 0 rgba(0,0,0,0.08), 0 1px 3px 0 rgba(0,0,0,0.04)" : "none"}
         display="flex"
         alignItems="center"
         justifyContent="center"
-        _hover={canUndo ? { bg: "sky.50", transform: "scale(1.05)" } : {}}
-        _active={canUndo ? { transform: "scale(0.95)" } : {}}
-        transition="all 0.15s"
+        _hover={canUndo ? { bg: "#FFF3F6", transform: "scale(1.06)" } : {}}
+        _active={canUndo ? { transform: "scale(0.94)" } : {}}
+        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
         cursor={canUndo ? "pointer" : "not-allowed"}
         disabled={!canUndo}
         onClick={handleUndo}
         aria-label="Cofnij"
         border="1px solid"
-        borderColor={canUndo ? "gray.200" : "gray.100"}
+        borderColor={canUndo ? "#F5E6EA" : "gray.100"}
       >
         <UndoIcon />
       </Box>
 
       <Box
         as="button"
-        w="40px"
-        h="40px"
+        w="44px"
+        h="44px"
         borderRadius="full"
-        bg={canRedo ? "white" : "gray.100"}
-        color={canRedo ? "sky.500" : "gray.300"}
-        shadow={canRedo ? "0 2px 8px 0 rgba(0,0,0,0.1)" : "none"}
+        bg={canRedo ? "white" : "gray.50"}
+        color={canRedo ? "#FF8FA3" : "gray.300"}
+        shadow={canRedo ? "0 2px 12px 0 rgba(0,0,0,0.08), 0 1px 3px 0 rgba(0,0,0,0.04)" : "none"}
         display="flex"
         alignItems="center"
         justifyContent="center"
-        _hover={canRedo ? { bg: "sky.50", transform: "scale(1.05)" } : {}}
-        _active={canRedo ? { transform: "scale(0.95)" } : {}}
-        transition="all 0.15s"
+        _hover={canRedo ? { bg: "#FFF3F6", transform: "scale(1.06)" } : {}}
+        _active={canRedo ? { transform: "scale(0.94)" } : {}}
+        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
         cursor={canRedo ? "pointer" : "not-allowed"}
         disabled={!canRedo}
         onClick={handleRedo}
         aria-label="Ponów"
         border="1px solid"
-        borderColor={canRedo ? "gray.200" : "gray.100"}
+        borderColor={canRedo ? "#F5E6EA" : "gray.100"}
       >
         <RedoIcon />
       </Box>

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scp -r frontend/src frontend/index.html frontend/package.json frontend/vite.config.js frontend/Dockerfile root@89.167.123.192:/opt/anelka/frontend/)",
+      "Bash(curl -s http://smartme.rafaldebski.com/api/health)",
+      "Bash(curl -sI http://smartme.rafaldebski.com/)",
+      "Bash(curl -sk https://smartme.rafaldebski.com/api/auth/status)",
+      "Bash(curl -sk https://smartme.rafaldebski.com/)",
+      "Bash(curl -sk https://smartme.rafaldebski.com/api/health)",
+      "Read(//c/Users/Rafa/pro/anelka/**)",
+      "Bash(openssl s_client -connect smartme.rafaldebski.com:443 -servername smartme.rafaldebski.com)",
+      "Bash(openssl x509 -noout -dates -subject 2)",
+      "Bash(1 echo \"=== Security Headers ===\" curl -skI https://smartme.rafaldebski.com/)"
+    ]
+  }
+}

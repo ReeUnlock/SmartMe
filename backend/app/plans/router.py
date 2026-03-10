@@ -1,6 +1,8 @@
 from datetime import date, timedelta
+from calendar import monthrange
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -13,8 +15,58 @@ from app.plans.schemas import (
     BucketItemCreate, BucketItemUpdate, BucketItemOut,
     PlansSummaryOut,
 )
+from app.expenses.models import Expense, ExpenseCategory
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
+
+
+def _enrich_goals_with_expenses(db: Session, user_id: int, goals: list[Goal]) -> list[dict]:
+    """For spending_limit goals, compute current month expense totals and attach to output."""
+    spending_goals = [g for g in goals if g.goal_type == "spending_limit" and g.linked_category_id]
+
+    # Batch-load expense totals for all spending_limit categories in one query
+    expense_totals: dict[int, float] = {}
+    category_names: dict[int, str] = {}
+
+    if spending_goals:
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        month_end = date(today.year, today.month, monthrange(today.year, today.month)[1])
+
+        cat_ids = list({g.linked_category_id for g in spending_goals})
+
+        # Sum expenses per category for current month
+        rows = (
+            db.query(Expense.category_id, func.coalesce(func.sum(Expense.amount), 0.0))
+            .filter(
+                Expense.user_id == user_id,
+                Expense.category_id.in_(cat_ids),
+                Expense.date >= month_start,
+                Expense.date <= month_end,
+            )
+            .group_by(Expense.category_id)
+            .all()
+        )
+        expense_totals = {cat_id: round(total, 2) for cat_id, total in rows}
+
+        # Load category names
+        cats = (
+            db.query(ExpenseCategory.id, ExpenseCategory.name)
+            .filter(ExpenseCategory.id.in_(cat_ids))
+            .all()
+        )
+        category_names = {cat_id: name for cat_id, name in cats}
+
+    results = []
+    for goal in goals:
+        data = GoalOut.model_validate(goal).model_dump()
+        if goal.goal_type == "spending_limit" and goal.linked_category_id:
+            data["computed_expense_total"] = expense_totals.get(goal.linked_category_id, 0.0)
+            data["linked_category_name"] = category_names.get(goal.linked_category_id)
+        elif goal.linked_category_id:
+            data["linked_category_name"] = category_names.get(goal.linked_category_id)
+        results.append(data)
+    return results
 
 
 # ─── Summary / Integration ───────────────────────────────────────
@@ -52,15 +104,20 @@ def get_summary(
 
 @router.get("/goals", response_model=list[GoalOut])
 def list_goals(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(200, ge=1, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
+    goals = (
         db.query(Goal)
         .filter(Goal.user_id == current_user.id)
         .order_by(Goal.is_completed, Goal.sort_order, Goal.created_at.desc())
+        .offset(skip)
+        .limit(limit)
         .all()
     )
+    return _enrich_goals_with_expenses(db, current_user.id, goals)
 
 
 @router.post("/goals", response_model=GoalOut, status_code=status.HTTP_201_CREATED)
@@ -73,7 +130,7 @@ def create_goal(
     db.add(goal)
     db.commit()
     db.refresh(goal)
-    return goal
+    return _enrich_goals_with_expenses(db, current_user.id, [goal])[0]
 
 
 @router.get("/goals/{goal_id}", response_model=GoalOut)
@@ -89,7 +146,7 @@ def get_goal(
     )
     if not goal:
         raise HTTPException(status_code=404, detail="Cel nie został znaleziony.")
-    return goal
+    return _enrich_goals_with_expenses(db, current_user.id, [goal])[0]
 
 
 @router.put("/goals/{goal_id}", response_model=GoalOut)
@@ -110,7 +167,7 @@ def update_goal(
         setattr(goal, field, value)
     db.commit()
     db.refresh(goal)
-    return goal
+    return _enrich_goals_with_expenses(db, current_user.id, [goal])[0]
 
 
 @router.delete("/goals/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)

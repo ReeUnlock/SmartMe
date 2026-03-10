@@ -1,109 +1,283 @@
-import { Box, Flex, Icon, Text, SimpleGrid } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom";
-import {
-  LuCalendar,
-  LuShoppingCart,
-  LuWallet,
-  LuTarget,
-} from "react-icons/lu";
-import AffirmationCloud from "./AffirmationCloud";
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react";
+import { Box, Flex } from "@chakra-ui/react";
+import DashboardGreeting from "../dashboard/DashboardGreeting";
+import TodayWidget from "../dashboard/TodayWidget";
+import MoodCheck from "../dashboard/MoodCheck";
+import GoalsWidget from "../dashboard/GoalsWidget";
+import BudgetWidget from "../dashboard/BudgetWidget";
+import ShoppingWidget from "../dashboard/ShoppingWidget";
+import useRewards from "../../hooks/useRewards";
+import useAchievements from "../../hooks/useAchievements";
+import useAvatarReaction from "../../hooks/useAvatarReaction";
+import { getNewlyUnlockedAvatars } from "../affirmation/avatarConfig";
 
-const modules = [
-  {
-    path: "/kalendarz",
-    label: "Kalendarz",
-    icon: LuCalendar,
-    color: "#339AF0",
-    bg: "#E7F5FF",
-    borderColor: "#A5D8FF",
-  },
-  {
-    path: "/zakupy",
-    label: "Zakupy",
-    icon: LuShoppingCart,
-    color: "#20C997",
-    bg: "#E6FCF5",
-    borderColor: "#96F2D7",
-  },
-  {
-    path: "/wydatki",
-    label: "Wydatki",
-    icon: LuWallet,
-    color: "#F47340",
-    bg: "#FFF4ED",
-    borderColor: "#FDD0B1",
-  },
-  {
-    path: "/plany",
-    label: "Plany",
-    icon: LuTarget,
-    color: "#E64980",
-    bg: "#FFF0F7",
-    borderColor: "#FCC2D7",
-  },
-];
+// Lazy-load below-fold and heavy components
+const AffirmationAvatar = lazy(() => import("../affirmation/AffirmationAvatar"));
+const ChallengesWidget = lazy(() => import("../dashboard/ChallengesWidget"));
+const AttentionWidget = lazy(() => import("../dashboard/AttentionWidget"));
 
-export default function DashboardPage() {
-  const navigate = useNavigate();
+const TILE_COMPONENTS = {
+  goals: GoalsWidget,
+  budget: BudgetWidget,
+  shopping: ShoppingWidget,
+};
+
+const DEFAULT_ORDER = ["goals", "budget", "shopping"];
+const STORAGE_KEY = "smartme_tile_order";
+
+function loadOrder() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (
+        Array.isArray(parsed) &&
+        parsed.length === DEFAULT_ORDER.length &&
+        DEFAULT_ORDER.every((k) => parsed.includes(k))
+      ) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return DEFAULT_ORDER;
+}
+
+function FadeIn({ delay = 0, children }) {
+  return (
+    <Box
+      className="sm-dashboard-fade"
+      style={{
+        animation: `dashFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) ${delay}s both`,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+function ReorderableTiles() {
+  const [order, setOrder] = useState(loadOrder);
+  const [dragging, setDragging] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+  const longPressTimer = useRef(null);
+  const touchStartPos = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  }, [order]);
+
+  const startDrag = useCallback((idx) => {
+    setDragging(idx);
+  }, []);
+
+  const handleDrop = useCallback(
+    (targetIdx) => {
+      if (dragging === null || dragging === targetIdx) {
+        setDragging(null);
+        setOverIdx(null);
+        return;
+      }
+      setOrder((prev) => {
+        const next = [...prev];
+        const [item] = next.splice(dragging, 1);
+        next.splice(targetIdx, 0, item);
+        return next;
+      });
+      setDragging(null);
+      setOverIdx(null);
+    },
+    [dragging]
+  );
+
+  const handleTouchStart = useCallback(
+    (idx, e) => {
+      touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      longPressTimer.current = setTimeout(() => {
+        startDrag(idx);
+      }, 500);
+    },
+    [startDrag]
+  );
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (longPressTimer.current && touchStartPos.current) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartPos.current.x);
+        const dy = Math.abs(e.touches[0].clientY - touchStartPos.current.y);
+        if (dx > 10 || dy > 10) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }
+      if (dragging === null) return;
+      const touch = e.touches[0];
+      const elements = document.querySelectorAll("[data-tile-idx]");
+      for (const el of elements) {
+        const rect = el.getBoundingClientRect();
+        if (
+          touch.clientY >= rect.top &&
+          touch.clientY <= rect.bottom
+        ) {
+          const idx = parseInt(el.dataset.tileIdx, 10);
+          setOverIdx(idx);
+          return;
+        }
+      }
+    },
+    [dragging]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+    if (dragging !== null && overIdx !== null) {
+      handleDrop(overIdx);
+    } else {
+      setDragging(null);
+      setOverIdx(null);
+    }
+  }, [dragging, overIdx, handleDrop]);
 
   return (
-    <Flex
-      direction="column"
-      align="center"
-      justify="center"
-      minH={{ base: "calc(100vh - 140px)", md: "calc(100vh - 80px)" }}
-      px={{ base: "3", md: "4" }}
-      py={{ base: "2", md: "4" }}
-    >
-      <AffirmationCloud />
-
-      <SimpleGrid
-        columns={2}
-        gap={{ base: "3", md: "4" }}
-        w="full"
-        maxW="400px"
-      >
-        {modules.map((mod) => (
-          <Flex
-            key={mod.path}
-            direction="column"
-            align="center"
-            justify="center"
-            gap={{ base: "2", md: "3" }}
-            bg={mod.bg}
-            borderWidth="2px"
-            borderColor={mod.borderColor}
-            borderRadius="2xl"
-            cursor="pointer"
-            py={{ base: "5", md: "8" }}
-            px={{ base: "3", md: "4" }}
-            shadow="0 2px 8px 0 rgba(0,0,0,0.04)"
-            _hover={{
-              transform: "scale(1.03)",
-              shadow: `0 4px 20px 0 ${mod.color}22`,
-              borderColor: mod.color,
+    <>
+      {order.map((key, idx) => {
+        const Component = TILE_COMPONENTS[key];
+        const isDragging = dragging === idx;
+        const isOver = overIdx === idx && dragging !== null && dragging !== idx;
+        return (
+          <Box
+            key={key}
+            mb={3.5}
+            data-tile-idx={idx}
+            draggable={dragging !== null}
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move";
+              startDrag(idx);
             }}
-            _active={{ transform: "scale(0.97)" }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setOverIdx(idx);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleDrop(idx);
+            }}
+            onDragEnd={() => { setDragging(null); setOverIdx(null); }}
+            onTouchStart={(e) => handleTouchStart(idx, e)}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            opacity={isDragging ? 0.5 : 1}
+            transform={isOver ? "scale(1.02)" : "none"}
             transition="all 0.2s"
-            onClick={() => navigate(mod.path)}
+            borderWidth={isOver ? "2px" : "0px"}
+            borderColor="rose.200"
+            borderStyle="dashed"
+            borderRadius="2xl"
+            style={{ touchAction: dragging !== null ? "none" : "auto" }}
           >
-            <Icon
-              as={mod.icon}
-              boxSize={{ base: "9", md: "12" }}
-              color={mod.color}
-              strokeWidth="1.5"
-            />
-            <Text
-              fontSize={{ base: "sm", md: "md" }}
-              fontWeight="700"
-              color={mod.color}
-              letterSpacing="-0.01em"
-            >
-              {mod.label}
-            </Text>
-          </Flex>
-        ))}
-      </SimpleGrid>
-    </Flex>
+            <Component />
+          </Box>
+        );
+      })}
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  const level = useRewards((s) => s.level);
+  const streakDays = useRewards((s) => s.streakDays);
+  const addBonusSparks = useRewards((s) => s.addBonusSparks);
+  const initialCheck = useAchievements((s) => s.initialCheck);
+  const updateMaxStreak = useAchievements((s) => s.updateMaxStreak);
+  const checkLevelRewards = useAchievements((s) => s.checkLevelRewards);
+
+  // Run initial checks on mount
+  useEffect(() => {
+    initialCheck(addBonusSparks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Track streak changes + streak milestone reaction
+  const prevStreakRef = useRef(0);
+  useEffect(() => {
+    if (streakDays > 0) {
+      updateMaxStreak(streakDays);
+      if (streakDays > prevStreakRef.current && streakDays >= 3 && streakDays % 3 === 0) {
+        useAvatarReaction.getState().react("streak_milestone", { streak: streakDays });
+      }
+      prevStreakRef.current = streakDays;
+    }
+  }, [streakDays, updateMaxStreak]);
+
+  // Check level milestones + avatar unlock reaction
+  useEffect(() => {
+    if (level > 1) {
+      const newAvatars = getNewlyUnlockedAvatars(level);
+      checkLevelRewards(level);
+      if (newAvatars.length > 0) {
+        useAvatarReaction.getState().react("avatar_unlocked");
+      }
+    }
+  }, [level, checkLevelRewards]);
+
+  return (
+    <Box
+      maxW="480px"
+      mx="auto"
+      px={{ base: "3", md: "4" }}
+      py={{ base: "3", md: "4" }}
+      pb={{ base: "16", md: "4" }}
+    >
+      {/* 1. Greeting + level badge */}
+      <FadeIn delay={0}>
+        <DashboardGreeting />
+      </FadeIn>
+
+      {/* 2. Affirmation cloud (lazy — heavy SVG + animations) */}
+      <FadeIn delay={0.06}>
+        <Flex justify="center" mt={5} mb={3}>
+          <Suspense fallback={null}>
+            <AffirmationAvatar />
+          </Suspense>
+        </Flex>
+      </FadeIn>
+
+      {/* 3. Plan na dziś */}
+      <FadeIn delay={0.12}>
+        <Box mb={3.5}>
+          <TodayWidget />
+        </Box>
+      </FadeIn>
+
+      {/* 4. Jak się dziś czujesz? */}
+      <FadeIn delay={0.18}>
+        <Box mb={3.5}>
+          <MoodCheck />
+        </Box>
+      </FadeIn>
+
+      {/* 5-7. Goals, Budget, Shopping (reorderable) */}
+      <FadeIn delay={0.24}>
+        <ReorderableTiles />
+      </FadeIn>
+
+      {/* 8. Challenges (lazy — below fold) */}
+      <FadeIn delay={0.32}>
+        <Box mb={3.5}>
+          <Suspense fallback={null}>
+            <ChallengesWidget />
+          </Suspense>
+        </Box>
+      </FadeIn>
+
+      {/* 9. Attention widget (lazy — below fold, auto-hides when empty) */}
+      <FadeIn delay={0.40}>
+        <Box mb={3.5}>
+          <Suspense fallback={null}>
+            <AttentionWidget />
+          </Suspense>
+        </Box>
+      </FadeIn>
+    </Box>
   );
 }

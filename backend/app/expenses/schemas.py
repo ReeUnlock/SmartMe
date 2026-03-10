@@ -58,6 +58,8 @@ class ExpenseCreate(BaseModel):
     is_shared: bool = False
     category_id: Optional[int] = None
     paid_by_id: Optional[int] = None
+    source: Optional[str] = Field(default=None, max_length=50)
+    source_id: Optional[int] = None
 
 
 class ExpenseUpdate(BaseModel):
@@ -77,6 +79,9 @@ class ExpenseOut(BaseModel):
     is_shared: bool
     category_id: Optional[int] = None
     paid_by_id: Optional[int] = None
+    source: Optional[str] = None
+    source_id: Optional[int] = None
+    recurring_id: Optional[int] = None
     category: Optional[ExpenseCategoryOut] = None
     paid_by: Optional[MemberOut] = None
     created_at: Optional[datetime] = None
@@ -117,6 +122,19 @@ class RecurringExpenseOut(BaseModel):
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+# ─── Generate Recurring ─────────────────────────────────────
+
+class GenerateRecurringRequest(BaseModel):
+    year: int
+    month: int = Field(ge=1, le=12)
+
+
+class GenerateRecurringResponse(BaseModel):
+    generated: int
+    skipped: int
+    expenses: list[ExpenseOut]
 
 
 # ─── Monthly Budget ──────────────────────────────────────────

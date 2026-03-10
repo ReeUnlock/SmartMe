@@ -14,7 +14,7 @@ function CategoryBudgetBar({ name, total, color, maxTotal }) {
     <Box>
       <Flex justify="space-between" mb={1}>
         <Text fontSize="sm" color="gray.600">{name}</Text>
-        <Text fontSize="sm" fontWeight="600" color="gray.700">{total.toFixed(0)} zł</Text>
+        <Text fontSize="sm" fontWeight="600" color="textSecondary">{total.toFixed(0)} zł</Text>
       </Flex>
       <Box bg="gray.100" borderRadius="full" h="8px">
         <Box h="100%" w={`${pct}%`} bg={color || "peach.400"} borderRadius="full" transition="width 0.3s" />
@@ -46,9 +46,13 @@ export default function BudgetView({ year, month }) {
     e.preventDefault();
     const val = parseFloat(budgetInput);
     if (!val || val <= 0) return;
-    await setBudget.mutateAsync({ year, month, data: { amount: val } });
-    setEditing(false);
-    setBudgetInput("");
+    try {
+      await setBudget.mutateAsync({ year, month, data: { amount: val } });
+      setEditing(false);
+      setBudgetInput("");
+    } catch {
+      // mutation error handled by TanStack Query
+    }
   };
 
   const maxCategoryTotal = summary.by_category.length > 0
@@ -58,10 +62,10 @@ export default function BudgetView({ year, month }) {
   return (
     <VStack gap={4} align="stretch">
       {/* Budget setting */}
-      <Box bg="white" borderRadius="xl" p={4} shadow="xs" border="1px solid" borderColor="gray.100">
+      <Box bg="white" borderRadius="2xl" p={4} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100">
         <Flex align="center" gap={2} mb={3}>
           <Icon as={LuPiggyBank} boxSize={5} color="peach.500" />
-          <Text fontSize="md" fontWeight="700" color="gray.700">
+          <Text fontSize="md" fontWeight="700" color="textSecondary">
             Budżet na {MONTH_NAMES[month]}
           </Text>
         </Flex>
@@ -144,16 +148,16 @@ export default function BudgetView({ year, month }) {
               <Text
                 as="button"
                 type="submit"
-                bg="peach.500"
+                bg="peach.400"
                 color="white"
                 fontWeight="600"
                 px={4}
                 py={1}
-                borderRadius="lg"
+                borderRadius="xl"
                 cursor="pointer"
                 fontSize="sm"
                 whiteSpace="nowrap"
-                _hover={{ bg: "peach.600" }}
+                _hover={{ bg: "peach.500" }}
                 opacity={!budgetInput || setBudget.isPending ? 0.5 : 1}
               >
                 Zapisz
@@ -169,7 +173,7 @@ export default function BudgetView({ year, month }) {
                   px={2}
                   py={1}
                   fontSize="sm"
-                  _hover={{ color: "gray.700" }}
+                  _hover={{ color: "textSecondary" }}
                 >
                   Anuluj
                 </Text>
@@ -181,8 +185,8 @@ export default function BudgetView({ year, month }) {
 
       {/* Category breakdown */}
       {summary.by_category.length > 0 && (
-        <Box bg="white" borderRadius="xl" p={4} shadow="xs" border="1px solid" borderColor="gray.100">
-          <Text fontSize="sm" fontWeight="600" color="gray.700" mb={3}>Wydatki wg kategorii</Text>
+        <Box bg="white" borderRadius="2xl" p={4} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100">
+          <Text fontSize="sm" fontWeight="600" color="textSecondary" mb={3}>Wydatki wg kategorii</Text>
           <VStack gap={3} align="stretch">
             {summary.by_category.map((cat, i) => (
               <CategoryBudgetBar
@@ -199,14 +203,14 @@ export default function BudgetView({ year, month }) {
 
       {/* Month comparison */}
       {comparison && comparison.previous.total > 0 && (
-        <Box bg="white" borderRadius="xl" p={4} shadow="xs" border="1px solid" borderColor="gray.100">
+        <Box bg="white" borderRadius="2xl" p={4} shadow="0 1px 8px 0 rgba(0,0,0,0.04)" borderWidth="1px" borderColor="gray.100">
           <Flex align="center" gap={2} mb={3}>
             <Icon
               as={comparison.diff_total > 0 ? LuTrendingUp : LuTrendingDown}
               boxSize={5}
               color={comparison.diff_total > 0 ? "red.500" : "green.500"}
             />
-            <Text fontSize="sm" fontWeight="600" color="gray.700">
+            <Text fontSize="sm" fontWeight="600" color="textSecondary">
               Porównanie z {MONTH_NAMES[comparison.previous.month]}
             </Text>
           </Flex>

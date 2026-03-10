@@ -1,0 +1,123 @@
+/* ─── SmartMe Motion System ─────────────────────────────────────
+   Soft, elegant transitions. GPU-friendly (transform + opacity only).
+   Premium blur-fade for page transitions.
+   ────────────────────────────────────────────────────────────────── */
+
+:root {
+  --sm-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --sm-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --sm-duration: 620ms;
+  --sm-duration-tab: 420ms;
+  --sm-duration-fast: 200ms;
+}
+
+/* ── Page enter — fast opacity + tiny float (no blur for GPU perf) ── */
+@keyframes smPageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Tab content switch (no blur for perf) ─────────────────────── */
+@keyframes smFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Card / section appear ──────────────────────────────────────── */
+@keyframes smCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Slide from right (for detail views) ────────────────────────── */
+@keyframes smSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── Accordion / expand ─────────────────────────────────────────── */
+@keyframes smExpandIn {
+  from {
+    opacity: 0;
+    transform: scaleY(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* ── Utility classes ────────────────────────────────────────────── */
+.sm-page-enter {
+  animation: smPageEnter var(--sm-duration) var(--sm-ease-out) both;
+  will-change: opacity, transform;
+}
+
+.sm-fade-in {
+  animation: smFadeIn var(--sm-duration-tab) var(--sm-ease-out) both;
+}
+
+.sm-card-enter {
+  animation: smCardEnter var(--sm-duration-fast) var(--sm-ease-out) both;
+}
+
+.sm-slide-right {
+  animation: smSlideInRight var(--sm-duration) var(--sm-ease-out) both;
+}
+
+.sm-expand-in {
+  animation: smExpandIn 180ms var(--sm-ease-out) both;
+  transform-origin: top center;
+}
+
+/* ── Dashboard stagger (moved from inline <style>) ─────────────── */
+@keyframes dashFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .sm-page-enter,
+  .sm-fade-in,
+  .sm-card-enter,
+  .sm-slide-right,
+  .sm-expand-in,
+  .sm-dashboard-fade {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+}

@@ -1,3 +1,4 @@
+import datetime as _dt
 from datetime import datetime
 from typing import Optional
 
@@ -60,23 +61,41 @@ class ItemOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReorderItem(BaseModel):
+    id: int
+    sort_order: int
+
+
 # --- Lists ---
 
 class ListCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    store_name: Optional[str] = Field(default=None, max_length=100)
 
 
 class ListUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    store_name: Optional[str] = Field(default=None, max_length=100)
     is_completed: Optional[bool] = None
 
 
 class ListOut(BaseModel):
     id: int
     name: str
+    store_name: Optional[str] = None
     is_completed: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     items: list[ItemOut] = []
 
     model_config = {"from_attributes": True}
+
+
+# --- Shopping → Expense bridge ---
+
+class ListToExpenseCreate(BaseModel):
+    amount: float = Field(gt=0)
+    category_id: Optional[int] = None
+    date: Optional[_dt.date] = None
+    paid_by_id: Optional[int] = None
+    is_shared: bool = False

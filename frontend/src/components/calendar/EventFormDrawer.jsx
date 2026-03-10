@@ -21,6 +21,9 @@ import {
 } from "@chakra-ui/react";
 import dayjs from "dayjs";
 import { EVENT_ICONS } from "./eventIcons";
+import { useQuickTemplates } from "../../hooks/useQuickTemplates";
+import DateInput from "../common/DateInput";
+import DateTimeInput from "../common/DateTimeInput";
 
 const COLOR_OPTIONS = [
   { key: "sky", value: "#339AF0" },
@@ -32,6 +35,9 @@ const COLOR_OPTIONS = [
   { key: "rose", value: "#E64980" },
   { key: "lavender", value: "#845EF7" },
 ];
+
+// Colors used by built-in quick-add templates
+const BUILTIN_COLORS = ["sky", "yellow", "peach", "lavender", "red", "green", "pink"];
 
 const DURATION_OPTIONS = [
   { value: "", label: "Brak" },
@@ -76,11 +82,15 @@ export default function EventFormDrawer({
   onSave,
   onDelete,
   isSaving,
+  templateMode = false,
 }) {
   const isEdit = !!event;
+  const customTemplates = useQuickTemplates((s) => s.templates);
 
   const [title, setTitle] = useState("");
+  const [allDay, setAllDay] = useState(false);
   const [startDatetime, setStartDatetime] = useState("");
+  const [startDate, setStartDate] = useState("");
   const [duration, setDuration] = useState("60");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("sky");
@@ -90,9 +100,11 @@ export default function EventFormDrawer({
   useEffect(() => {
     if (isEdit && event) {
       setTitle(event.title || "");
+      setAllDay(!!event.all_day);
       const start = event.start_at || event.start_datetime || event.start_date;
       const end = event.end_at || event.end_datetime || event.end_date;
       setStartDatetime(toLocalDatetime(start));
+      setStartDate(start ? dayjs(start).format("YYYY-MM-DD") : "");
       const dur = calcDurationMinutes(start, end);
       setDuration(dur || "60");
       setDescription(event.description || "");
@@ -101,15 +113,28 @@ export default function EventFormDrawer({
       setRrule(event.rrule || "");
     } else {
       setTitle("");
+      setAllDay(false);
       const defaultDate = selectedDate || dayjs().format("YYYY-MM-DD");
       setStartDatetime(defaultDate + "T09:00");
+      setStartDate(defaultDate);
       setDuration("60");
       setDescription("");
-      setColor("sky");
       setIcon("");
       setRrule("");
+
+      // In template mode, auto-pick the first color not used by any template
+      if (templateMode) {
+        const usedColors = new Set([
+          ...BUILTIN_COLORS,
+          ...customTemplates.map((t) => t.color),
+        ]);
+        const freeColor = COLOR_OPTIONS.find((c) => !usedColors.has(c.key));
+        setColor(freeColor ? freeColor.key : "sky");
+      } else {
+        setColor("sky");
+      }
     }
-  }, [isEdit, event, selectedDate, isOpen]);
+  }, [isEdit, event, selectedDate, isOpen, templateMode, customTemplates]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -117,19 +142,23 @@ export default function EventFormDrawer({
 
     const data = {
       title: title.trim(),
-      all_day: false,
+      all_day: allDay,
       description: description.trim() || null,
       color,
       icon: icon || null,
       category: null,
       location: null,
       rrule: rrule || null,
-      start_at: startDatetime,
-      end_at: null,
     };
 
-    if (duration && startDatetime) {
-      data.end_at = dayjs(startDatetime).add(Number(duration), "minute").format("YYYY-MM-DDTHH:mm");
+    if (allDay) {
+      data.start_at = startDate + "T00:00:00";
+      data.end_at = startDate + "T23:59:59";
+    } else {
+      data.start_at = startDatetime;
+      data.end_at = duration && startDatetime
+        ? dayjs(startDatetime).add(Number(duration), "minute").format("YYYY-MM-DDTHH:mm")
+        : null;
     }
 
     onSave(data, event?.id);
@@ -171,11 +200,31 @@ export default function EventFormDrawer({
             borderTopRadius="2xl"
           />
 
+          {/* Recurring event warning */}
+          {isEdit && event?.rrule && (
+            <Flex
+              align="center"
+              gap="2"
+              px="5"
+              py="2"
+              bg="yellow.50"
+              borderBottom="1px solid"
+              borderColor="yellow.100"
+            >
+              <Text fontSize="sm" lineHeight="1">
+                {"🔁"}
+              </Text>
+              <Text fontSize="xs" color="yellow.700" fontWeight="500">
+                {"To wydarzenie si\u0119 powtarza. Zmiany zostan\u0105 zastosowane do wszystkich wyst\u0105pie\u0144."}
+              </Text>
+            </Flex>
+          )}
+
           <DialogHeader py="3" px="5">
             <Flex align="center" justify="space-between" w="full">
               <DialogTitle>
-                <Text fontSize="md" fontWeight="700" color="gray.800">
-                  {isEdit ? "Edytuj wydarzenie" : "Nowe wydarzenie"}
+                <Text fontSize="md" fontWeight="700" color="textPrimary">
+                  {templateMode ? "Nowy szablon" : isEdit ? "Edytuj wydarzenie" : "Nowe wydarzenie"}
                 </Text>
               </DialogTitle>
               <DialogCloseTrigger asChild>
@@ -230,39 +279,78 @@ export default function EventFormDrawer({
                 />
               </Box>
 
-              {/* Start datetime */}
-              <Box>
-                <Text fontSize="xs" fontWeight="600" color="gray.500" mb="1.5" textTransform="uppercase" letterSpacing="0.5px">
-                  {"Data i godzina"}
+              {/* All-day toggle */}
+              <Flex
+                align="center"
+                justify="space-between"
+                px="3"
+                py="2"
+                bg="gray.50"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="gray.200"
+                cursor="pointer"
+                onClick={() => {
+                  setAllDay((v) => !v);
+                  if (!allDay && startDatetime) {
+                    setStartDate(dayjs(startDatetime).format("YYYY-MM-DD"));
+                  } else if (allDay && startDate) {
+                    setStartDatetime(startDate + "T09:00");
+                  }
+                }}
+                _hover={{ borderColor: "gray.300" }}
+                transition="all 0.15s"
+              >
+                <Text fontSize="sm" fontWeight="500" color="gray.600">
+                  {"Ca\u0142y dzie\u0144"}
                 </Text>
                 <Box
-                  as="input"
-                  type="datetime-local"
-                  value={startDatetime}
-                  onChange={(e) => setStartDatetime(e.target.value)}
-                  w="full"
-                  px="3"
-                  py="1.5"
-                  borderRadius="xl"
-                  borderWidth="1px"
-                  borderColor="gray.200"
-                  fontSize="sm"
-                  bg="gray.50"
-                  _hover={{ borderColor: "gray.300" }}
-                  _focus={{
-                    borderColor: "rose.300",
-                    bg: "white",
-                    outline: "none",
-                    boxShadow: "0 0 0 1px var(--chakra-colors-rose-300)",
-                  }}
-                  required
-                />
+                  w="36px"
+                  h="20px"
+                  borderRadius="full"
+                  bg={allDay ? "rose.400" : "gray.300"}
+                  position="relative"
+                  transition="background 0.2s"
+                >
+                  <Box
+                    position="absolute"
+                    top="2px"
+                    left={allDay ? "18px" : "2px"}
+                    w="16px"
+                    h="16px"
+                    borderRadius="full"
+                    bg="white"
+                    shadow="0 1px 3px rgba(0,0,0,0.2)"
+                    transition="left 0.2s"
+                  />
+                </Box>
+              </Flex>
+
+              {/* Date / DateTime input */}
+              <Box>
+                {allDay ? (
+                  <DateInput
+                    value={startDate}
+                    onChange={setStartDate}
+                    accentColor="sky"
+                    label="Data"
+                    required
+                  />
+                ) : (
+                  <DateTimeInput
+                    value={startDatetime}
+                    onChange={setStartDatetime}
+                    accentColor="sky"
+                    label={"Data i godzina"}
+                    required
+                  />
+                )}
               </Box>
 
-              {/* Duration + Description side by side row */}
+              {/* Duration + Recurrence row */}
               <Flex gap="3">
-                {/* Duration */}
-                <Box flex="1">
+                {/* Duration — hidden for all-day events */}
+                <Box flex="1" display={allDay ? "none" : "block"}>
                   <Text fontSize="xs" fontWeight="600" color="gray.500" mb="1.5" textTransform="uppercase" letterSpacing="0.5px">
                     Czas trwania
                   </Text>
@@ -392,10 +480,10 @@ export default function EventFormDrawer({
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
-                        bg={icon === ic.key ? "sky.50" : "gray.50"}
+                        bg={icon === ic.key ? "rose.50" : "gray.50"}
                         border="2px solid"
-                        borderColor={icon === ic.key ? "sky.400" : "transparent"}
-                        _hover={{ transform: "scale(1.1)", bg: "sky.50" }}
+                        borderColor={icon === ic.key ? "rose.300" : "transparent"}
+                        _hover={{ transform: "scale(1.1)", bg: "rose.50" }}
                         transition="all 0.15s"
                         onClick={() => setIcon(ic.key)}
                         cursor="pointer"
@@ -425,7 +513,7 @@ export default function EventFormDrawer({
                       borderRadius="full"
                       bg={c.value}
                       border="3px solid"
-                      borderColor={color === c.key ? "gray.700" : "transparent"}
+                      borderColor={color === c.key ? "textPrimary" : "transparent"}
                       _hover={{ transform: "scale(1.15)" }}
                       transition="all 0.15s"
                       onClick={() => setColor(c.key)}
@@ -453,7 +541,7 @@ export default function EventFormDrawer({
                 shadow="0 4px 14px 0 rgba(231, 73, 128, 0.25)"
                 loading={isSaving}
               >
-                {isEdit ? "Zapisz zmiany" : "Dodaj wydarzenie"}
+                {templateMode ? "Zapisz szablon" : isEdit ? "Zapisz zmiany" : "Dodaj wydarzenie"}
               </Button>
 
               {isEdit && (

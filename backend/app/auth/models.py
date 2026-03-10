@@ -11,3 +11,4 @@ class User(Base, TimestampMixin):
     email = Column(String(120), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    onboarding_completed = Column(Boolean, default=False, nullable=False, server_default="false")

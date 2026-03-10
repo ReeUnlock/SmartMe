@@ -4,13 +4,14 @@ import {
   Box,
   Button,
   Flex,
-  Heading,
   Input,
+  Spinner,
   Text,
   VStack,
 } from "@chakra-ui/react";
 import { setup, checkAuthStatus } from "../../api/auth";
 import { useAuth } from "../../hooks/useAuth";
+import SmartMeLogo from "../common/SmartMeLogo";
 
 export default function SetupPage() {
   const [username, setUsername] = useState("");
@@ -19,19 +20,32 @@ export default function SetupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { setToken, loadUser, token } = useAuth();
+  const { setToken, loadUser, token, user, isLoading } = useAuth();
 
   useEffect(() => {
-    if (token) {
-      navigate("/", { replace: true });
+    if (isLoading) return;
+
+    if (token && user) {
+      navigate(user.onboarding_completed ? "/" : "/witaj", { replace: true });
       return;
     }
-    checkAuthStatus().then((data) => {
-      if (data.setup_completed) {
-        navigate("/login", { replace: true });
+
+    if (!token) {
+      const fromReset = sessionStorage.getItem("anelka_from_reset");
+      if (fromReset) {
+        sessionStorage.removeItem("anelka_from_reset");
+        return;
       }
-    });
-  }, [navigate, token]);
+
+      checkAuthStatus()
+        .then((data) => {
+          if (data.setup_completed) {
+            navigate("/login", { replace: true });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [navigate, token, user, isLoading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,7 +55,7 @@ export default function SetupPage() {
       const data = await setup({ username, email, password });
       setToken(data.access_token);
       await loadUser();
-      navigate("/");
+      navigate("/witaj", { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -49,9 +63,17 @@ export default function SetupPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <Flex minH="100dvh" align="center" justify="center">
+        <Spinner size="lg" color="rose.400" />
+      </Flex>
+    );
+  }
+
   return (
     <Flex
-      minH="100vh"
+      minH="100dvh"
       align="center"
       justify="center"
       p="4"
@@ -71,21 +93,10 @@ export default function SetupPage() {
         borderColor="rose.100"
       >
         <VStack gap="6" as="form" onSubmit={handleSubmit}>
-          <VStack gap="1">
-            <Heading
-              size="xl"
-              fontFamily="'Nunito', sans-serif"
-              fontWeight="800"
-              bgGradient="to-r"
-              gradientFrom="rose.400"
-              gradientTo="lavender.400"
-              bgClip="text"
-              letterSpacing="-0.02em"
-            >
-              Anelka
-            </Heading>
-            <Text color="gray.500" fontSize="sm">
-              Stwórz swoje konto
+          <VStack gap="2" align="center">
+            <SmartMeLogo height="56px" />
+            <Text color="gray.400" fontSize="sm">
+              {"Stwórz swoje konto"}
             </Text>
           </VStack>
 
@@ -95,6 +106,7 @@ export default function SetupPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              autoComplete="off"
               borderRadius="xl"
               size="lg"
               borderColor="gray.200"
@@ -106,6 +118,7 @@ export default function SetupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="off"
               borderRadius="xl"
               size="lg"
               borderColor="gray.200"
@@ -113,10 +126,12 @@ export default function SetupPage() {
             />
             <Input
               type="password"
-              placeholder="Hasło"
+              placeholder={"Hasło (min. 6 znaków)"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
+              autoComplete="new-password"
               borderRadius="xl"
               size="lg"
               borderColor="gray.200"
@@ -141,7 +156,7 @@ export default function SetupPage() {
             shadow="0 2px 12px 0 rgba(231, 73, 128, 0.25)"
             loading={loading}
           >
-            Rozpocznij
+            {"Rozpocznij"}
           </Button>
         </VStack>
       </Box>

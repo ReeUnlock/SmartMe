@@ -18,7 +18,7 @@ class Event(Base, TimestampMixin):
     end_at = Column(DateTime(timezone=True), nullable=True)
     all_day = Column(Boolean, default=False)
     color = Column(String(20), nullable=True)
-    icon = Column(String(10), nullable=True)
+    icon = Column(String(30), nullable=True)
     category = Column(String(50), nullable=True)
     location = Column(String(255), nullable=True)
     rrule = Column(String(500), nullable=True)

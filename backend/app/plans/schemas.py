@@ -35,10 +35,12 @@ class GoalCreate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = Field(default=None, max_length=50)
     color: Optional[str] = Field(default=None, max_length=30)
+    goal_type: str = Field(default="manual", pattern=r"^(manual|savings|spending_limit)$")
     target_value: Optional[float] = None
     current_value: float = 0
     unit: Optional[str] = Field(default=None, max_length=30)
     deadline: Optional[date] = None
+    linked_category_id: Optional[int] = None
 
 
 class GoalUpdate(BaseModel):
@@ -46,12 +48,14 @@ class GoalUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = Field(default=None, max_length=50)
     color: Optional[str] = Field(default=None, max_length=30)
+    goal_type: Optional[str] = Field(default=None, pattern=r"^(manual|savings|spending_limit)$")
     target_value: Optional[float] = None
     current_value: Optional[float] = None
     unit: Optional[str] = Field(default=None, max_length=30)
     deadline: Optional[date] = None
     is_completed: Optional[bool] = None
     sort_order: Optional[int] = None
+    linked_category_id: Optional[int] = None
 
 
 class GoalOut(BaseModel):
@@ -60,12 +64,16 @@ class GoalOut(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     color: Optional[str] = None
+    goal_type: str = "manual"
     target_value: Optional[float] = None
     current_value: float
     unit: Optional[str] = None
     deadline: Optional[date] = None
     is_completed: bool
     sort_order: int
+    linked_category_id: Optional[int] = None
+    linked_category_name: Optional[str] = None
+    computed_expense_total: Optional[float] = None
     milestones: list[MilestoneOut] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

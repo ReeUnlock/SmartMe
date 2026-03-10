@@ -9,8 +9,17 @@ class SetupRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
+    username: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=1, max_length=72)
+
+
+class ResetRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=72)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=72)
+    new_password: str = Field(min_length=6, max_length=72)
 
 
 class TokenResponse(BaseModel):
@@ -23,6 +32,7 @@ class UserOut(BaseModel):
     username: str
     email: str
     is_active: bool
+    onboarding_completed: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -4,13 +4,14 @@ import {
   Box,
   Button,
   Flex,
-  Heading,
   Input,
+  Spinner,
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { login, checkAuthStatus, resetAccount } from "../../api/auth";
+import { login, checkAuthStatus } from "../../api/auth";
 import { useAuth } from "../../hooks/useAuth";
+import SmartMeLogo from "../common/SmartMeLogo";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -18,19 +19,26 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { setToken, loadUser, token } = useAuth();
+  const { setToken, loadUser, token, user, isLoading } = useAuth();
 
   useEffect(() => {
-    if (token) {
-      navigate("/", { replace: true });
+    if (isLoading) return;
+
+    if (token && user) {
+      navigate(user.onboarding_completed ? "/" : "/witaj", { replace: true });
       return;
     }
-    checkAuthStatus().then((data) => {
-      if (!data.setup_completed) {
-        navigate("/setup", { replace: true });
-      }
-    });
-  }, [navigate, token]);
+
+    if (!token) {
+      checkAuthStatus()
+        .then((data) => {
+          if (!data.setup_completed) {
+            navigate("/setup", { replace: true });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [navigate, token, user, isLoading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,17 +48,30 @@ export default function LoginPage() {
       const data = await login({ username, password });
       setToken(data.access_token);
       await loadUser();
-      navigate("/");
+      const u = useAuth.getState().user;
+      navigate(u?.onboarding_completed ? "/" : "/witaj", { replace: true });
     } catch (err) {
-      setError(err.message);
+      setError(
+        err.message === "Nieautoryzowany"
+          ? "Nieprawidłowa nazwa użytkownika lub hasło"
+          : err.message
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <Flex minH="100dvh" align="center" justify="center">
+        <Spinner size="lg" color="rose.400" />
+      </Flex>
+    );
+  }
+
   return (
     <Flex
-      minH="100vh"
+      minH="100dvh"
       align="center"
       justify="center"
       p="4"
@@ -70,30 +91,20 @@ export default function LoginPage() {
         borderColor="rose.100"
       >
         <VStack gap="6" as="form" onSubmit={handleSubmit}>
-          <VStack gap="1">
-            <Heading
-              size="xl"
-              fontFamily="'Nunito', sans-serif"
-              fontWeight="800"
-              bgGradient="to-r"
-              gradientFrom="rose.400"
-              gradientTo="lavender.400"
-              bgClip="text"
-              letterSpacing="-0.02em"
-            >
-              Anelka
-            </Heading>
-            <Text color="gray.500" fontSize="sm">
-              Zaloguj się
+          <VStack gap="2" align="center">
+            <SmartMeLogo height="56px" />
+            <Text color="gray.400" fontSize="sm">
+              {"Zaloguj się"}
             </Text>
           </VStack>
 
           <VStack gap="3" w="full">
             <Input
-              placeholder="Nazwa użytkownika"
+              placeholder="Nazwa użytkownika lub email"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              autoComplete="username"
               borderRadius="xl"
               size="lg"
               borderColor="gray.200"
@@ -105,6 +116,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
               borderRadius="xl"
               size="lg"
               borderColor="gray.200"
@@ -130,22 +142,6 @@ export default function LoginPage() {
             loading={loading}
           >
             Zaloguj
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            color="gray.400"
-            _hover={{ color: "rose.400" }}
-            onClick={async () => {
-              if (window.confirm("Na pewno chcesz usunąć konto i utworzyć nowe?")) {
-                await resetAccount();
-                localStorage.removeItem("token");
-                navigate("/setup", { replace: true });
-              }
-            }}
-          >
-            Resetuj konto
           </Button>
         </VStack>
       </Box>

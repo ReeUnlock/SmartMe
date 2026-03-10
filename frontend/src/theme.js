@@ -80,6 +80,10 @@ const config = defineConfig({
         bg: {
           DEFAULT: { value: "#FBF8F9" },
         },
+        // Warm blue-gray text hierarchy — replaces harsh black/gray.800/gray.700
+        textPrimary: { value: "#3B4A63" },
+        textSecondary: { value: "#5A6B82" },
+        textTertiary: { value: "#8294AA" },
       },
     },
   },

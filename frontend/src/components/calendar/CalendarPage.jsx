@@ -6,19 +6,19 @@ import "dayjs/locale/pl";
 import CalendarHeader from "./CalendarHeader";
 import MonthView from "./MonthView";
 import DayDetailView from "./DayDetailView";
-import DayEventsDrawer from "./DayEventsDrawer";
 import EventFormDrawer from "./EventFormDrawer";
 import UndoRedoButtons from "./UndoRedoButtons";
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from "../../hooks/useCalendar";
+import { useQuickTemplates } from "../../hooks/useQuickTemplates";
 
 dayjs.locale("pl");
 
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(dayjs().startOf("month"));
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
-  const [showDayDrawer, setShowDayDrawer] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [templateMode, setTemplateMode] = useState(false);
 
   // Fetch events for current month (with padding for prev/next month days)
   const rangeStart = currentMonth.subtract(7, "day").format("YYYY-MM-DD");
@@ -28,6 +28,7 @@ export default function CalendarPage() {
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
+  const addQuickTemplate = useQuickTemplates((s) => s.addTemplate);
 
   const handlePrevMonth = useCallback(() => {
     setCurrentMonth((m) => m.subtract(1, "month"));
@@ -53,6 +54,13 @@ export default function CalendarPage() {
 
   const handleAddEvent = useCallback(() => {
     setEditingEvent(null);
+    setTemplateMode(false);
+    setShowEventForm(true);
+  }, []);
+
+  const handleAddTemplate = useCallback(() => {
+    setEditingEvent(null);
+    setTemplateMode(true);
     setShowEventForm(true);
   }, []);
 
@@ -70,6 +78,13 @@ export default function CalendarPage() {
 
   const handleSave = useCallback(
     (data, eventId) => {
+      if (templateMode) {
+        // Template mode — only save as quick-add template, don't create event
+        addQuickTemplate(data);
+        setShowEventForm(false);
+        setTemplateMode(false);
+        return;
+      }
       if (eventId) {
         updateEvent.mutate(
           { id: eventId, data, previousData: editingEvent },
@@ -88,7 +103,7 @@ export default function CalendarPage() {
         });
       }
     },
-    [createEvent, updateEvent, editingEvent]
+    [createEvent, updateEvent, editingEvent, templateMode, addQuickTemplate]
   );
 
   const handleDelete = useCallback(
@@ -106,13 +121,10 @@ export default function CalendarPage() {
     [deleteEvent, editingEvent]
   );
 
-  const handleCloseDayDrawer = useCallback(() => {
-    setShowDayDrawer(false);
-  }, []);
-
   const handleCloseEventForm = useCallback(() => {
     setShowEventForm(false);
     setEditingEvent(null);
+    setTemplateMode(false);
   }, []);
 
   return (
@@ -127,25 +139,27 @@ export default function CalendarPage() {
       )}
 
       {/* === DAY SECTION === */}
-      <Box mb="4">
-        <Text
-          fontSize="xs"
-          fontWeight="700"
-          color="sky.500"
-          textTransform="uppercase"
-          letterSpacing="1px"
-          px="1"
-          mb="2"
-        >
-          {"\u{1F4C5} Przegl\u0105d dnia"}
-        </Text>
+      <Box mb="5">
+        <Flex align="center" gap="2" px="1.5" mb="2.5">
+          <Text fontSize="sm" lineHeight="1">{"\u{1F4C5}"}</Text>
+          <Text
+            fontSize="11px"
+            fontWeight="700"
+            color="#B8A0A6"
+            letterSpacing="0.06em"
+            fontFamily="'Nunito', sans-serif"
+            textTransform="uppercase"
+          >
+            {"Przegl\u0105d dnia"}
+          </Text>
+        </Flex>
         <Box
           borderWidth="1px"
-          borderColor="gray.100"
-          borderRadius="xl"
+          borderColor="#F5E6EA"
+          borderRadius="2xl"
           bg="white"
           overflow="hidden"
-          shadow="0 1px 4px 0 rgba(0,0,0,0.03)"
+          shadow="0 2px 16px 0 rgba(0,0,0,0.03)"
         >
           {selectedDate && (
             <DayDetailView
@@ -154,6 +168,7 @@ export default function CalendarPage() {
               onDateChange={handleDayDetailDateChange}
               onEditEvent={handleEditEvent}
               onAddEvent={handleAddEvent}
+              onAddTemplate={handleAddTemplate}
               onQuickAdd={handleQuickAdd}
             />
           )}
@@ -162,26 +177,28 @@ export default function CalendarPage() {
 
       {/* === MONTH SECTION === */}
       <Box>
-        <Text
-          fontSize="xs"
-          fontWeight="700"
-          color="sky.500"
-          textTransform="uppercase"
-          letterSpacing="1px"
-          px="1"
-          mb="2"
-        >
-          {"\u{1F5D3}\uFE0F Przegl\u0105d miesi\u0105ca"}
-        </Text>
+        <Flex align="center" gap="2" px="1.5" mb="2.5">
+          <Text fontSize="sm" lineHeight="1">{"\u{1F5D3}\uFE0F"}</Text>
+          <Text
+            fontSize="11px"
+            fontWeight="700"
+            color="#B8A0A6"
+            letterSpacing="0.06em"
+            fontFamily="'Nunito', sans-serif"
+            textTransform="uppercase"
+          >
+            {"Przegl\u0105d miesi\u0105ca"}
+          </Text>
+        </Flex>
         <Box
           borderWidth="1px"
-          borderColor="gray.100"
-          borderRadius="xl"
+          borderColor="#F5E6EA"
+          borderRadius="2xl"
           overflow="hidden"
-          shadow="0 1px 4px 0 rgba(0,0,0,0.03)"
+          shadow="0 2px 16px 0 rgba(0,0,0,0.03)"
         >
           {/* Header with month navigation */}
-          <Box bg="white" px="2" pt="2" pb="1">
+          <Box bg="white" px="2" pt="3" pb="1">
             <CalendarHeader
               currentMonth={currentMonth}
               onPrev={handlePrevMonth}
@@ -206,20 +223,20 @@ export default function CalendarPage() {
       <Box
         as="button"
         position="fixed"
-        bottom={{ base: "90px", md: "24px" }}
+        bottom={{ base: "calc(80px + env(safe-area-inset-bottom, 0px))", md: "24px" }}
         right={{ base: "20px", md: "24px" }}
-        w="52px"
-        h="52px"
+        w="54px"
+        h="54px"
         borderRadius="full"
-        bg="rose.400"
+        bg="linear-gradient(135deg, #FF8FA3 0%, #FFB38A 100%)"
         color="white"
-        shadow="0 2px 12px 0 rgba(231, 73, 128, 0.3)"
+        shadow="0 4px 20px 0 rgba(255, 143, 163, 0.3), 0 1px 4px 0 rgba(0,0,0,0.06)"
         display="flex"
         alignItems="center"
         justifyContent="center"
-        _hover={{ bg: "rose.500", transform: "scale(1.05)" }}
-        _active={{ transform: "scale(0.95)" }}
-        transition="all 0.15s"
+        _hover={{ transform: "scale(1.08)", shadow: "0 6px 28px 0 rgba(255, 143, 163, 0.4), 0 2px 8px 0 rgba(0,0,0,0.08)" }}
+        _active={{ transform: "scale(0.94)" }}
+        transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
         zIndex="10"
         onClick={() => {
           setEditingEvent(null);
@@ -228,21 +245,11 @@ export default function CalendarPage() {
         }}
         aria-label="Dodaj wydarzenie"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
       </Box>
-
-      {/* Day events drawer */}
-      <DayEventsDrawer
-        isOpen={showDayDrawer}
-        onClose={handleCloseDayDrawer}
-        selectedDate={selectedDate}
-        events={events}
-        onAddEvent={handleAddEvent}
-        onEditEvent={handleEditEvent}
-      />
 
       {/* Event form drawer (create/edit) */}
       <EventFormDrawer
@@ -253,6 +260,7 @@ export default function CalendarPage() {
         onSave={handleSave}
         onDelete={handleDelete}
         isSaving={createEvent.isPending || updateEvent.isPending}
+        templateMode={templateMode}
       />
     </Box>
   );

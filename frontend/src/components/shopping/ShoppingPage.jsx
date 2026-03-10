@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Box, Flex, Heading, Text, Icon, VStack, Spinner } from "@chakra-ui/react";
 import { LuPlus, LuShoppingCart } from "react-icons/lu";
-import { useShoppingLists, useCreateList, useDeleteList } from "../../hooks/useShopping";
+import { useShoppingLists, useCreateList, useDeleteList, useAddItem } from "../../hooks/useShopping";
 import ShoppingListCard from "./ShoppingListCard";
 import ShoppingListDetail from "./ShoppingListDetail";
 import NewListDialog from "./NewListDialog";
@@ -10,26 +10,51 @@ export default function ShoppingPage() {
   const { data: lists, isLoading } = useShoppingLists();
   const createList = useCreateList();
   const deleteList = useDeleteList();
+  const addItemMut = useAddItem();
   const [selectedListId, setSelectedListId] = useState(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
 
-  const handleCreate = async (name) => {
-    const newList = await createList.mutateAsync({ name });
-    setShowNewDialog(false);
-    setSelectedListId(newList.id);
+  const handleCreate = async (name, storeName = null, templateItems = null) => {
+    try {
+      const newList = await createList.mutateAsync({ name, store_name: storeName });
+      // If created from a template, add all template items
+      if (templateItems?.length) {
+        for (const item of templateItems) {
+          await addItemMut.mutateAsync({
+            listId: newList.id,
+            data: {
+              name: item.name,
+              quantity: item.quantity || null,
+              unit: item.unit || null,
+              category_id: item.category_id || null,
+            },
+          });
+        }
+      }
+      setShowNewDialog(false);
+      setSelectedListId(newList.id);
+    } catch {
+      // mutation error handled by TanStack Query
+    }
   };
 
   const handleDelete = async (id) => {
-    await deleteList.mutateAsync(id);
-    if (selectedListId === id) setSelectedListId(null);
+    try {
+      await deleteList.mutateAsync(id);
+      if (selectedListId === id) setSelectedListId(null);
+    } catch {
+      // mutation error handled by TanStack Query
+    }
   };
 
   if (selectedListId) {
     return (
-      <ShoppingListDetail
-        listId={selectedListId}
-        onBack={() => setSelectedListId(null)}
-      />
+      <Box className="sm-slide-right">
+        <ShoppingListDetail
+          listId={selectedListId}
+          onBack={() => setSelectedListId(null)}
+        />
+      </Box>
     );
   }
 
@@ -44,13 +69,13 @@ export default function ShoppingPage() {
           gap={2}
           px={3}
           py={2}
-          bg="sage.500"
+          bg="sage.400"
           color="white"
           borderRadius="xl"
           cursor="pointer"
           fontWeight="600"
           fontSize="sm"
-          _hover={{ bg: "sage.600" }}
+          _hover={{ bg: "sage.500" }}
           _active={{ transform: "scale(0.97)" }}
           transition="all 0.2s"
           onClick={() => setShowNewDialog(true)}
@@ -66,9 +91,9 @@ export default function ShoppingPage() {
         </Flex>
       ) : !lists?.length ? (
         <VStack py={16} gap={3} color="gray.400">
-          <Icon as={LuShoppingCart} boxSize={16} strokeWidth={1} />
-          <Text fontSize="lg" fontWeight="600">Brak list zakupów</Text>
-          <Text fontSize="sm">Utwórz pierwszą listę, klikając „Nowa lista"</Text>
+          <Icon as={LuShoppingCart} boxSize={16} strokeWidth={1} color="sage.200" />
+          <Text fontSize="lg" fontWeight="600">{"Brak list zakupów"}</Text>
+          <Text fontSize="sm" textAlign="center">{'Utwórz pierwsz\u0105 list\u0119, klikaj\u0105c \u201ENowa lista\u201D'}</Text>
         </VStack>
       ) : (
         <VStack gap={3} align="stretch">

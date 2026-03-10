@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Box, Flex, Heading, Text, Spinner } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import { LuTarget, LuStar } from "react-icons/lu";
-import { useGoals, usePlansSummary } from "../../hooks/usePlans";
+import { usePlansSummary } from "../../hooks/usePlans";
 import GoalsView from "./GoalsView";
 import BucketListView from "./BucketListView";
 
@@ -16,45 +16,47 @@ export default function PlansPage() {
 
   return (
     <Box px={{ base: 0, md: 6 }} py={{ base: 0, md: 4 }} maxW="600px" mx="auto" w="100%" overflow="hidden">
-      <Heading
-        size={{ base: "lg", md: "xl" }}
-        color="rose.700"
-        fontFamily="'Nunito', sans-serif"
-        mb={1}
-      >
-        {"Plany"}
-      </Heading>
-
-      {/* Summary strip */}
-      {summary && !summaryLoading && (
-        <Flex gap={4} mb={4} flexWrap="wrap">
-          <Text fontSize="xs" color="gray.500">
-            {"Cele: "}{summary.completed_goals}/{summary.total_goals}{" ukończonych"}
-          </Text>
-          <Text fontSize="xs" color="gray.500">
-            {"Bucket lista: "}{summary.completed_bucket_items}/{summary.total_bucket_items}{" spełnionych"}
-          </Text>
-        </Flex>
-      )}
+      {/* Header + Summary */}
+      <Flex align="center" justify="space-between" mb={1}>
+        <Heading
+          size={{ base: "lg", md: "xl" }}
+          color="rose.700"
+          fontFamily="'Nunito', sans-serif"
+        >
+          {"Cele"}
+        </Heading>
+        {summary && !summaryLoading && (
+          <Flex gap={3}>
+            <Text fontSize="2xs" color="gray.400" fontWeight="500">
+              {summary.completed_goals}/{summary.total_goals}{" cel."}
+            </Text>
+            <Text fontSize="2xs" color="gray.400" fontWeight="500">
+              {summary.completed_bucket_items}/{summary.total_bucket_items}{" bucket"}
+            </Text>
+          </Flex>
+        )}
+      </Flex>
 
       {/* Tabs */}
-      <Flex gap={2} mb={5}>
+      <Flex gap={0} mb={4} bg="rose.50" borderRadius="xl" p="3px" overflow="hidden">
         {TABS.map((t) => {
           const active = tab === t.key;
           return (
             <Flex
               key={t.key}
               align="center"
+              justify="center"
+              flex={1}
               gap={1.5}
               px={4}
               py={2}
-              borderRadius="xl"
+              borderRadius="lg"
               cursor="pointer"
               fontWeight="600"
               fontSize="sm"
-              bg={active ? "rose.400" : "rose.50"}
-              color={active ? "white" : "rose.500"}
-              _hover={{ bg: active ? "rose.500" : "rose.100" }}
+              bg={active ? "white" : "transparent"}
+              color={active ? "rose.500" : "gray.500"}
+              shadow={active ? "sm" : "none"}
               _active={{ transform: "scale(0.97)" }}
               transition="all 0.2s"
               onClick={() => setTab(t.key)}
@@ -66,8 +68,10 @@ export default function PlansPage() {
         })}
       </Flex>
 
-      {tab === "goals" && <GoalsView />}
-      {tab === "bucket" && <BucketListView />}
+      <Box key={tab} className="sm-fade-in">
+        {tab === "goals" && <GoalsView />}
+        {tab === "bucket" && <BucketListView />}
+      </Box>
     </Box>
   );
 }
