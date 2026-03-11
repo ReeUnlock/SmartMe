@@ -11,6 +11,7 @@ import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useChallenges from "../../hooks/useChallenges";
 import useAvatarReaction from "../../hooks/useAvatarReaction";
+import { playSound } from "../../utils/soundManager";
 
 const CATEGORY_LABELS = {
   finanse: "Finanse",
@@ -116,6 +117,7 @@ export default function GoalDetail({ goalId, onBack, onEdit }) {
         data: { is_completed: willComplete },
       });
       if (willComplete) {
+        playSound("taskComplete");
         trackProgress("goals_completed", 1, addBonusSparks);
         trackChallenge("goal_complete", addBonusSparks);
         useAvatarReaction.getState().react("goal_completed");

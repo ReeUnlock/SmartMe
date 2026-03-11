@@ -5,6 +5,7 @@ import {
   useBucketItems, useCreateBucketItem, useDeleteBucketItem, useToggleBucketItem,
 } from "../../hooks/usePlans";
 import BucketItemFormDialog from "./BucketItemFormDialog";
+import { playSound } from "../../utils/soundManager";
 
 const CATEGORY_LABELS = {
   podroze: "Podróże",
@@ -161,7 +162,10 @@ export default function BucketListView() {
             <BucketCard
               key={item.id}
               item={item}
-              onToggle={() => toggleItem.mutate(item.id)}
+              onToggle={() => {
+                if (!item.is_completed) playSound("taskComplete");
+                toggleItem.mutate(item.id);
+              }}
               onDelete={() => deleteItem.mutate(item.id)}
             />
           ))}
