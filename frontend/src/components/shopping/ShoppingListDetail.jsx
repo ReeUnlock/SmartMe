@@ -10,7 +10,6 @@ import { useMembers } from "../../hooks/useExpenses";
 import ShoppingItemRow from "./ShoppingItemRow";
 import DateInput from "../common/DateInput";
 import { parseItemInput, inferCategoryId } from "../../utils/shoppingUtils";
-import { playSound } from "../../utils/soundManager";
 import { useShoppingTemplates } from "../../hooks/useShoppingTemplates";
 import { useItemHistory } from "../../hooks/useItemHistory";
 
@@ -312,7 +311,7 @@ export default function ShoppingListDetail({ listId, onBack }) {
                 onStartEdit={() => setEditingItemId(item.id)}
                 onCancelEdit={() => setEditingItemId(null)}
                 onSaveEdit={(updates) => handleUpdateItem(item.id, updates)}
-                onToggle={() => { if (!item.is_checked) playSound("taskComplete"); toggleItem.mutate(item.id); }}
+                onToggle={() => toggleItem.mutate(item.id)}
                 onDelete={() => deleteItem.mutate(item.id)}
                 reorderMode={reorderMode && selectedCategoryId === null}
                 isFirst={idx === 0}
