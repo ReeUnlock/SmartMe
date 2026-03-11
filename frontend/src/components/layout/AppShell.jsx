@@ -7,7 +7,6 @@ import BottomNav from "./BottomNav";
 import PageTransition from "../common/PageTransition";
 
 const VoiceFab = lazy(() => import("../voice/VoiceFab"));
-const ExpenseUndoBar = lazy(() => import("../expenses/ExpenseUndoBar"));
 
 export default function AppShell() {
   const location = useLocation();
@@ -78,7 +77,6 @@ export default function AppShell() {
       </Box>
       <BottomNav />
       <Suspense fallback={null}><VoiceFab /></Suspense>
-      <Suspense fallback={null}><ExpenseUndoBar /></Suspense>
     </Flex>
   );
 }

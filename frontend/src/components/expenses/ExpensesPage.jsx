@@ -4,6 +4,7 @@ import ExpensesDashboard from "./ExpensesDashboard";
 import ExpensesList from "./ExpensesList";
 import BudgetView from "./BudgetView";
 import RecurringExpenses from "./RecurringExpenses";
+import ExpenseUndoBar from "./ExpenseUndoBar";
 
 const TABS = [
   { key: "dashboard", label: "Przegląd" },
@@ -113,6 +114,7 @@ export default function ExpensesPage() {
         {activeTab === "recurring" && <RecurringExpenses year={year} month={month} />}
       </Box>
 
+      <ExpenseUndoBar />
     </Box>
   );
 }

@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Flex, Text, Icon } from "@chakra-ui/react";
 import { LuUndo2 } from "react-icons/lu";
 import useExpenseUndo from "../../hooks/useExpenseUndo";
@@ -10,10 +11,25 @@ const UNDO_LABELS = {
   update: "Wydatek zapisany",
 };
 
+const AUTO_DISMISS_MS = 8000;
+
 export default function ExpenseUndoBar() {
   const stack = useExpenseUndo((s) => s.stack);
+  const clearUndo = useExpenseUndo((s) => s.clear);
   const undoExpense = useUndoExpense();
   const [undoing, setUndoing] = useState(false);
+
+  // Auto-dismiss after timeout
+  useEffect(() => {
+    if (stack.length === 0) return;
+    const timer = setTimeout(clearUndo, AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [stack, clearUndo]);
+
+  // Clear on unmount (navigating away from Expenses)
+  useEffect(() => {
+    return () => clearUndo();
+  }, [clearUndo]);
 
   const handleUndo = useCallback(async () => {
     setUndoing(true);
@@ -29,7 +45,7 @@ export default function ExpenseUndoBar() {
   const lastAction = stack[0];
   if (!lastAction) return null;
 
-  return (
+  return createPortal(
     <Flex
       position="fixed"
       bottom={{ base: "calc(68px + env(safe-area-inset-bottom, 0px) + 12px)", md: "24px" }}
@@ -88,6 +104,7 @@ export default function ExpenseUndoBar() {
           </Text>
         )}
       </Flex>
-    </Flex>
+    </Flex>,
+    document.body,
   );
 }
