@@ -177,16 +177,18 @@ export default function EventFormDrawer({
       />
       <DialogPositioner
         display="flex"
-        alignItems="center"
+        alignItems={{ base: "flex-end", md: "center" }}
         justifyContent="center"
-        p="5"
+        p={{ base: "0", md: "5" }}
       >
         <DialogContent
-          borderRadius="2xl"
+          borderRadius={{ base: "2xl 2xl 0 0", md: "2xl" }}
           maxW="400px"
           w="full"
-          maxH="85vh"
-          overflow="auto"
+          maxH={{ base: "90dvh", md: "85vh" }}
+          overflow="hidden"
+          display="flex"
+          flexDirection="column"
           shadow="0 20px 60px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04)"
           bg="white"
         >
@@ -254,7 +256,7 @@ export default function EventFormDrawer({
             </Flex>
           </DialogHeader>
 
-          <DialogBody py="2" px="5" as="form" id="event-form" onSubmit={handleSubmit}>
+          <DialogBody py="2" px="5" as="form" id="event-form" onSubmit={handleSubmit} overflowY="auto" flex="1" css={{ WebkitOverflowScrolling: "touch", "&::-webkit-scrollbar": { display: "none" }, scrollbarWidth: "none" }}>
             <VStack gap="4" align="stretch">
               {/* Title */}
               <Box>
@@ -422,7 +424,7 @@ export default function EventFormDrawer({
                   Opis
                 </Text>
                 <Textarea
-                  placeholder="Opcjonalny opis..."
+                  placeholder={"Dodaj opis…"}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   borderRadius="xl"
@@ -526,7 +528,7 @@ export default function EventFormDrawer({
             </VStack>
           </DialogBody>
 
-          <DialogFooter px="5" py="4">
+          <DialogFooter px="5" py="4" borderTopWidth="1px" borderColor="gray.100" flexShrink={0} pb={{ base: "calc(16px + env(safe-area-inset-bottom, 0px))", md: "4" }}>
             <VStack w="full" gap="2">
               <Button
                 type="submit"

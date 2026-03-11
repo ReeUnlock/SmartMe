@@ -14,7 +14,8 @@ export default function Header() {
       align="center"
       justify="space-between"
       px="5"
-      py="3"
+      py="2.5"
+      minH="60px"
       bg="white"
       borderBottomWidth="1px"
       borderColor="rose.100"
@@ -34,6 +35,7 @@ export default function Header() {
               height: "56px",
               objectFit: "contain",
               display: logoLoaded ? "block" : "none",
+              verticalAlign: "middle",
             }}
             onLoad={() => setLogoLoaded(true)}
             onError={() => setLogoError(true)}

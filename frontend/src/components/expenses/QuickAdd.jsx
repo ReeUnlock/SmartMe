@@ -135,8 +135,9 @@ export default function QuickAdd({ year, month }) {
       <Box as="form" onSubmit={handleSubmit}>
         <Flex gap={2}>
           <Input
-            placeholder="Kwota"
+            placeholder={"Kwota zł"}
             type="number"
+            inputMode="decimal"
             step="0.01"
             min="0.01"
             value={amount}
@@ -148,7 +149,7 @@ export default function QuickAdd({ year, month }) {
             flex={1}
           />
           <Input
-            placeholder="Opis (opcjonalnie)"
+            placeholder={"Opis"}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onFocus={() => setExpanded(true)}

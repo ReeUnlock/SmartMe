@@ -106,6 +106,106 @@
   }
 }
 
+/* ── Refined placeholder styling ───────────────────────────────── */
+input::placeholder,
+textarea::placeholder {
+  color: #B0B8C4 !important;
+  opacity: 1 !important;
+  font-weight: 400 !important;
+  font-size: 0.92em;
+  letter-spacing: 0.01em;
+}
+
+/* ── Bottom-sheet dialog system ───────────────────────────────── */
+.sm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 400;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sm-dialog-container {
+  position: fixed;
+  inset: 0;
+  z-index: 401;
+  display: flex;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  /* Mobile: bottom-sheet; desktop: centered */
+  align-items: flex-end;
+}
+@media (min-width: 768px) {
+  .sm-dialog-container {
+    align-items: center;
+    padding: 16px;
+  }
+}
+
+.sm-dialog-content {
+  position: relative;
+  z-index: 1;
+  background: white;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  /* Mobile: bottom-sheet with flat bottom */
+  border-radius: var(--chakra-radii-2xl) var(--chakra-radii-2xl) 0 0;
+  max-height: 90dvh;
+  max-height: 90vh; /* fallback */
+  max-height: 90dvh;
+  box-shadow: 0 -4px 40px -8px rgba(0, 0, 0, 0.12),
+              0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+@supports (height: 1dvh) {
+  .sm-dialog-content {
+    max-height: 90dvh;
+  }
+}
+@media (min-width: 768px) {
+  .sm-dialog-content {
+    border-radius: var(--chakra-radii-2xl);
+    max-height: 90vh;
+    box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* Sticky action footer inside dialogs */
+.sm-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 12px 24px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  z-index: 2;
+}
+@media (min-width: 768px) {
+  .sm-dialog-actions {
+    padding-bottom: 12px;
+  }
+}
+
+/* Hide scrollbar inside dialogs for cleaner look */
+.sm-dialog-content::-webkit-scrollbar { display: none; }
+.sm-dialog-content { scrollbar-width: none; }
+
+/* ── iOS keyboard-safe utilities ────────────────────────────────── */
+/* Hide fixed bottom UI when virtual keyboard is open (iOS Safari) */
+@supports (-webkit-touch-callout: none) {
+  /* When visualViewport shrinks (keyboard open), hide bottom chrome */
+  .sm-kbd-hide {
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .sm-kbd-hide[data-kbd-open="true"] {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+  }
+}
+
 /* ── Reduced motion ─────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .sm-page-enter,

@@ -8,6 +8,7 @@ import {
   LuWallet,
   LuTarget,
 } from "react-icons/lu";
+import { useKeyboardOpen } from "../../hooks/useKeyboardOpen";
 const navItems = [
   { path: "/", label: "Menu", icon: LuLayoutGrid, color: "rose.400", muted: "rose.300", bg: "rose.50", exact: true },
   { path: "/kalendarz", label: "Kalendarz", icon: LuCalendar, color: "lavender.500", muted: "lavender.300", bg: "lavender.50" },
@@ -19,6 +20,7 @@ const navItems = [
 export default memo(function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const kbdOpen = useKeyboardOpen();
   return (
     <Box
       position="fixed"
@@ -29,9 +31,11 @@ export default memo(function BottomNav() {
       borderTopWidth="1px"
       borderColor="rose.100"
       shadow="0 -2px 16px 0 rgba(231, 73, 128, 0.05)"
-      zIndex="1000"
+      zIndex="200"
       display={{ base: "block", md: "none" }}
       pb="env(safe-area-inset-bottom)"
+      className="sm-kbd-hide"
+      data-kbd-open={kbdOpen ? "true" : undefined}
     >
       <Flex justify="space-around" py="1.5" px="2">
         {navItems.map((item) => {

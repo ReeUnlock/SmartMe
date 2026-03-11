@@ -296,7 +296,7 @@ export default function ExpensesList({ year, month }) {
           pointerEvents="none"
         />
         <Input
-          placeholder="Szukaj wydatku…"
+          placeholder={"Szukaj…"}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           size="sm"
@@ -326,77 +326,120 @@ export default function ExpensesList({ year, month }) {
         )}
       </Box>
 
-      {/* Category filters */}
-      <Flex gap={1} mb={3} flexWrap="wrap">
-        <Text
-          as="button"
-          fontSize="xs"
-          px={2}
-          py={1}
-          borderRadius="md"
-          bg={!filterCategory ? "peach.400" : "peach.50"}
-          color={!filterCategory ? "white" : "gray.600"}
-          cursor="pointer"
-          fontWeight="500"
-          onClick={() => setFilterCategory(null)}
-        >
-          Wszystkie
+      {/* Filters card */}
+      <Box
+        bg="white"
+        borderRadius="2xl"
+        px={3.5}
+        py={3}
+        mb={4}
+        shadow="0 1px 8px 0 rgba(0,0,0,0.04)"
+        borderWidth="1px"
+        borderColor="gray.100"
+      >
+        {/* Category filters — horizontal scroll */}
+        <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.04em" mb={2}>
+          {"Kategoria"}
         </Text>
-        {categories?.map((cat) => (
-          <Text
-            key={cat.id}
-            as="button"
-            fontSize="xs"
-            px={2}
-            py={1}
-            borderRadius="md"
-            bg={filterCategory === cat.id ? "peach.400" : "peach.50"}
-            color={filterCategory === cat.id ? "white" : "gray.600"}
-            cursor="pointer"
-            fontWeight="500"
-            onClick={() => setFilterCategory(filterCategory === cat.id ? null : cat.id)}
-          >
-            {cat.name}
-          </Text>
-        ))}
-      </Flex>
-
-      {/* Member filter */}
-      {members?.length > 0 && (
-        <Flex gap={1} mb={4}>
+        <Flex
+          gap={1.5}
+          overflowX="auto"
+          pb={1}
+          mb={members?.length > 0 ? 3 : 0}
+          css={{
+            "&::-webkit-scrollbar": { display: "none" },
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           <Text
             as="button"
             fontSize="xs"
-            px={2}
-            py={1}
-            borderRadius="md"
-            bg={!filterMember ? "peach.400" : "peach.50"}
-            color={!filterMember ? "white" : "gray.600"}
+            px={3}
+            py={1.5}
+            borderRadius="full"
+            bg={!filterCategory ? "peach.400" : "peach.50"}
+            color={!filterCategory ? "white" : "gray.500"}
             cursor="pointer"
-            fontWeight="500"
-            onClick={() => setFilterMember(null)}
+            fontWeight="600"
+            whiteSpace="nowrap"
+            flexShrink={0}
+            transition="all 0.15s"
+            _hover={{ bg: !filterCategory ? "peach.500" : "peach.100" }}
+            onClick={() => setFilterCategory(null)}
           >
-            Wszyscy
+            {"Wszystkie"}
           </Text>
-          {members.map((m) => (
+          {categories?.map((cat) => (
             <Text
-              key={m.id}
+              key={cat.id}
               as="button"
               fontSize="xs"
-              px={2}
-              py={1}
-              borderRadius="md"
-              bg={filterMember === m.id ? "peach.400" : "peach.50"}
-              color={filterMember === m.id ? "white" : "gray.600"}
+              px={3}
+              py={1.5}
+              borderRadius="full"
+              bg={filterCategory === cat.id ? "peach.400" : "peach.50"}
+              color={filterCategory === cat.id ? "white" : "gray.500"}
               cursor="pointer"
-              fontWeight="500"
-              onClick={() => setFilterMember(filterMember === m.id ? null : m.id)}
+              fontWeight="600"
+              whiteSpace="nowrap"
+              flexShrink={0}
+              transition="all 0.15s"
+              _hover={{ bg: filterCategory === cat.id ? "peach.500" : "peach.100" }}
+              onClick={() => setFilterCategory(filterCategory === cat.id ? null : cat.id)}
             >
-              {m.name}
+              {cat.name}
             </Text>
           ))}
         </Flex>
-      )}
+
+        {/* Member filter */}
+        {members?.length > 0 && (
+          <>
+            <Box h="1px" bg="gray.100" mb={3} />
+            <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.04em" mb={2}>
+              {"Kto płaci"}
+            </Text>
+            <Flex gap={1.5}>
+              <Text
+                as="button"
+                fontSize="xs"
+                px={3}
+                py={1.5}
+                borderRadius="full"
+                bg={!filterMember ? "peach.400" : "peach.50"}
+                color={!filterMember ? "white" : "gray.500"}
+                cursor="pointer"
+                fontWeight="600"
+                transition="all 0.15s"
+                _hover={{ bg: !filterMember ? "peach.500" : "peach.100" }}
+                onClick={() => setFilterMember(null)}
+              >
+                {"Wszyscy"}
+              </Text>
+              {members.map((m) => (
+                <Text
+                  key={m.id}
+                  as="button"
+                  fontSize="xs"
+                  px={3}
+                  py={1.5}
+                  borderRadius="full"
+                  bg={filterMember === m.id ? "peach.400" : "peach.50"}
+                  color={filterMember === m.id ? "white" : "gray.500"}
+                  cursor="pointer"
+                  fontWeight="600"
+                  transition="all 0.15s"
+                  _hover={{ bg: filterMember === m.id ? "peach.500" : "peach.100" }}
+                  onClick={() => setFilterMember(filterMember === m.id ? null : m.id)}
+                >
+                  {m.name}
+                </Text>
+              ))}
+            </Flex>
+          </>
+        )}
+      </Box>
 
       {/* Expenses list */}
       {!dates.length ? (

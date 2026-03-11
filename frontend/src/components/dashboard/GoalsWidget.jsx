@@ -76,6 +76,7 @@ function GoalRow({ goal }) {
         <Box
           h="100%"
           w={`${progress}%`}
+          minW={progress > 0 ? "24px" : "0px"}
           bg={barColor}
           borderRadius="full"
           transition="width 0.4s ease"

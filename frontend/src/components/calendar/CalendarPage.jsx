@@ -7,9 +7,11 @@ import CalendarHeader from "./CalendarHeader";
 import MonthView from "./MonthView";
 import DayDetailView from "./DayDetailView";
 import EventFormDrawer from "./EventFormDrawer";
+import QuickAddEditor from "./QuickAddEditor";
 import UndoRedoButtons from "./UndoRedoButtons";
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from "../../hooks/useCalendar";
 import { useQuickTemplates } from "../../hooks/useQuickTemplates";
+import { useKeyboardOpen } from "../../hooks/useKeyboardOpen";
 
 dayjs.locale("pl");
 
@@ -19,6 +21,8 @@ export default function CalendarPage() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [templateMode, setTemplateMode] = useState(false);
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+  const kbdOpen = useKeyboardOpen();
 
   // Fetch events for current month (with padding for prev/next month days)
   const rangeStart = currentMonth.subtract(7, "day").format("YYYY-MM-DD");
@@ -29,6 +33,8 @@ export default function CalendarPage() {
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
   const addQuickTemplate = useQuickTemplates((s) => s.addTemplate);
+  const allTemplates = useQuickTemplates((s) => s.templates);
+  const setTemplates = useQuickTemplates((s) => s.setTemplates);
 
   const handlePrevMonth = useCallback(() => {
     setCurrentMonth((m) => m.subtract(1, "month"));
@@ -63,6 +69,18 @@ export default function CalendarPage() {
     setTemplateMode(true);
     setShowEventForm(true);
   }, []);
+
+  const handleEditTemplates = useCallback(() => {
+    setShowTemplateEditor(true);
+  }, []);
+
+  const handleSaveTemplates = useCallback(
+    (updatedTemplates) => {
+      setTemplates(updatedTemplates);
+      setShowTemplateEditor(false);
+    },
+    [setTemplates]
+  );
 
   const handleQuickAdd = useCallback(
     (data) => {
@@ -170,6 +188,7 @@ export default function CalendarPage() {
               onAddEvent={handleAddEvent}
               onAddTemplate={handleAddTemplate}
               onQuickAdd={handleQuickAdd}
+              onEditTemplates={handleEditTemplates}
             />
           )}
         </Box>
@@ -238,6 +257,8 @@ export default function CalendarPage() {
         _active={{ transform: "scale(0.94)" }}
         transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
         zIndex="10"
+        className="sm-kbd-hide"
+        data-kbd-open={kbdOpen ? "true" : undefined}
         onClick={() => {
           setEditingEvent(null);
           setSelectedDate(selectedDate || dayjs().format("YYYY-MM-DD"));
@@ -261,6 +282,14 @@ export default function CalendarPage() {
         onDelete={handleDelete}
         isSaving={createEvent.isPending || updateEvent.isPending}
         templateMode={templateMode}
+      />
+
+      {/* Quick Add template editor */}
+      <QuickAddEditor
+        open={showTemplateEditor}
+        onClose={() => setShowTemplateEditor(false)}
+        templates={allTemplates}
+        onSave={handleSaveTemplates}
       />
     </Box>
   );

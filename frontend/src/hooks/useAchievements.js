@@ -6,6 +6,7 @@ import {
   checkLevelMilestones,
   LEVEL_MILESTONES,
 } from "../utils/achievementEngine";
+import { playSound } from "../utils/soundManager";
 import useCelebration from "./useCelebration";
 
 const STORAGE_KEY = "smartme_achievements";
@@ -93,6 +94,7 @@ const useAchievements = create((set, get) => ({
     // Trigger celebration animation for new achievements
     if (newlyUnlocked.length > 0) {
       useCelebration.getState().celebrate("achievement", { originY: 30 });
+      playSound("achievementUnlocked");
     }
 
     const newState = {

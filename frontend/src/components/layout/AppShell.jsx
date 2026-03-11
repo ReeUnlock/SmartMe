@@ -13,7 +13,8 @@ export default function AppShell() {
 
   return (
     <Flex
-      minH="100dvh"
+      h="100dvh"
+      maxH="100dvh"
       position="relative"
       style={{
         background:
@@ -60,11 +61,14 @@ export default function AppShell() {
       >
         <Header />
         <Box
+          data-scroll-root=""
           flex="1"
+          minH="0"
           p={{ base: "2", md: "4" }}
           pb={{ base: "calc(140px + env(safe-area-inset-bottom, 0px))", md: "4" }}
           overflowY="auto"
           overflowX="hidden"
+          css={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
           <PageTransition key={location.pathname}>
             <Outlet />

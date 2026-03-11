@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { grantReward, createInitialState, ensureDailyReset, calculateLevel } from "../utils/rewardEngine";
+import { playSound } from "../utils/soundManager";
 import useCelebration from "./useCelebration";
 import useAvatarReaction from "./useAvatarReaction";
 
@@ -56,6 +57,7 @@ const useRewards = create((set, get) => ({
         sparks: result.sparksGained,
         subtitle: parts.length > 0 ? parts.join(" + ") : null,
       });
+      playSound("sparksGained");
 
       // Separate level-up toast (this one is special enough to stand alone)
       if (result.levelUp) {
@@ -67,6 +69,7 @@ const useRewards = create((set, get) => ({
         });
         useCelebration.getState().celebrate("levelup", { originY: 15 });
         useAvatarReaction.getState().react("level_up");
+        playSound("levelUp");
       }
     }
 

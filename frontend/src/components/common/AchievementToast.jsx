@@ -7,6 +7,8 @@ import useChallenges from "../../hooks/useChallenges";
 // Soft celebration particles — sparkles and stars
 function CelebrationParticles({ onDone }) {
   const containerRef = useRef(null);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -27,7 +29,7 @@ function CelebrationParticles({ onDone }) {
         top: ${startY}%;
         font-size: ${10 + Math.random() * 14}px;
         pointer-events: none;
-        z-index: 10001;
+        z-index: 500;
         opacity: 0;
         transition: all ${800 + Math.random() * 400}ms cubic-bezier(0.22, 1, 0.36, 1);
       `;
@@ -48,14 +50,15 @@ function CelebrationParticles({ onDone }) {
 
     const timer = setTimeout(() => {
       particles.forEach((p) => p.remove());
-      onDone?.();
+      onDoneRef.current?.();
     }, 1200);
 
     return () => {
       clearTimeout(timer);
       particles.forEach((p) => p.remove());
     };
-  }, [onDone]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return <div ref={containerRef} />;
 }
@@ -159,7 +162,7 @@ export default function AchievementToast() {
       top="60px"
       left="50%"
       transform="translateX(-50%)"
-      zIndex={10001}
+      zIndex={500}
       display="flex"
       flexDirection="column"
       alignItems="center"

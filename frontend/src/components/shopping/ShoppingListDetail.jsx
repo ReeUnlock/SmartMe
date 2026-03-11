@@ -10,6 +10,7 @@ import { useMembers } from "../../hooks/useExpenses";
 import ShoppingItemRow from "./ShoppingItemRow";
 import DateInput from "../common/DateInput";
 import { parseItemInput, inferCategoryId } from "../../utils/shoppingUtils";
+import { playSound } from "../../utils/soundManager";
 import { useShoppingTemplates } from "../../hooks/useShoppingTemplates";
 import { useItemHistory } from "../../hooks/useItemHistory";
 
@@ -228,7 +229,7 @@ export default function ShoppingListDetail({ listId, onBack }) {
       {/* Add item form */}
       <Flex as="form" onSubmit={handleAddItem} gap={2} mb={3}>
         <Input
-          placeholder="Dodaj produkt, np. 2 kg ziemniaki"
+          placeholder={"np. 2 kg ziemniaki"}
           value={newItemName}
           onChange={(e) => setNewItemName(e.target.value)}
           size="sm"
@@ -311,7 +312,7 @@ export default function ShoppingListDetail({ listId, onBack }) {
                 onStartEdit={() => setEditingItemId(item.id)}
                 onCancelEdit={() => setEditingItemId(null)}
                 onSaveEdit={(updates) => handleUpdateItem(item.id, updates)}
-                onToggle={() => toggleItem.mutate(item.id)}
+                onToggle={() => { if (!item.is_checked) playSound("taskComplete"); toggleItem.mutate(item.id); }}
                 onDelete={() => deleteItem.mutate(item.id)}
                 reorderMode={reorderMode && selectedCategoryId === null}
                 isFirst={idx === 0}
@@ -593,21 +594,22 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
   };
 
   return (
-    <Box position="fixed" inset={0} zIndex={2000} display="flex" alignItems="center" justifyContent="center">
+    <Box position="fixed" inset={0} zIndex={400} display="flex" alignItems={{ base: "flex-end", md: "center" }} justifyContent="center">
       <Box position="absolute" inset={0} bg="blackAlpha.400" onClick={onClose} />
       <Box
         as="form"
         onSubmit={handleSubmit}
         bg="white"
-        borderRadius="2xl"
+        borderRadius={{ base: "2xl 2xl 0 0", md: "2xl" }}
         p={6}
-        w="90%"
+        w={{ base: "100%", md: "90%" }}
         maxW="400px"
         shadow="xl"
         position="relative"
         zIndex={1}
-        maxH="90vh"
+        maxH={{ base: "90dvh", md: "90vh" }}
         overflowY="auto"
+        pb={{ base: "calc(24px + env(safe-area-inset-bottom, 0px))", md: "24px" }}
       >
         <Flex align="center" gap={2} mb={4}>
           <Icon as={LuWallet} boxSize={5} color="peach.500" />
@@ -619,7 +621,8 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
         {/* Amount */}
         <Text fontSize="sm" fontWeight="500" color="gray.600" mb={1}>{"Kwota (zł) *"}</Text>
         <Input
-          placeholder="0.00"
+          placeholder={"np. 149.90"}
+          inputMode="decimal"
           type="number"
           step="0.01"
           min="0.01"

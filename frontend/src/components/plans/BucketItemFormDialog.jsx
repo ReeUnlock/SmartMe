@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Box, Flex, Text, Input, Heading } from "@chakra-ui/react";
+import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 
 const CATEGORIES = [
   { value: "podroze", label: "Podróże" },
@@ -14,8 +15,6 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
 
-  if (!open) return null;
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -29,28 +28,16 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
     setCategory("");
   };
 
+  const handleClose = () => {
+    onClose();
+    setTitle("");
+    setDescription("");
+    setCategory("");
+  };
+
   return (
-    <Box
-      position="fixed"
-      inset={0}
-      zIndex={2000}
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-    >
-      <Box position="absolute" inset={0} bg="blackAlpha.400" onClick={onClose} />
-      <Box
-        as="form"
-        onSubmit={handleSubmit}
-        bg="white"
-        borderRadius="2xl"
-        p={6}
-        w="90%"
-        maxW="400px"
-        shadow="xl"
-        position="relative"
-        zIndex={1}
-      >
+    <BottomSheetDialog open={open} onClose={handleClose} maxW="400px" onSubmit={handleSubmit}>
+      <Box p={6} pb={0}>
         <Heading size="md" mb={4} color="rose.700" fontFamily="'Nunito', sans-serif">
           {"Nowe marzenie"}
         </Heading>
@@ -68,7 +55,7 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
 
         <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Opis"}</Text>
         <Input
-          placeholder={"Opcjonalny opis"}
+          placeholder={"Opis marzenia"}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           mb={3}
@@ -77,7 +64,7 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
         />
 
         <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Kategoria"}</Text>
-        <Flex gap={2} mb={4} flexWrap="wrap">
+        <Flex gap={2} mb={2} flexWrap="wrap">
           {CATEGORIES.map((cat) => (
             <Text
               key={cat.value}
@@ -99,12 +86,15 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
             </Text>
           ))}
         </Flex>
+      </Box>
 
+      {/* Sticky actions */}
+      <DialogActions>
         <Flex gap={3} justify="flex-end">
           <Text
             as="button"
             type="button"
-            onClick={() => { onClose(); setTitle(""); setDescription(""); setCategory(""); }}
+            onClick={handleClose}
             color="gray.500"
             fontWeight="500"
             cursor="pointer"
@@ -130,7 +120,7 @@ export default function BucketItemFormDialog({ open, onClose, onSubmit, isLoadin
             {isLoading ? "Dodaję…" : "Dodaj"}
           </Text>
         </Flex>
-      </Box>
-    </Box>
+      </DialogActions>
+    </BottomSheetDialog>
   );
 }

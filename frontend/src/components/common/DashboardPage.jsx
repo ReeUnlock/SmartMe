@@ -6,6 +6,7 @@ import MoodCheck from "../dashboard/MoodCheck";
 import GoalsWidget from "../dashboard/GoalsWidget";
 import BudgetWidget from "../dashboard/BudgetWidget";
 import ShoppingWidget from "../dashboard/ShoppingWidget";
+import RewardBar from "../dashboard/RewardBar";
 import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useAvatarReaction from "../../hooks/useAvatarReaction";
@@ -270,7 +271,14 @@ export default function DashboardPage() {
         </Box>
       </FadeIn>
 
-      {/* 9. Attention widget (lazy — below fold, auto-hides when empty) */}
+      {/* 9. XP / Level progress */}
+      <FadeIn delay={0.36}>
+        <Box mb={3.5}>
+          <RewardBar />
+        </Box>
+      </FadeIn>
+
+      {/* 10. Attention widget (lazy — below fold, auto-hides when empty) */}
       <FadeIn delay={0.40}>
         <Box mb={3.5}>
           <Suspense fallback={null}>

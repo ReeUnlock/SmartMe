@@ -71,7 +71,7 @@ export default function SuccessToast() {
       bottom={{ base: "140px", md: "24px" }}
       left="50%"
       transform="translateX(-50%)"
-      zIndex={9999}
+      zIndex={500}
       display="flex"
       flexDirection="column"
       alignItems="center"

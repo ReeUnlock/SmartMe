@@ -75,7 +75,7 @@ export default function SparkToast() {
       top="env(safe-area-inset-top, 12px)"
       left="50%"
       transform="translateX(-50%)"
-      zIndex={10000}
+      zIndex={500}
       display="flex"
       flexDirection="column"
       alignItems="center"

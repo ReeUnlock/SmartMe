@@ -2,6 +2,7 @@ import { Box, Flex } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEventHistory } from "../../hooks/useEventHistory";
 import { createEvent, updateEvent, deleteEvent } from "../../api/calendar";
+import { useKeyboardOpen } from "../../hooks/useKeyboardOpen";
 
 function UndoIcon() {
   return (
@@ -27,6 +28,7 @@ export default function UndoRedoButtons() {
   const popUndo = useEventHistory((s) => s.popUndo);
   const popRedo = useEventHistory((s) => s.popRedo);
   const queryClient = useQueryClient();
+  const kbdOpen = useKeyboardOpen();
 
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
@@ -104,6 +106,8 @@ export default function UndoRedoButtons() {
       transform="translateX(-50%)"
       gap="2"
       zIndex="10"
+      className="sm-kbd-hide"
+      data-kbd-open={kbdOpen ? "true" : undefined}
     >
       <Box
         as="button"

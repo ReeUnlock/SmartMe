@@ -12,14 +12,31 @@
       html, body, #root {
         font-family: 'Inter', sans-serif;
         height: 100%;
-        min-height: 100vh;
-        min-height: 100dvh;
-        overflow-x: hidden;
+        height: 100dvh;
         -webkit-text-size-adjust: 100%;
       }
-      /* Prevent iOS overscroll bounce on body */
-      body { overscroll-behavior-y: none; position: fixed; width: 100%; }
-      #root { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+      html {
+        overflow: hidden;
+        /* Prevent iOS rubber-band bounce on the whole page */
+        position: fixed;
+        width: 100%;
+      }
+      body {
+        overflow: hidden;
+        overscroll-behavior-y: none;
+        /* Prevent iOS double-tap zoom */
+        touch-action: manipulation;
+      }
+      #root {
+        overflow: hidden;
+        height: 100%;
+      }
+      /* iOS auto-zoom prevention: inputs below 16px trigger Safari zoom */
+      @supports (-webkit-touch-callout: none) {
+        input, textarea, select {
+          font-size: 16px !important;
+        }
+      }
     </style>
   </head>
   <body>

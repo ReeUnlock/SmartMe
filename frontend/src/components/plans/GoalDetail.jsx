@@ -239,6 +239,7 @@ export default function GoalDetail({ goalId, onBack, onEdit }) {
               h="100%"
               borderRadius="full"
               w={`${progress}%`}
+              minW={progress > 0 ? "24px" : "0px"}
               transition="width 0.4s ease"
             />
           </Box>
@@ -281,6 +282,7 @@ export default function GoalDetail({ goalId, onBack, onEdit }) {
               h="100%"
               borderRadius="full"
               w={`${progress}%`}
+              minW={progress > 0 ? "24px" : "0px"}
               transition="width 0.4s ease"
             />
           </Box>

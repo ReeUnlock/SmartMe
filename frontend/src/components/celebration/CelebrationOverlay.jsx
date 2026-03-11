@@ -131,7 +131,7 @@ function createParticle(config, type, index, total, originX, originY, intensity)
     height: ${size}px;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 10002;
+    z-index: 600;
     opacity: 0;
     background: ${color};
     will-change: transform, opacity;
@@ -180,7 +180,7 @@ function createGlow(config, originX, originY, intensity) {
     height: ${size}px;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 10001;
+    z-index: 599;
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.2);
     background: radial-gradient(circle, rgba(${glowColor},${(glowOpacity * 0.5).toFixed(2)}) 0%, rgba(${glowColor},${(glowOpacity * 0.15).toFixed(2)}) 40%, transparent 70%);

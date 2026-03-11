@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { AmbientSparkle, TapParticles } from "../shared";
-import { AVATAR_LABEL_THEMES } from "../../../utils/reactionConfig";
+
 
 const AMBIENT_SPARKLES = [
   { top: "5%",  left: "50%", delay: 0, dur: 3.8 },
@@ -162,21 +162,7 @@ export default function AuraOrb({ phase, showTapParticles, onTap, mode }) {
 
         <TapParticles active={showTapParticles} particles={TAP_PARTICLES} />
 
-        {phase === "idle" && (
-          <Flex position="absolute" inset={0} align="center" justify="center">
-            <Text
-              fontSize="13px"
-              fontWeight="800"
-              color={AVATAR_LABEL_THEMES.aura.color}
-              textShadow={AVATAR_LABEL_THEMES.aura.textShadow}
-              letterSpacing="0.04em"
-              fontFamily="'Nunito', sans-serif"
-              style={{ animation: "avatarLabelFloat 3s ease-in-out infinite" }}
-            >
-              {"Twoja afirmacja \u2726"}
-            </Text>
-          </Flex>
-        )}
+        {/* Idle — no label, avatar-only */}
 
         {phase === "preparing" && (
           <Flex position="absolute" inset={0} align="center" justify="center" gap="6px">

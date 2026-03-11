@@ -462,6 +462,7 @@ export default function AchievementsPage({ onBack }) {
           <Box
             h="100%"
             borderRadius="full"
+            minW={overallPct > 0 ? "24px" : "0px"}
             transition="width 0.6s cubic-bezier(0.22, 1, 0.36, 1)"
             style={{
               width: `${overallPct}%`,

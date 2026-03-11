@@ -345,7 +345,7 @@ function AffirmationOverlay({ affirmation, closing, onClose }) {
       left={0}
       right={0}
       bottom={0}
-      zIndex={9999}
+      zIndex={450}
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -618,22 +618,7 @@ export default function AffirmationCloud() {
         {/* Tap particles — hearts & stars burst */}
         <TapParticles active={showTapParticles} />
 
-        {/* Idle label */}
-        {phase === "idle" && (
-          <Flex position="absolute" inset={0} align="center" justify="center" pb="6px">
-            <Text
-              fontSize="13px"
-              fontWeight="800"
-              color="#7A2E4A"
-              textShadow="0 0 12px rgba(255,255,255,0.6), 0 0 24px rgba(255,230,240,0.4)"
-              letterSpacing="0.04em"
-              fontFamily="'Nunito', sans-serif"
-              style={{ animation: "affLabelFloat 3s ease-in-out infinite" }}
-            >
-              {"Twoja afirmacja ✦"}
-            </Text>
-          </Flex>
-        )}
+        {/* Idle — no label, avatar-only */}
 
         {/* Preparing — three dots */}
         {phase === "preparing" && (

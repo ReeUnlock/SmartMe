@@ -3,14 +3,13 @@ import {
   Box, Flex, Text, Input, Heading, VStack,
 } from "@chakra-ui/react";
 import { useShoppingTemplates } from "../../hooks/useShoppingTemplates";
+import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 
 export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
   const [name, setName] = useState("");
   const [storeName, setStoreName] = useState("");
   const templates = useShoppingTemplates((s) => s.templates);
   const removeTemplate = useShoppingTemplates((s) => s.removeTemplate);
-
-  if (!open) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -28,38 +27,14 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
   };
 
   return (
-    <Box
-      position="fixed"
-      inset={0}
-      zIndex={2000}
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-    >
-      <Box
-        position="absolute"
-        inset={0}
-        bg="blackAlpha.400"
-        onClick={onClose}
-      />
-      <Box
-        as="form"
-        onSubmit={handleSubmit}
-        bg="white"
-        borderRadius="2xl"
-        p={6}
-        w="90%"
-        maxW="380px"
-        shadow="xl"
-        position="relative"
-        zIndex={1}
-      >
+    <BottomSheetDialog open={open} onClose={onClose} maxW="380px" onSubmit={handleSubmit}>
+      <Box p={6} pb={0}>
         <Heading size="md" mb={4} color="sage.700" fontFamily="'Nunito', sans-serif">
           Nowa lista zakupów
         </Heading>
         <VStack gap={3} align="stretch" mb={4}>
           <Input
-            placeholder="Nazwa listy, np. Tygodniowe zakupy"
+            placeholder={"np. Tygodniowe zakupy"}
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
@@ -67,7 +42,7 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
             _focus={{ borderColor: "sage.400", boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)" }}
           />
           <Input
-            placeholder="Sklep (opcjonalnie), np. Biedronka"
+            placeholder={"np. Biedronka"}
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
             borderColor="sage.200"
@@ -144,7 +119,10 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
             </Flex>
           </Box>
         )}
+      </Box>
 
+      {/* Sticky actions */}
+      <DialogActions>
         <Flex gap={3} justify="flex-end">
           <Text
             as="button"
@@ -175,7 +153,7 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
             {isLoading ? "Tworzę…" : "Utwórz"}
           </Text>
         </Flex>
-      </Box>
-    </Box>
+      </DialogActions>
+    </BottomSheetDialog>
   );
 }

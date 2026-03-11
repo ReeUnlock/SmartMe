@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Box, Flex, Text, Input, Heading, Spinner } from "@chakra-ui/react";
 import { useExpenseCategories } from "../../hooks/useExpenses";
 import DateInput from "../common/DateInput";
+import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 
 const CATEGORIES = [
   { value: "finanse", label: "Finanse" },
@@ -71,8 +72,6 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
     }
   }, [goalType]);
 
-  if (!open) return null;
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -104,13 +103,8 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
     (goalType !== "spending_limit" || linkedCategoryId);
 
   return (
-    <Box position="fixed" inset={0} zIndex={2000} display="flex" alignItems="center" justifyContent="center">
-      <Box position="absolute" inset={0} bg="blackAlpha.400" onClick={onClose} />
-      <Box
-        as="form" onSubmit={handleSubmit} bg="white" borderRadius="2xl" p={6}
-        w="90%" maxW="420px" shadow="xl" position="relative" zIndex={1}
-        maxH="90vh" overflowY="auto"
-      >
+    <BottomSheetDialog open={open} onClose={onClose} maxW="420px" onSubmit={handleSubmit}>
+      <Box p={6} pb={0}>
         <Heading size="md" mb={4} color="rose.700" fontFamily="'Nunito', sans-serif">
           {isEdit ? "Edytuj cel" : "Nowy cel"}
         </Heading>
@@ -190,7 +184,7 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
 
         <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Opis"}</Text>
         <Input
-          placeholder={"Opcjonalny opis celu"}
+          placeholder={"Opis celu"}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           mb={3}
@@ -225,10 +219,11 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
         <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>
           {goalType === "spending_limit" ? "Limit miesięczny *" : "Cel liczbowy"}
         </Text>
-        <Flex gap={2} mb={3}>
+        <Flex gap={2} mb={3} align="center">
           <Input
             placeholder={isFinancial ? "np. 500" : "np. 10000"}
             type="number"
+            inputMode="decimal"
             step="any"
             min="0"
             value={targetValue}
@@ -238,15 +233,17 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
             _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
           />
           {isFinancial ? (
-            <Flex align="center" px={3} bg="gray.50" borderRadius="md" flex={1}>
-              <Text fontSize="sm" color="gray.500" fontWeight="500">{"zł"}</Text>
+            <Flex align="center" justify="center" px={3} h="40px" bg="gray.50" borderRadius="md" minW="48px" flexShrink={0}>
+              <Text fontSize="sm" color="gray.500" fontWeight="600">{"zł"}</Text>
             </Flex>
           ) : (
             <Input
-              placeholder={"Jednostka, np. zł"}
+              placeholder={"np. km"}
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
-              flex={1}
+              maxW="90px"
+              flexShrink={0}
+              textAlign="center"
               borderColor="rose.200"
               _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
             />
@@ -267,9 +264,12 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
           label="Termin"
           placeholder="Wybierz termin"
           clearable
-          mb={4}
+          mb={2}
         />
+      </Box>
 
+      {/* Sticky actions */}
+      <DialogActions>
         <Flex gap={3} justify="flex-end">
           <Text
             as="button" type="button" onClick={onClose}
@@ -288,7 +288,7 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
               : (isEdit ? "Zapisz" : "Utwórz")}
           </Text>
         </Flex>
-      </Box>
-    </Box>
+      </DialogActions>
+    </BottomSheetDialog>
   );
 }

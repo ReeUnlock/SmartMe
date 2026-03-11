@@ -104,7 +104,7 @@ export default function TodayWidget() {
             <Icon as={LuSun} boxSize="14px" color="sky.500" strokeWidth="2.5" />
           </Flex>
           <Text fontSize="sm" fontWeight="700" color="textSecondary">
-            {"Dzisiaj"}
+            {"Zaplanowane"}
           </Text>
         </Flex>
         <Flex align="center" gap={1}>

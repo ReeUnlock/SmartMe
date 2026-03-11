@@ -6,6 +6,7 @@ import useAchievements from "../../hooks/useAchievements";
 import useChallenges from "../../hooks/useChallenges";
 import { HeartSvg, StarSvg, HEART_COLORS, STAR_COLORS } from "./shared";
 import AVATAR_CONFIG, { getSelectedAvatar, getAvatarComponents } from "./avatarConfig";
+import { playSound } from "../../utils/soundManager";
 import useCelebration from "../../hooks/useCelebration";
 import useAvatarReaction from "../../hooks/useAvatarReaction";
 
@@ -216,7 +217,7 @@ function AffirmationOverlay({ affirmation, closing, onClose }) {
       left={0}
       right={0}
       bottom={0}
-      zIndex={9999}
+      zIndex={450}
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -392,6 +393,7 @@ export default function AffirmationAvatar() {
       trackChallenge("affirmation", addBonusSparks);
       useCelebration.getState().celebrate("affirmation", { originY: 35, intensity: 0.7 });
       useAvatarReaction.getState().react("affirmation_reveal");
+      playSound("affirmationOpen");
     }
   }, [phase, grantReward, trackProgress, addBonusSparks, trackChallenge]);
 

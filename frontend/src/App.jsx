@@ -5,6 +5,7 @@ import { ChakraProvider } from "@chakra-ui/react";
 
 import { system } from "./theme";
 import "./styles/motion.css";
+import { preloadSounds } from "./utils/soundManager";
 import { useAuth } from "./hooks/useAuth";
 import AppShell from "./components/layout/AppShell";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -56,6 +57,7 @@ function AppRoutes() {
 
   useEffect(() => {
     loadUser();
+    preloadSounds();
   }, [loadUser]);
 
   return (

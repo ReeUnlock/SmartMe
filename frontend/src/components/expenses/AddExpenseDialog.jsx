@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Box, Flex, Text, Input, Heading } from "@chakra-ui/react";
 import { useExpenseCategories, useMembers } from "../../hooks/useExpenses";
 import DateInput from "../common/DateInput";
+import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 
 export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, defaultDate, expense }) {
   const isEdit = !!expense;
@@ -35,8 +36,6 @@ export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, d
     }
   }, [expense, defaultDate, open]);
 
-  if (!open) return null;
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const val = parseFloat(amount);
@@ -53,24 +52,8 @@ export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, d
   };
 
   return (
-    <Box position="fixed" inset={0} zIndex={2000} display="flex" alignItems={{ base: "flex-end", md: "center" }} justifyContent="center">
-      <Box position="absolute" inset={0} bg="blackAlpha.400" onClick={onClose} />
-      <Box
-        as="form"
-        onSubmit={handleSubmit}
-        bg="white"
-        borderRadius={{ base: "2xl 2xl 0 0", md: "2xl" }}
-        p={6}
-        w={{ base: "100%", md: "90%" }}
-        maxW="400px"
-        shadow="xl"
-        position="relative"
-        zIndex={1}
-        maxH={{ base: "calc(100vh - env(keyboard-inset-height, 0px) - 20px)", md: "90vh" }}
-        overflowY="auto"
-        pb={{ base: "env(safe-area-inset-bottom, 16px)", md: 6 }}
-        style={{ WebkitOverflowScrolling: "touch" }}
-      >
+    <BottomSheetDialog open={open} onClose={onClose} maxW="400px" onSubmit={handleSubmit}>
+      <Box p={6} pb={0}>
         <Heading size="md" mb={4} color="peach.600" fontFamily="'Nunito', sans-serif">
           {isEdit ? "Edytuj wydatek" : "Nowy wydatek"}
         </Heading>
@@ -78,8 +61,9 @@ export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, d
         {/* Amount */}
         <Text fontSize="sm" fontWeight="500" color="gray.600" mb={1}>{"Kwota (zł) *"}</Text>
         <Input
-          placeholder="0.00"
+          placeholder={"np. 49.90"}
           type="number"
+          inputMode="decimal"
           step="0.01"
           min="0.01"
           value={amount}
@@ -93,7 +77,7 @@ export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, d
         {/* Description */}
         <Text fontSize="sm" fontWeight="500" color="gray.600" mb={1}>Opis</Text>
         <Input
-          placeholder="np. Obiad w restauracji"
+          placeholder={"np. obiad, zakupy…"}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           mb={3}
@@ -170,7 +154,7 @@ export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, d
         <Flex
           align="center"
           gap={2}
-          mb={4}
+          mb={2}
           cursor="pointer"
           onClick={() => setIsShared(!isShared)}
         >
@@ -190,8 +174,10 @@ export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, d
           </Box>
           <Text fontSize="sm" color="gray.600">{"Wydatek wspólny"}</Text>
         </Flex>
+      </Box>
 
-        {/* Actions */}
+      {/* Sticky actions */}
+      <DialogActions>
         <Flex gap={3} justify="flex-end">
           <Text
             as="button"
@@ -222,7 +208,7 @@ export default function AddExpenseDialog({ open, onClose, onSubmit, isLoading, d
             {isLoading ? (isEdit ? "Zapisuję…" : "Dodaję…") : (isEdit ? "Zapisz" : "Dodaj")}
           </Text>
         </Flex>
-      </Box>
-    </Box>
+      </DialogActions>
+    </BottomSheetDialog>
   );
 }

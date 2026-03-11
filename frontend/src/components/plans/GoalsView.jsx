@@ -7,6 +7,7 @@ import useAchievements from "../../hooks/useAchievements";
 import useChallenges from "../../hooks/useChallenges";
 import GoalCard from "./GoalCard";
 import GoalDetail from "./GoalDetail";
+import { playSound } from "../../utils/soundManager";
 import GoalFormDialog from "./GoalFormDialog";
 
 const CATEGORIES = [
@@ -71,6 +72,7 @@ export default function GoalsView() {
       grantReward("goal_created");
       trackProgress("goals_created", 1, addBonusSparks);
       trackChallenge("goal_create", addBonusSparks);
+      playSound("goalAdded");
     } catch {
       // mutation error handled by TanStack Query
     }

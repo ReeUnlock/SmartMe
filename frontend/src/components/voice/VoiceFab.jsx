@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { useVoiceCommand } from "../../hooks/useVoiceCommand";
-import useRewards from "../../hooks/useRewards";
+import { useKeyboardOpen } from "../../hooks/useKeyboardOpen";
+import { playSound } from "../../utils/soundManager";
 import VoiceConfirmationDialog from "./VoiceConfirmationDialog";
 
 // Measure safe-area-inset-bottom once at mount to prevent layout jumps
@@ -53,88 +54,40 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function MiniProgressBar() {
-  const xp = useRewards((s) => s.xp);
-  const xpToNextLevel = useRewards((s) => s.xpToNextLevel);
-  const level = useRewards((s) => s.level);
-  const sparks = useRewards((s) => s.sparks);
-  const streakDays = useRewards((s) => s.streakDays);
-
-  const progress = xpToNextLevel > 0 ? Math.min((xp / xpToNextLevel) * 100, 100) : 0;
-
-  return (
-    <Flex
-      align="center"
-      gap={2}
-      px={3}
-      py={2}
-      borderRadius="full"
-      style={{
-        background: "linear-gradient(90deg, #FCC2D7, #F9915E)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-        boxShadow: "0 8px 24px rgba(249,145,94,0.25)",
-      }}
-    >
-      {/* Level circle */}
-      <Flex
-        align="center"
-        justify="center"
-        w="26px"
-        h="26px"
-        borderRadius="full"
-        flexShrink={0}
-        style={{
-          background: "rgba(255,255,255,0.35)",
-          boxShadow: "inset 0 1px 2px rgba(255,255,255,0.3)",
-        }}
-      >
-        <Text fontSize="xs" fontWeight="800" color="white" lineHeight="1">
-          {level}
-        </Text>
-      </Flex>
-
-      {/* XP bar */}
-      <Box flex={1} minW="60px">
-        <Box h="6px" borderRadius="full" overflow="hidden" style={{ background: "rgba(255,255,255,0.3)" }}>
-          <Box
-            h="100%"
-            borderRadius="full"
-            transition="width 0.6s cubic-bezier(0.22, 1, 0.36, 1)"
-            bg="white"
-            style={{ width: `${progress}%` }}
-          />
-        </Box>
-      </Box>
-
-      {/* Sparks */}
-      <Text fontSize="xs" fontWeight="700" color="white" whiteSpace="nowrap" lineHeight="1">
-        {"✨"} {sparks}
-      </Text>
-
-      {/* Streak */}
-      {streakDays > 0 && (
-        <Text fontSize="xs" fontWeight="700" color="white" whiteSpace="nowrap" lineHeight="1">
-          {"🔥"} {streakDays}
-        </Text>
-      )}
-    </Flex>
-  );
-}
-
 export default function VoiceFab() {
   const { isRecording, isProcessing, recordingDuration, proposedAction, error } = useVoiceCommand();
   const startRecording = useVoiceCommand((s) => s.startRecording);
   const stopRecording = useVoiceCommand((s) => s.stopRecording);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const errorTimerRef = useRef(null);
+
+  // Auto-show and auto-dismiss error after 5s
+  useEffect(() => {
+    if (error && !proposedAction) {
+      setErrorVisible(true);
+      clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = setTimeout(() => {
+        setErrorVisible(false);
+        useVoiceCommand.getState().clearError();
+      }, 5000);
+    } else {
+      setErrorVisible(false);
+    }
+    return () => clearTimeout(errorTimerRef.current);
+  }, [error, proposedAction]);
+
   const safeBottom = useSafeAreaBottom();
-  // BottomNav ~68px + safe area + 12px gap, computed once to prevent jumps
-  const fabBottom = 68 + safeBottom + 12;
+  const kbdOpen = useKeyboardOpen();
+  // BottomNav ~68px + safe area + 16px gap
+  const fabBottom = 68 + safeBottom + 16;
 
   const handleClick = () => {
     if (isProcessing) return;
     if (isRecording) {
+      playSound("voiceStop");
       stopRecording();
     } else {
+      playSound("voiceStart");
       startRecording();
     }
   };
@@ -144,17 +97,41 @@ export default function VoiceFab() {
 
   return (
     <>
-      {/* Floating container: progress bar + mic */}
+      {/* Floating mic button */}
       <Flex
         position="fixed"
         bottom={{ base: `${fabBottom}px`, md: "20px" }}
-        left="12px"
-        right="12px"
+        right={{ base: "16px", md: "20px" }}
         align="center"
         gap={2}
-        zIndex="1001"
+        zIndex="300"
         pointerEvents="auto"
+        className="sm-kbd-hide"
+        data-kbd-open={kbdOpen ? "true" : undefined}
       >
+        {/* Recording duration badge */}
+        {isRecording && (
+          <Box
+            bg="red.500"
+            color="white"
+            px="2.5"
+            py="1"
+            borderRadius="full"
+            fontSize="xs"
+            fontWeight="600"
+            shadow="0 2px 8px rgba(229, 62, 62, 0.3)"
+            animation="pulse 1.5s ease-in-out infinite"
+            css={{
+              "@keyframes pulse": {
+                "0%, 100%": { opacity: 1 },
+                "50%": { opacity: 0.6 },
+              },
+            }}
+          >
+            {formatDuration(recordingDuration)}
+          </Box>
+        )}
+
         {/* Mic button */}
         <Box
           as="button"
@@ -187,44 +164,17 @@ export default function VoiceFab() {
         >
           {isProcessing ? <SpinnerIcon /> : isRecording ? <StopIcon /> : <MicIcon />}
         </Box>
-
-        {/* Mini progress bar — fills remaining width */}
-        <Box flex={1} minW={0}>
-          <MiniProgressBar />
-        </Box>
-
-        {/* Recording duration badge */}
-        {isRecording && (
-          <Box
-            bg="red.500"
-            color="white"
-            px="2"
-            py="0.5"
-            borderRadius="full"
-            fontSize="xs"
-            fontWeight="600"
-            animation="pulse 1.5s ease-in-out infinite"
-            css={{
-              "@keyframes pulse": {
-                "0%, 100%": { opacity: 1 },
-                "50%": { opacity: 0.6 },
-              },
-            }}
-          >
-            {formatDuration(recordingDuration)}
-          </Box>
-        )}
       </Flex>
 
       {/* Confirmation dialog */}
       <VoiceConfirmationDialog />
 
-      {/* Error toast (simple) */}
-      {error && !proposedAction && (
-        <Box
+      {/* Error toast — appears above FAB, auto-dismisses after 5s */}
+      {errorVisible && error && (
+        <Flex
           position="fixed"
-          bottom={{ base: `${fabBottom + 60}px`, md: "80px" }}
-          left="16px"
+          bottom={{ base: `${fabBottom + 58}px`, md: "80px" }}
+          right={{ base: "16px", md: "20px" }}
           maxW="280px"
           bg="red.50"
           borderWidth="1px"
@@ -232,23 +182,29 @@ export default function VoiceFab() {
           borderRadius="xl"
           px="3"
           py="2"
-          zIndex="1002"
-          shadow="md"
+          zIndex="300"
+          shadow="0 4px 12px 0 rgba(229, 62, 62, 0.15)"
+          align="center"
+          gap="2"
+          className="sm-fade-in"
         >
-          <Text fontSize="xs" color="red.600">
+          <Text fontSize="xs" color="red.600" flex="1">
             {error}
           </Text>
           <Box
             as="button"
             fontSize="xs"
             color="red.400"
-            fontWeight="500"
-            mt="1"
-            onClick={() => useVoiceCommand.getState().clearError()}
+            fontWeight="600"
+            flexShrink={0}
+            onClick={() => {
+              setErrorVisible(false);
+              useVoiceCommand.getState().clearError();
+            }}
           >
-            Zamknij
+            {"✕"}
           </Box>
-        </Box>
+        </Flex>
       )}
     </>
   );

@@ -71,18 +71,20 @@ export default function VoiceConfirmationDialog() {
         }}
       >
         <DialogBackdrop bg="blackAlpha.400" backdropFilter="blur(4px)" />
-        <DialogPositioner display="flex" alignItems="center" justifyContent="center" p="5">
+        <DialogPositioner display="flex" alignItems={{ base: "flex-end", md: "center" }} justifyContent="center" p={{ base: "0", md: "5" }}>
           <DialogContent
-            borderRadius="2xl"
+            borderRadius={{ base: "2xl 2xl 0 0", md: "2xl" }}
             maxW="400px"
             w="full"
-            maxH="85vh"
-            overflow="auto"
+            maxH={{ base: "90dvh", md: "85vh" }}
+            overflow="hidden"
+            display="flex"
+            flexDirection="column"
             shadow="0 20px 60px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04)"
             bg="white"
           >
-            <Box h="3px" bgGradient="to-r" gradientFrom="rose.300" gradientVia="pink.300" gradientTo="rose.400" borderTopRadius="2xl" />
-            <DialogHeader py="3" px="5">
+            <Box h="3px" bgGradient="to-r" gradientFrom="rose.300" gradientVia="pink.300" gradientTo="rose.400" borderTopRadius="2xl" flexShrink={0} />
+            <DialogHeader py="3" px="5" flexShrink={0}>
               <Flex align="center" justify="space-between" w="full">
                 <DialogTitle>
                   <Text fontSize="md" fontWeight="700" color="textPrimary">
@@ -96,7 +98,7 @@ export default function VoiceConfirmationDialog() {
                 </DialogCloseTrigger>
               </Flex>
             </DialogHeader>
-            <DialogBody py="3" px="5">
+            <DialogBody py="3" px="5" overflowY="auto" flex="1" css={{ WebkitOverflowScrolling: "touch" }}>
               <VStack gap="3" align="stretch">
                 {transcript && <TranscriptBox transcript={transcript} />}
                 {isMixed ? (
@@ -157,17 +159,19 @@ export default function VoiceConfirmationDialog() {
       }}
     >
       <DialogBackdrop bg="blackAlpha.400" backdropFilter="blur(4px)" />
-      <DialogPositioner display="flex" alignItems="center" justifyContent="center" p="5">
+      <DialogPositioner display="flex" alignItems={{ base: "flex-end", md: "center" }} justifyContent="center" p={{ base: "0", md: "5" }}>
         <DialogContent
-          borderRadius="2xl"
+          borderRadius={{ base: "2xl 2xl 0 0", md: "2xl" }}
           maxW="400px"
           w="full"
-          maxH="85vh"
-          overflow="auto"
+          maxH={{ base: "90dvh", md: "85vh" }}
+          overflow="hidden"
+          display="flex"
+          flexDirection="column"
           shadow="0 20px 60px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04)"
           bg="white"
         >
-          <Box h="3px" bgGradient="to-r" gradientFrom={accent.from} gradientVia={accent.via} gradientTo={accent.to} borderTopRadius="2xl" />
+          <Box h="3px" bgGradient="to-r" gradientFrom={accent.from} gradientVia={accent.via} gradientTo={accent.to} borderTopRadius="2xl" flexShrink={0} />
           <DialogHeader py="3" px="5">
             <Flex align="center" justify="space-between" w="full">
               <DialogTitle>
