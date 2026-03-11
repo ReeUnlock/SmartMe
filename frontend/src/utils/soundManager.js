@@ -19,6 +19,7 @@ const SOUND_MAP = {
   voiceStop: "stop-nagrywania-glosu.mp3",
   // dailyCheckIn: "codzienne-powitanie.mp3", — file not yet created
   levelUp: "nowy-poziom.mp3",
+  expenseAdded: "dodano-wydatek.mp3",
 };
 
 const BASE_PATH = "/sounds/";
