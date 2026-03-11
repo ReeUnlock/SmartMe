@@ -1,9 +1,15 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
  * Shared bottom-sheet dialog wrapper.
  * Mobile: slides up from bottom (flat bottom corners).
  * Desktop: centered modal (all corners rounded).
+ *
+ * iOS keyboard handling:
+ *   On iOS Safari, position:fixed uses the layout viewport which does NOT
+ *   shrink when the virtual keyboard opens. We listen to visualViewport
+ *   resize events and adjust the container height to match the actual
+ *   visible area, keeping DialogActions visible above the keyboard.
  *
  * Props:
  *  - open: boolean
@@ -24,6 +30,7 @@ export default function BottomSheetDialog({
   className = "",
 }) {
   const contentRef = useRef(null);
+  const [vvHeight, setVvHeight] = useState(null);
 
   // Lock scroll on the app's scroll container when open
   useEffect(() => {
@@ -32,6 +39,35 @@ export default function BottomSheetDialog({
     if (scrollRoot) scrollRoot.style.overflowY = "hidden";
     return () => {
       if (scrollRoot) scrollRoot.style.overflowY = "";
+    };
+  }, [open]);
+
+  // Track visualViewport height for iOS keyboard handling
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const handleResize = () => {
+      // Only apply when viewport is noticeably smaller than window
+      // (keyboard is open). Use offsetTop to position correctly.
+      const windowH = window.innerHeight;
+      const viewH = vv.height;
+      if (windowH - viewH > 100) {
+        setVvHeight(viewH + vv.offsetTop);
+      } else {
+        setVvHeight(null);
+      }
+    };
+
+    vv.addEventListener("resize", handleResize);
+    vv.addEventListener("scroll", handleResize);
+    // Initial check in case keyboard is already open
+    handleResize();
+    return () => {
+      vv.removeEventListener("resize", handleResize);
+      vv.removeEventListener("scroll", handleResize);
+      setVvHeight(null);
     };
   }, [open]);
 
@@ -57,14 +93,29 @@ export default function BottomSheetDialog({
   const tagProps = Tag === "form" || onSubmit ? { onSubmit } : {};
   const ActualTag = onSubmit ? "form" : Tag;
 
+  // When iOS keyboard is open, constrain to visual viewport
+  const kbdOpen = vvHeight != null;
+  const containerStyle = kbdOpen
+    ? { height: `${vvHeight}px`, top: 0, bottom: "auto" }
+    : undefined;
+  // Override CSS max-height (90dvh uses layout viewport, not visual)
+  const contentStyle = kbdOpen
+    ? { maxWidth: maxW, maxHeight: `${vvHeight}px` }
+    : { maxWidth: maxW };
+
   return (
     <>
       <div className="sm-dialog-backdrop" onClick={onClose} />
-      <div className="sm-dialog-container" onClick={handleBackdropClick}>
+      <div
+        className="sm-dialog-container"
+        onClick={handleBackdropClick}
+        style={containerStyle}
+        data-kbd-open={kbdOpen || undefined}
+      >
         <ActualTag
           ref={contentRef}
           className={`sm-dialog-content ${className}`.trim()}
-          style={{ maxWidth: maxW }}
+          style={contentStyle}
           onClick={(e) => e.stopPropagation()}
           {...tagProps}
         >

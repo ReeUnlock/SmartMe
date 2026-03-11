@@ -181,11 +181,16 @@ textarea::placeholder {
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   z-index: 2;
+  flex-shrink: 0;
 }
 @media (min-width: 768px) {
   .sm-dialog-actions {
     padding-bottom: 12px;
   }
+}
+/* When keyboard is open (container constrained), drop safe-area padding */
+.sm-dialog-container[data-kbd-open] .sm-dialog-actions {
+  padding-bottom: 12px;
 }
 
 /* Hide scrollbar inside dialogs for cleaner look */
