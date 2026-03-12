@@ -2,12 +2,14 @@
 
 ## Projekt
 Personalny hub zarządzania życiem dla jednej kobiety. Mobile-first, ciepłe pastele, UI po polsku.
-Domena produkcyjna: `smartme.rafaldebski.com`
+Domena produkcyjna: `www.smartme.life`
 
 ## Stack
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL 16, Alembic
 - **Frontend**: React 19, Vite 6, Chakra UI v3, React Router v7, TanStack Query v5, zustand v5
+- **Mobile**: Capacitor 8 (Android + iOS), app id: `com.rafaldebski.smartme`
 - **Infra**: Docker Compose (db, backend, frontend, nginx)
+- **CI/CD**: GitHub Actions (build + Android APK + iOS validation)
 - **AI**: OpenAI API (Whisper transkrypcja + GPT-4o-mini parsowanie intencji)
 - **OCR**: Tesseract (lokalnie, język polski)
 
@@ -42,7 +44,7 @@ backend/alembic/    — migracje DB (16 plików, env.py importuje wszystkie mode
 frontend/src/
   App.jsx           — Router + ChakraProvider + QueryClientProvider + ErrorBoundary + Global Overlays (lazy)
   theme.js          — pastelowa paleta: rose, peach, sage, sky, lavender + semantic tokens
-  api/              — client.js (apiFetch + apiUpload z JWT), pliki per moduł (auth, calendar, shopping, expenses, plans, voice)
+  api/              — client.js (apiFetch + apiUpload z JWT, VITE_API_URL env), pliki per moduł (auth, calendar, shopping, expenses, plans, voice)
   config/
     motionConfig.js   — centralna konfiguracja animacji: EASING, DURATION, Z-index, celebration presets, micro-feedback, module themes
   styles/
@@ -68,7 +70,7 @@ frontend/src/
     useCelebration.js   — zustand, celebrate(type, options), priority + throttling
     useAvatarReaction.js — zustand, react(type), probability + cooldown, session cap (20)
     useVoiceCommand.js  — zustand, MediaRecorder, startRecording/stopRecording/confirmAction
-    useQuickTemplates.js — zustand+localStorage, szablony kalendarza (max 8)
+    useQuickTemplates.js — zustand+localStorage, szablony kalendarza (max 12)
     useShoppingTemplates.js — zustand+localStorage, szablony zakupów (max 20)
     useItemHistory.js   — zustand+localStorage, historia produktów (max 100, LRU)
     useSoundSettings.js — zustand+localStorage, enabled/volume
@@ -126,7 +128,7 @@ frontend/src/
       DateInput.jsx          — date-only picker
       SmartMeLogo.jsx        — logo (image fallback)
       FeedbackDialog.jsx     — formularz opinii
-      SettingsPage.jsx       — profil, hasło, reset, dźwięki, feedback, avatar link
+      SettingsPage.jsx       — profil, hasło, reset, dźwięki, feedback, avatar link, polityka prywatności
     affirmation/    — Avatar system
       AffirmationAvatar.jsx    — state machine (idle/happy/think/reading), afirmacje, particles
       AvatarSelectionPage.jsx  — galeria kart avatarów (locked/active)
@@ -419,6 +421,130 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - [ ] Faza 9: Polish (Google Calendar, PWA, streaming AI)
 - [x] Faza R: SmartMe Rewards (sparks, levels, achievements, challenges, celebrations, avatars, affirmations)
 - [x] Faza M: Motion System (motionConfig, micro-feedback, ambient animations, branded loader/empty states)
+- [x] Faza S: Store Readiness (Capacitor, manifest, icons, CI/CD, privacy policy, account deletion)
+
+## Mobile / Capacitor
+
+### Konfiguracja
+- **App ID**: `com.rafaldebski.smartme`
+- **App name**: SmartMe
+- **Config**: `frontend/capacitor.config.ts`
+- **Web dir**: `dist` (Vite build output)
+- **Android scheme**: `https` (matches production)
+- **Platforms**: Android (`frontend/android/`), iOS (`frontend/ios/`)
+
+### Struktura natywna
+```
+frontend/
+  capacitor.config.ts       — Capacitor config (appId, plugins, server)
+  .env                      — Dev (VITE_API_URL unset → "/api")
+  .env.production           — Web prod (VITE_API_URL unset → "/api")
+  .env.capacitor            — Native builds (VITE_API_URL=https://www.smartme.life/api)
+  android/                  — Android platform (Gradle, manifesty, ikony)
+  ios/                      — iOS platform (Xcode project, SPM, Info.plist)
+  public/
+    manifest.json           — PWA manifest
+    privacy-policy.html     — Polityka prywatności (standalone HTML)
+    icons/                  — Ikony (192, 512, maskable, apple-touch, favicon, 1024, source SVG)
+  scripts/
+    generate-icons.mjs      — Generacja ikon z source PNG (wymaga sharp)
+```
+
+### API w buildach natywnych
+- `client.js` czyta `import.meta.env.VITE_API_URL || "/api"`
+- Web (dev/prod): proxy nginx → `/api` → backend → działa relative
+- Native (Capacitor): brak nginx, wymaga absolutny URL → `.env.capacitor` ustawia `VITE_API_URL=https://www.smartme.life/api`
+- Scripty `cap:build:android` / `cap:build:ios` używają `--mode capacitor` automatycznie
+
+### CORS dla Capacitor
+Backend (`config.py`) zawiera dodatkowe origins dla natywnych WebView:
+- `https://localhost` (Android Capacitor)
+- `capacitor://localhost` (iOS Capacitor)
+- `http://localhost`
+
+### Uprawnienia natywne
+- **Android**: `INTERNET`, `RECORD_AUDIO` (AndroidManifest.xml)
+- **iOS**: `NSMicrophoneUsageDescription` (Info.plist, po polsku)
+- **iOS orientation**: portrait-only
+
+### Komendy Capacitor
+```bash
+cd frontend
+
+# Sync web assets do platform
+npm run cap:sync
+
+# Build + sync Android
+npm run cap:build:android
+
+# Build + sync iOS
+npm run cap:build:ios
+
+# Otwórz w IDE
+npm run cap:open:android    # Android Studio
+npm run cap:open:ios        # Xcode
+```
+
+### Ikony
+- Source SVG: `public/icons/icon-source.svg` (gradient rose→peach, "SM")
+- Generowane: 192, 512, maskable-192, maskable-512, apple-touch-180, favicon-16/32, 1024
+- Android: mipmap PNGs (mdpi→xxxhdpi) + adaptive icon (foreground PNG + #FBF8F9 background)
+- iOS: AppIcon-512@2x.png (1024×1024)
+- Regeneracja: `node scripts/generate-icons.mjs path/to/icon-1024.png` (wymaga `npm install -D sharp`)
+
+## CI/CD — GitHub Actions
+
+### Workflows
+```
+.github/workflows/
+  build.yml     — Frontend build + Android debug APK
+  ios.yml       — iOS build validation (macOS runner) + signed build skeleton
+```
+
+### build.yml (ubuntu-latest)
+1. **frontend-build**: npm ci → web build → capacitor build → cap sync → upload dist
+2. **android-build** (needs frontend-build): Java 17 + Android SDK → cap sync android → Gradle assembleDebug → upload APK
+
+### ios.yml (macos-latest)
+1. **ios-build** (always runs): npm ci → vite build → cap sync ios → resolve SPM → `xcodebuild build` (CODE_SIGNING_ALLOWED=NO, simulator)
+2. **ios-signed-build** (gated by `vars.IOS_SIGNING_ENABLED == 'true'`): certificate + profile install → archive → export IPA
+
+### Wymagane secrets (dla signed iOS build)
+| Secret | Opis |
+|--------|------|
+| `IOS_CERTIFICATE_P12_BASE64` | Base64 .p12 certificate |
+| `IOS_CERTIFICATE_PASSWORD` | Hasło P12 |
+| `IOS_PROVISION_PROFILE_BASE64` | Base64 provisioning profile |
+| `IOS_KEYCHAIN_PASSWORD` | Dowolny string (temp keychain) |
+| `IOS_TEAM_ID` | Apple Team ID (10 znaków) |
+
+### Repo variable
+| Variable | Opis |
+|----------|------|
+| `IOS_SIGNING_ENABLED` | `true` aby włączyć signed build |
+
+## PWA / Manifest
+
+- `public/manifest.json`: name="SmartMe", display="standalone", orientation="portrait"
+- Theme color: `#F4A0B5` (rose)
+- Background color: `#FBF8F9` (ciepły beżowy)
+- Icons: 192, 512 (any + maskable)
+- `index.html`: manifest link, theme-color meta, apple-mobile-web-app meta, favicons
+
+## Polityka prywatności i compliance
+
+### Polityka prywatności
+- Plik: `frontend/public/privacy-policy.html` (standalone HTML, po polsku)
+- URL produkcyjny: `https://www.smartme.life/privacy-policy.html`
+- Link w apce: Ustawienia → "Informacje prawne" → "Polityka prywatności"
+- Treść: zbierane dane, OpenAI (Whisper/GPT), usunięcie konta, RODO, kontakt
+
+### Usunięcie konta (Apple/Google requirement)
+- Endpoint: `POST /api/auth/reset` — wymaga auth + potwierdzenie hasłem
+- **Działa w produkcji** (production block usunięty)
+- Kasuje kaskadowo: 13 tabel + user record
+- UI: Ustawienia → "Strefa ostrożności" → "Resetuj konto" → hasło + dialog potwierdzenia
+- Po usunięciu: redirect do /setup
 
 ## Komendy — lokalne (dev)
 ```bash
@@ -441,12 +567,12 @@ docker exec anelka-backend alembic upgrade head
 
 ### Infrastruktura
 - **VPS**: Hetzner CX23, Ubuntu, `89.167.123.192`
-- **Domena**: `smartme.rafaldebski.com` (DNS A record → VPS IP)
+- **Domena**: `www.smartme.life` (DNS A record → VPS IP)
 - **SSL**: Let's Encrypt (certbot), certyfikat ważny do 2026-06-08
 - **SSH**: `ssh root@89.167.123.192` (klucz ed25519 z maszyny Rafa)
 - **Pliki na serwerze**: `/root/anelka/`
 - **Docker Compose prod**: `docker-compose.prod.yml` (porty 80/443, frontend jako static build, certbot)
-- **Env prod**: `/root/anelka/.env` (silny SECRET_KEY i DB_PASSWORD, CORS tylko https://smartme.rafaldebski.com)
+- **Env prod**: `/root/anelka/.env` (silny SECRET_KEY i DB_PASSWORD, CORS tylko https://www.smartme.life)
 
 ### Różnice prod vs dev
 | | Dev (localhost) | Prod (VPS) |
@@ -456,7 +582,7 @@ docker exec anelka-backend alembic upgrade head
 | Frontend Dockerfile | `Dockerfile` | `Dockerfile.prod` |
 | Nginx config | `nginx/nginx.conf` | `nginx/nginx.prod.conf` |
 | Porty | 81, 8001, 3001, 5433 | 80, 443 (SSL) |
-| CORS | localhost:81, localhost:3001 | https://smartme.rafaldebski.com |
+| CORS | localhost:81, localhost:3001 | https://www.smartme.life |
 | SSL | Brak | Let's Encrypt + HSTS |
 
 ### Procedura deploy (krok po kroku)
@@ -471,7 +597,7 @@ ssh root@89.167.123.192 'cd /root/anelka && docker compose -f docker-compose.pro
 ssh root@89.167.123.192 'sleep 15 && docker restart anelka-nginx'
 
 # 4. Weryfikacja
-ssh root@89.167.123.192 'curl -s https://smartme.rafaldebski.com/api/health'
+ssh root@89.167.123.192 'curl -s https://www.smartme.life/api/health'
 # Oczekiwany wynik: {"status":"ok","database":"ok"}
 ```
 

@@ -1,7 +1,7 @@
 # SmartMe — Kompletna Dokumentacja Aplikacji
 
 > Personalny hub zarządzania życiem. Mobile-first, ciepłe pastele, UI po polsku.
-> Domena: `smartme.rafaldebski.com`
+> Domena: `www.smartme.life`
 
 ---
 
@@ -26,7 +26,11 @@
 17. [Bezpieczeństwo](#17-bezpieczeństwo)
 18. [Deploy i Produkcja](#18-deploy-i-produkcja)
 19. [Komendy Developerskie](#19-komendy-developerskie)
-20. [Fazy Implementacji](#20-fazy-implementacji)
+20. [Mobile / Capacitor](#20-mobile--capacitor)
+21. [CI/CD — GitHub Actions](#21-cicd--github-actions)
+22. [PWA / Manifest](#22-pwa--manifest)
+23. [Polityka Prywatności i Compliance](#23-polityka-prywatności-i-compliance)
+24. [Fazy Implementacji](#24-fazy-implementacji)
 
 ---
 
@@ -42,6 +46,8 @@
 | State (server) | TanStack Query v5.62 |
 | State (client) | Zustand v5 + localStorage |
 | Infra | Docker Compose, Nginx Alpine |
+| Mobile | Capacitor 8 (Android + iOS), app id: `com.rafaldebski.smartme` |
+| CI/CD | GitHub Actions (build, Android APK, iOS validation) |
 | AI | OpenAI API (Whisper transkrypcja + GPT-4o-mini parsowanie intencji) |
 | OCR | Tesseract + tesseract-ocr-pol (w obrazie Docker) |
 
@@ -108,7 +114,7 @@ Aplikacja dostępna pod `http://localhost:81`
 ### Vite Config
 
 - Code splitting: `vendor-react`, `vendor-chakra`, `vendor-query`, `vendor-utils`
-- `allowedHosts`: `["smartme.rafaldebski.com"]`
+- `allowedHosts`: `["www.smartme.life"]`
 - Watch: polling co 1000ms (Docker na Windows)
 - Dev server: host 0.0.0.0, port 3000
 
@@ -1205,7 +1211,12 @@ In-memory sliding window per IP (nie distributed).
 
 Konfigurowalny przez env `CORS_ORIGINS` (lista origins oddzielona przecinkami).
 - Dev: `http://localhost:81, http://localhost:3001`
-- Prod: `https://smartme.rafaldebski.com`
+- Prod: `https://www.smartme.life`
+
+Dodatkowo backend zawsze dodaje origins Capacitor WebView:
+- `https://localhost` (Android Capacitor)
+- `capacitor://localhost` (iOS Capacitor)
+- `http://localhost`
 
 ### Kompresja
 
@@ -1227,7 +1238,7 @@ GZip na backendzie (FastAPI middleware, min 500B) + nginx (gzip level 4, min 256
 |---------|---------|
 | VPS | Hetzner CX23, Ubuntu |
 | IP | 89.167.123.192 |
-| Domena | smartme.rafaldebski.com |
+| Domena | www.smartme.life |
 | SSL | Let's Encrypt (ważny do 2026-06-08) |
 | SSH | `ssh root@89.167.123.192` (klucz ed25519) |
 | Pliki | `/root/anelka/` |
@@ -1241,7 +1252,7 @@ GZip na backendzie (FastAPI middleware, min 500B) + nginx (gzip level 4, min 256
 | Frontend Dockerfile | Dockerfile | Dockerfile.prod (multi-stage) |
 | Nginx config | nginx.conf | nginx.prod.conf (SSL, HSTS) |
 | Porty | 81, 8001, 3001, 5433 | 80, 443 (SSL) |
-| CORS | localhost | https://smartme.rafaldebski.com |
+| CORS | localhost | https://www.smartme.life |
 | SSL | Brak | Let's Encrypt + HSTS |
 
 ### Procedura deploy
@@ -1259,7 +1270,7 @@ ssh root@89.167.123.192 'cd /root/anelka && docker compose -f docker-compose.pro
 ssh root@89.167.123.192 'sleep 15 && docker restart anelka-nginx'
 
 # 4. Weryfikacja
-ssh root@89.167.123.192 'curl -s https://smartme.rafaldebski.com/api/health'
+ssh root@89.167.123.192 'curl -s https://www.smartme.life/api/health'
 # → {"status":"ok","database":"ok"}
 ```
 
@@ -1300,7 +1311,218 @@ ssh root@89.167.123.192 'docker logs anelka-nginx --tail 30'
 
 ---
 
-## 20. Fazy Implementacji
+## 20. Mobile / Capacitor
+
+### Konfiguracja
+
+| Parametr | Wartość |
+|----------|---------|
+| App ID | `com.rafaldebski.smartme` |
+| App Name | SmartMe |
+| Web Dir | `dist` |
+| Android Scheme | `https` |
+| Min SDK (Android) | 24 (Android 7.0) |
+| Target SDK | 36 |
+| iOS Deployment Target | 15.0 |
+| iOS Orientation | Portrait only |
+
+### Struktura natywna
+
+```
+frontend/
+  capacitor.config.ts       — Capacitor config (appId, appName, webDir, plugins)
+  .env                      — Dev env (VITE_API_URL unset → "/api")
+  .env.production           — Web prod env (VITE_API_URL unset → "/api")
+  .env.capacitor            — Native builds (VITE_API_URL=https://www.smartme.life/api)
+  android/                  — Android platform (Gradle project)
+    app/src/main/
+      AndroidManifest.xml   — Permissions: INTERNET, RECORD_AUDIO
+      res/mipmap-*/         — Launcher icons (SmartMe gradient, all densities)
+      res/values/strings.xml — app_name="SmartMe"
+  ios/                      — iOS platform (Xcode project, Swift Package Manager)
+    App/App/
+      Info.plist            — NSMicrophoneUsageDescription, portrait-only
+      Assets.xcassets/      — AppIcon (1024x1024)
+  public/
+    manifest.json           — PWA web app manifest
+    privacy-policy.html     — Polityka prywatności (standalone)
+    icons/                  — icon-192, icon-512, maskable, apple-touch, favicons, source SVG
+  scripts/
+    generate-icons.mjs      — Generacja ikon z source PNG (wymaga sharp)
+```
+
+### API w buildach natywnych
+
+Frontend `client.js` czyta `import.meta.env.VITE_API_URL || "/api"`:
+- **Web** (dev/prod): nginx proxy → `/api` → backend — relative path działa
+- **Native** (Capacitor): brak nginx, absolutny URL wymagany → `.env.capacitor` ustawia `VITE_API_URL=https://www.smartme.life/api`
+- Scripty `cap:build:android` / `cap:build:ios` automatycznie używają `--mode capacitor`
+
+### Uprawnienia
+
+| Platforma | Uprawnienie | Cel |
+|-----------|-------------|-----|
+| Android | `INTERNET` | Komunikacja z API |
+| Android | `RECORD_AUDIO` | Komendy głosowe |
+| iOS | `NSMicrophoneUsageDescription` | Komendy głosowe (opis po polsku) |
+
+### Ikony
+
+Source SVG (`public/icons/icon-source.svg`): gradient rose→peach z literami "SM".
+
+| Plik | Rozmiar | Zastosowanie |
+|------|---------|-------------|
+| `icon-192.png` | 192×192 | PWA manifest |
+| `icon-512.png` | 512×512 | PWA manifest |
+| `icon-maskable-192.png` | 192×192 | PWA manifest (maskable) |
+| `icon-maskable-512.png` | 512×512 | PWA manifest (maskable) |
+| `apple-touch-icon.png` | 180×180 | iOS Safari |
+| `favicon-16.png` | 16×16 | Browser tab |
+| `favicon-32.png` | 32×32 | Browser tab |
+| `icon-1024.png` | 1024×1024 | Store source |
+| Android `mipmap-*` | 48–192px | Android launcher |
+| iOS `AppIcon-512@2x` | 1024×1024 | iOS app icon |
+
+Regeneracja: `node scripts/generate-icons.mjs path/to/final-icon-1024.png` (wymaga `npm install -D sharp`)
+
+### Komendy Capacitor
+
+```bash
+cd frontend
+
+npm run cap:sync              # Sync web assets do platform
+npm run cap:build:android     # Build + sync Android (mode capacitor)
+npm run cap:build:ios         # Build + sync iOS (mode capacitor)
+npm run cap:open:android      # Otwórz w Android Studio
+npm run cap:open:ios          # Otwórz w Xcode
+```
+
+---
+
+## 21. CI/CD — GitHub Actions
+
+### Workflows
+
+| Plik | Runner | Trigger |
+|------|--------|---------|
+| `.github/workflows/build.yml` | ubuntu-latest | push/PR main |
+| `.github/workflows/ios.yml` | macos-latest | push/PR main |
+
+### build.yml — Frontend + Android
+
+**Job 1: `frontend-build`**
+1. Node 20 + npm ci
+2. `vite build` (web) — walidacja web build
+3. `vite build --mode capacitor` — walidacja native build
+4. `cap sync` — walidacja Capacitor sync
+5. Upload `dist/` jako artifact
+
+**Job 2: `android-build`** (needs frontend-build)
+1. Java 17 + Android SDK
+2. npm ci → vite build (capacitor) → cap sync android
+3. `./gradlew assembleDebug --no-daemon`
+4. Upload debug APK jako artifact
+
+### ios.yml — iOS
+
+**Job 1: `ios-build`** (zawsze)
+1. Node 20 + npm ci
+2. vite build (capacitor) → cap sync ios
+3. Resolve Swift Package Dependencies
+4. `xcodebuild build` — unsigned, iOS Simulator, CODE_SIGNING_ALLOWED=NO
+
+**Job 2: `ios-signed-build`** (gated)
+- Warunek: `vars.IOS_SIGNING_ENABLED == 'true'` + push to main
+- Instaluje certificate + provisioning profile do temp keychain
+- `xcodebuild archive` → export IPA (app-store-connect method)
+- Upload IPA jako artifact
+
+### Wymagane secrets (signed iOS)
+
+| Secret | Opis | Jak wygenerować |
+|--------|------|-----------------|
+| `IOS_CERTIFICATE_P12_BASE64` | Distribution certificate | `base64 -i Cert.p12` |
+| `IOS_CERTIFICATE_PASSWORD` | Hasło P12 | Ustawione przy eksporcie |
+| `IOS_PROVISION_PROFILE_BASE64` | Provisioning profile | `base64 -i Profile.mobileprovision` |
+| `IOS_KEYCHAIN_PASSWORD` | Temp CI keychain | `openssl rand -hex 16` |
+| `IOS_TEAM_ID` | Apple Developer Team ID | developer.apple.com |
+
+| Variable | Opis |
+|----------|------|
+| `IOS_SIGNING_ENABLED` | `true` aby włączyć signed build |
+
+---
+
+## 22. PWA / Manifest
+
+### manifest.json
+
+```json
+{
+  "name": "SmartMe",
+  "short_name": "SmartMe",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF8F9",
+  "theme_color": "#F4A0B5",
+  "lang": "pl"
+}
+```
+
+### Meta tagi (index.html)
+
+- `<link rel="manifest" href="/manifest.json">`
+- `<meta name="theme-color" content="#F4A0B5">`
+- `<meta name="apple-mobile-web-app-capable" content="yes">`
+- `<meta name="apple-mobile-web-app-status-bar-style" content="default">`
+- `<meta name="apple-mobile-web-app-title" content="SmartMe">`
+- `<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">`
+- Favicons: 16px + 32px PNG
+
+---
+
+## 23. Polityka Prywatności i Compliance
+
+### Polityka prywatności
+
+- **Plik**: `frontend/public/privacy-policy.html` (standalone HTML, po polsku)
+- **URL**: `https://www.smartme.life/privacy-policy.html`
+- **Link w apce**: Ustawienia → "Informacje prawne" → "Polityka prywatności"
+- **Treść obejmuje**: zbierane dane, przetwarzanie głosu (OpenAI), usługi zewnętrzne, przechowywanie danych, usunięcie konta, prawa RODO, kontakt
+
+### Usunięcie konta (Apple/Google requirement)
+
+| Aspekt | Implementacja |
+|--------|--------------|
+| Endpoint | `POST /api/auth/reset` (wymaga JWT + hasło) |
+| Dostępność | **Działa w produkcji** |
+| Weryfikacja | Hasło + dialog potwierdzenia |
+| Zakres | Kasuje 13 tabel + user record (kaskadowo) |
+| UI | Ustawienia → "Strefa ostrożności" → "Resetuj konto" |
+| Po usunięciu | localStorage clear → redirect /setup |
+
+### Zbierane dane
+
+| Typ | Przechowywanie | Opis |
+|-----|----------------|------|
+| Dane konta | PostgreSQL (serwer) | username, email, hashed password |
+| Dane aplikacji | PostgreSQL (serwer) | wydarzenia, zakupy, wydatki, cele, plany |
+| System nagród | localStorage (urządzenie) | sparki, poziom, streak, osiągnięcia, wyzwania |
+| Ustawienia | localStorage (urządzenie) | dźwięki, avatar, szablony |
+| Nagrania głosowe | Nie przechowywane | Przetwarzane przez OpenAI Whisper, usuwane po transkrypcji |
+| Opinie | PostgreSQL (anonimowe) | wiadomość, kategoria, opcjonalny email |
+
+### Usługi zewnętrzne
+
+| Usługa | Cel | Dane przesyłane |
+|--------|-----|------------------|
+| OpenAI Whisper | Transkrypcja głosu | Audio (tymczasowo) |
+| OpenAI GPT-4o-mini | Parsowanie intencji | Tekst transkrypcji |
+| Google Fonts | Czcionki Inter + Nunito | Żądania HTTP (IP) |
+
+---
+
+## 24. Fazy Implementacji
 
 | Faza | Opis | Status |
 |------|------|--------|
@@ -1316,6 +1538,7 @@ ssh root@89.167.123.192 'docker logs anelka-nginx --tail 30'
 | 9 | Polish (Google Calendar, PWA, streaming AI) | ⬜ |
 | R | SmartMe Rewards (sparks, levels, achievements, challenges, celebrations, avatars) | ✅ |
 | M | Motion System (motionConfig, micro-feedback, ambient animations, branded loader/empty states) | ✅ |
+| S | Store Readiness (Capacitor, manifest, icons, CI/CD, privacy policy, account deletion) | ✅ |
 
 ### Przygotowane puste moduły (backend)
 
@@ -1368,21 +1591,44 @@ anelka/
 │   │       ├── affirmation/     # Avatar system (4 SVG avatars, config, reactions) + 7
 │   │       ├── voice/           # VoiceFab, ConfirmationDialog
 │   │       └── celebration/     # CelebrationOverlay (particle engine)
-│   ├── public/sounds/           # 9 plików audio (polskie nazwy)
+│   ├── public/
+│   │   ├── sounds/              # 9 plików audio (polskie nazwy)
+│   │   ├── icons/               # App icons (192, 512, maskable, apple-touch, favicons, 1024, source SVG)
+│   │   ├── manifest.json        # PWA manifest
+│   │   ├── privacy-policy.html  # Polityka prywatności
+│   │   └── logo-smartme.png     # Logo wordmark
+│   ├── android/                 # Capacitor Android platform
+│   │   └── app/src/main/
+│   │       ├── AndroidManifest.xml  # INTERNET + RECORD_AUDIO
+│   │       └── res/             # Launcher icons, splash, strings, styles
+│   ├── ios/                     # Capacitor iOS platform
+│   │   └── App/App/
+│   │       ├── Info.plist       # Permissions, portrait-only
+│   │       └── Assets.xcassets/ # AppIcon
+│   ├── scripts/
+│   │   └── generate-icons.mjs   # Icon generation script (requires sharp)
+│   ├── capacitor.config.ts      # Capacitor config
+│   ├── .env                     # Dev env
+│   ├── .env.production          # Web production env
+│   ├── .env.capacitor           # Native build env (absolute API URL)
 │   ├── package.json
 │   ├── vite.config.js
 │   ├── Dockerfile               # Dev
 │   └── Dockerfile.prod          # Prod (multi-stage build)
+├── .github/workflows/
+│   ├── build.yml                # Frontend + Android CI
+│   └── ios.yml                  # iOS CI (macOS runner)
 ├── nginx/
 │   ├── nginx.conf               # Dev config
 │   └── nginx.prod.conf          # Prod config (SSL, HSTS)
 ├── docker-compose.yml           # Dev
 ├── docker-compose.prod.yml      # Prod
 ├── .env                         # Environment (dev)
+├── .gitignore                   # Includes Capacitor build artifacts
 ├── CLAUDE.md                    # Instrukcje dla Claude
 └── DOKUMENTACJA.md              # Ta dokumentacja
 ```
 
 ---
 
-> Dokumentacja wygenerowana 2026-03-12. Wersja aplikacji: SmartMe v1.0 (Fazy 0–6 + R + M).
+> Dokumentacja zaktualizowana 2026-03-12. Wersja aplikacji: SmartMe v1.0 (Fazy 0–6 + R + M + S).

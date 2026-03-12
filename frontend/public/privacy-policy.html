@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Polityka Prywatności — SmartMe</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #3B4A63;
+      background: #FBF8F9;
+      line-height: 1.7;
+      padding: 24px 16px 48px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; color: #2B3A4E; }
+    h2 { font-size: 1.1rem; font-weight: 600; margin: 24px 0 8px; color: #2B3A4E; }
+    p, li { font-size: 0.95rem; margin-bottom: 8px; }
+    ul { padding-left: 20px; }
+    .date { font-size: 0.85rem; color: #8294AA; margin-bottom: 24px; }
+    a { color: #F4A0B5; }
+  </style>
+</head>
+<body>
+  <h1>Polityka Prywatności</h1>
+  <p class="date">Ostatnia aktualizacja: 12 marca 2026</p>
+
+  <p>SmartMe ("Aplikacja") to personalny hub zarządzania życiem stworzony przez Rafała Dębskiego ("my", "nas"). Niniejsza polityka opisuje, w jaki sposób zbieramy, wykorzystujemy i chronimy Twoje dane.</p>
+
+  <h2>1. Jakie dane zbieramy</h2>
+  <ul>
+    <li><strong>Dane konta</strong> — nazwa użytkownika, adres e-mail, zaszyfrowane hasło.</li>
+    <li><strong>Dane aplikacji</strong> — wydarzenia kalendarza, listy zakupów, wydatki, cele, plany, nagrody i ustawienia.</li>
+    <li><strong>Dane głosowe</strong> — nagrania audio przesyłane przez funkcję komend głosowych są przetwarzane przez OpenAI Whisper w celu transkrypcji i natychmiast usuwane po przetworzeniu. Nie przechowujemy nagrań audio.</li>
+    <li><strong>Opinie</strong> — wiadomość, kategoria, opcjonalny e-mail (anonimowe — nie powiązane z kontem).</li>
+  </ul>
+
+  <h2>2. Jak wykorzystujemy dane</h2>
+  <p>Dane są wykorzystywane wyłącznie do świadczenia usług Aplikacji:</p>
+  <ul>
+    <li>Przechowywanie i wyświetlanie Twoich wydarzeń, zakupów, wydatków i planów.</li>
+    <li>Przetwarzanie komend głosowych (transkrypcja i parsowanie intencji).</li>
+    <li>Obliczanie statystyk, budżetów i celów.</li>
+    <li>Działanie systemu nagród i osiągnięć (dane przechowywane lokalnie na urządzeniu).</li>
+  </ul>
+
+  <h2>3. Usługi zewnętrzne</h2>
+  <ul>
+    <li><strong>OpenAI API</strong> — do transkrypcji głosu (Whisper) i parsowania intencji (GPT-4o-mini). Dane audio są przetwarzane zgodnie z <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">polityką prywatności OpenAI</a>.</li>
+    <li><strong>Google Fonts</strong> — czcionki ładowane z serwerów Google.</li>
+  </ul>
+  <p>Nie sprzedajemy, nie udostępniamy ani nie przekazujemy Twoich danych osobowych żadnym innym stronom trzecim.</p>
+
+  <h2>4. Przechowywanie danych</h2>
+  <p>Dane aplikacji są przechowywane na naszym serwerze (PostgreSQL). Dane systemu nagród, osiągnięć i wyzwań są przechowywane wyłącznie lokalnie na Twoim urządzeniu (localStorage).</p>
+
+  <h2>5. Usunięcie konta i danych</h2>
+  <p>Możesz usunąć swoje konto i wszystkie powiązane dane w dowolnym momencie w Ustawieniach → "Usuń konto". Operacja ta jest nieodwracalna i kasuje:</p>
+  <ul>
+    <li>Dane konta (użytkownik, e-mail)</li>
+    <li>Wszystkie wydarzenia, listy zakupów, wydatki, cele i plany</li>
+    <li>Wszystkie opinie wysłane z aplikacji</li>
+  </ul>
+
+  <h2>6. Bezpieczeństwo</h2>
+  <p>Stosujemy standardowe środki bezpieczeństwa: szyfrowane hasła (bcrypt), komunikacja HTTPS, tokeny JWT z wygaśnięciem, ograniczanie liczby żądań (rate limiting).</p>
+
+  <h2>7. Twoje prawa</h2>
+  <p>Zgodnie z RODO masz prawo do:</p>
+  <ul>
+    <li>Dostępu do swoich danych</li>
+    <li>Sprostowania danych</li>
+    <li>Usunięcia danych (przez funkcję usuwania konta)</li>
+    <li>Ograniczenia przetwarzania</li>
+  </ul>
+
+  <h2>8. Kontakt</h2>
+  <p>W sprawach dotyczących prywatności: <a href="mailto:kontakt@rafaldebski.com">kontakt@rafaldebski.com</a></p>
+
+  <h2>9. Zmiany</h2>
+  <p>Możemy aktualizować niniejszą politykę. Aktualna wersja jest zawsze dostępna pod adresem <a href="https://www.smartme.life/privacy-policy.html">www.smartme.life/privacy-policy.html</a>.</p>
+</body>
+</html>
