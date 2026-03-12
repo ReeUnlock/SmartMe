@@ -18,9 +18,17 @@ class Settings:
     UPLOADS_DIR: str = os.getenv("UPLOADS_DIR", "/app/uploads")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    CORS_ORIGINS: list[str] = os.getenv(
-        "CORS_ORIGINS", "http://localhost:81,http://localhost:3001"
-    ).split(",")
+    CORS_ORIGINS: list[str] = [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS", "http://localhost:81,http://localhost:3001"
+        ).split(",")
+    ] + [
+        # Capacitor native WebView origins
+        "https://localhost",
+        "capacitor://localhost",
+        "http://localhost",
+    ]
 
 
 settings = Settings()

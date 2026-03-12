@@ -28,33 +28,39 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
 
   return (
     <BottomSheetDialog open={open} onClose={onClose} maxW="380px" onSubmit={handleSubmit}>
-      <Box p={6} pb={0}>
-        <Heading size="md" mb={4} color="sage.700" fontFamily="'Nunito', sans-serif">
-          Nowa lista zakupów
+      <Box px={4} pt={4} pb={1}>
+        <Heading size="sm" mb={3} color="sage.700" fontFamily="'Nunito', sans-serif">
+          {"Nowa lista zakupów"}
         </Heading>
-        <VStack gap={3} align="stretch" mb={4}>
+        <VStack gap={2} align="stretch" mb={3}>
           <Input
             placeholder={"np. Tygodniowe zakupy"}
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
+            size="sm"
+            bg="gray.50"
+            borderRadius="lg"
             borderColor="sage.200"
-            _focus={{ borderColor: "sage.400", boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)" }}
+            _focus={{ bg: "white", borderColor: "sage.400", boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)" }}
+            _placeholder={{ color: "gray.400" }}
           />
           <Input
             placeholder={"np. Biedronka"}
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
-            borderColor="sage.200"
-            _focus={{ borderColor: "sage.400", boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)" }}
             size="sm"
+            bg="gray.50"
+            borderRadius="lg"
+            borderColor="sage.200"
+            _focus={{ bg: "white", borderColor: "sage.400", boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)" }}
+            _placeholder={{ color: "gray.400" }}
           />
         </VStack>
 
-        {/* Templates section */}
         {templates.length > 0 && (
-          <Box mb={4}>
-            <Text fontSize="2xs" fontWeight="700" color="sage.500" textTransform="uppercase" mb={2} letterSpacing="0.04em">
+          <Box mb={2}>
+            <Text fontSize="2xs" fontWeight="700" color="sage.500" textTransform="uppercase" mb={1.5} letterSpacing="0.04em">
               {"Z szablonu"}
             </Text>
             <Flex gap={1.5} flexWrap="wrap">
@@ -68,7 +74,7 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
                     color="sage.600"
                     bg="sage.50"
                     px={3}
-                    py={1.5}
+                    py={1}
                     borderRadius="full"
                     borderWidth="1px"
                     borderColor="sage.200"
@@ -88,7 +94,6 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
                       {tpl.items.length}
                     </Text>
                   </Text>
-                  {/* Remove template */}
                   <Box
                     as="button"
                     type="button"
@@ -121,34 +126,16 @@ export default function NewListDialog({ open, onClose, onSubmit, isLoading }) {
         )}
       </Box>
 
-      {/* Sticky actions */}
       <DialogActions>
         <Flex gap={3} justify="flex-end">
-          <Text
-            as="button"
-            type="button"
-            onClick={onClose}
-            color="gray.500"
-            fontWeight="500"
-            cursor="pointer"
-            px={4}
-            py={2}
-            _hover={{ color: "textSecondary" }}
-          >
+          <Text as="button" type="button" onClick={onClose} color="gray.500" fontWeight="500" cursor="pointer" px={3} py={1.5} fontSize="sm" _hover={{ color: "textSecondary" }}>
             Anuluj
           </Text>
           <Text
-            as="button"
-            type="submit"
-            bg="sage.400"
-            color="white"
-            fontWeight="600"
-            px={5}
-            py={2}
-            borderRadius="xl"
-            cursor="pointer"
+            as="button" type="submit" bg="sage.400" color="white" fontWeight="600"
+            px={5} py={2} borderRadius="xl" cursor="pointer" fontSize="sm"
             opacity={!name.trim() || isLoading ? 0.5 : 1}
-            _hover={{ bg: "sage.500" }}
+            _hover={{ bg: "sage.500" }} transition="all 0.15s"
           >
             {isLoading ? "Tworzę…" : "Utwórz"}
           </Text>

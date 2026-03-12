@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, Children, isValidElement } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Shared bottom-sheet dialog wrapper.
@@ -117,7 +118,7 @@ export default function BottomSheetDialog({
     actionsChildren = [];
   }
 
-  return (
+  return createPortal(
     <>
       <div className="sm-dialog-backdrop" onClick={onClose} />
       <div
@@ -137,7 +138,8 @@ export default function BottomSheetDialog({
           {actionsChildren}
         </ActualTag>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 

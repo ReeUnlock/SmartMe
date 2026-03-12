@@ -95,11 +95,6 @@ def reset_account(
     db: Session = Depends(get_db),
 ):
     """Delete account and all related data. Requires auth + password confirmation."""
-    if settings.ENV == "production":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Reset konta jest wyłączony w środowisku produkcyjnym.",
-        )
 
     if not verify_password(data.password, current_user.hashed_password):
         raise HTTPException(

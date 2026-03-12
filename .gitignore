@@ -5,3 +5,26 @@ __pycache__/
 dist/
 nginx/certs/
 .vite/
+
+# Capacitor native build artifacts (keep platform source in git)
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/ios/App/App/public/
+frontend/ios/App/App/capacitor.config.json
+frontend/ios/App/Pods/
+frontend/ios/App/build/
+frontend/ios/DerivedData/
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+*.xcarchive
+*.p8
+*.pem
+*.cer
+*.csr
+*.key
+*_base64.txt

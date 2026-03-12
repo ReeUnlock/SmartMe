@@ -2,7 +2,7 @@
 
 ## Projekt
 Personalny hub zarządzania życiem dla jednej kobiety. Mobile-first, ciepłe pastele, UI po polsku.
-Domena produkcyjna: `app.smartme.life`
+Domena produkcyjna: `smartme.life`
 
 ## Stack
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL 16, Alembic
@@ -439,7 +439,7 @@ frontend/
   capacitor.config.ts       — Capacitor config (appId, plugins, server)
   .env                      — Dev (VITE_API_URL unset → "/api")
   .env.production           — Web prod (VITE_API_URL unset → "/api")
-  .env.capacitor            — Native builds (VITE_API_URL=https://app.smartme.life/api)
+  .env.capacitor            — Native builds (VITE_API_URL=https://smartme.life/api)
   android/                  — Android platform (Gradle, manifesty, ikony)
   ios/                      — iOS platform (Xcode project, SPM, Info.plist)
   public/
@@ -453,7 +453,7 @@ frontend/
 ### API w buildach natywnych
 - `client.js` czyta `import.meta.env.VITE_API_URL || "/api"`
 - Web (dev/prod): proxy nginx → `/api` → backend → działa relative
-- Native (Capacitor): brak nginx, wymaga absolutny URL → `.env.capacitor` ustawia `VITE_API_URL=https://app.smartme.life/api`
+- Native (Capacitor): brak nginx, wymaga absolutny URL → `.env.capacitor` ustawia `VITE_API_URL=https://smartme.life/api`
 - Scripty `cap:build:android` / `cap:build:ios` używają `--mode capacitor` automatycznie
 
 ### CORS dla Capacitor
@@ -535,7 +535,7 @@ npm run cap:open:ios        # Xcode
 
 ### Polityka prywatności
 - Plik: `frontend/public/privacy-policy.html` (standalone HTML, po polsku)
-- URL produkcyjny: `https://app.smartme.life/privacy-policy.html`
+- URL produkcyjny: `https://smartme.life/privacy-policy.html`
 - Link w apce: Ustawienia → "Informacje prawne" → "Polityka prywatności"
 - Treść: zbierane dane, OpenAI (Whisper/GPT), usunięcie konta, RODO, kontakt
 
@@ -567,12 +567,12 @@ docker exec anelka-backend alembic upgrade head
 
 ### Infrastruktura
 - **VPS**: Hetzner CX23, Ubuntu, `89.167.123.192`
-- **Domena**: `app.smartme.life` (DNS A record → VPS IP)
+- **Domena**: `smartme.life` (DNS A record → VPS IP)
 - **SSL**: Let's Encrypt (certbot), certyfikat ważny do 2026-06-08
 - **SSH**: `ssh root@89.167.123.192` (klucz ed25519 z maszyny Rafa)
 - **Pliki na serwerze**: `/root/anelka/`
 - **Docker Compose prod**: `docker-compose.prod.yml` (porty 80/443, frontend jako static build, certbot)
-- **Env prod**: `/root/anelka/.env` (silny SECRET_KEY i DB_PASSWORD, CORS tylko https://app.smartme.life)
+- **Env prod**: `/root/anelka/.env` (silny SECRET_KEY i DB_PASSWORD, CORS tylko https://smartme.life)
 
 ### Różnice prod vs dev
 | | Dev (localhost) | Prod (VPS) |
@@ -582,7 +582,7 @@ docker exec anelka-backend alembic upgrade head
 | Frontend Dockerfile | `Dockerfile` | `Dockerfile.prod` |
 | Nginx config | `nginx/nginx.conf` | `nginx/nginx.prod.conf` |
 | Porty | 81, 8001, 3001, 5433 | 80, 443 (SSL) |
-| CORS | localhost:81, localhost:3001 | https://app.smartme.life |
+| CORS | localhost:81, localhost:3001 | https://smartme.life |
 | SSL | Brak | Let's Encrypt + HSTS |
 
 ### Procedura deploy (krok po kroku)
@@ -597,7 +597,7 @@ ssh root@89.167.123.192 'cd /root/anelka && docker compose -f docker-compose.pro
 ssh root@89.167.123.192 'sleep 15 && docker restart anelka-nginx'
 
 # 4. Weryfikacja
-ssh root@89.167.123.192 'curl -s https://app.smartme.life/api/health'
+ssh root@89.167.123.192 'curl -s https://smartme.life/api/health'
 # Oczekiwany wynik: {"status":"ok","database":"ok"}
 ```
 

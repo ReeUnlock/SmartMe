@@ -58,14 +58,12 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
     }
   }, [open, goal]);
 
-  // Auto-set unit for financial goals
   useEffect(() => {
     if (isFinancial) {
       setUnit("zł");
     }
   }, [goalType]);
 
-  // Clear linked category when switching away from spending_limit
   useEffect(() => {
     if (goalType !== "spending_limit") {
       setLinkedCategoryId(null);
@@ -104,14 +102,13 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
 
   return (
     <BottomSheetDialog open={open} onClose={onClose} maxW="420px" onSubmit={handleSubmit}>
-      <Box p={6} pb={0}>
-        <Heading size="md" mb={4} color="rose.700" fontFamily="'Nunito', sans-serif">
+      <Box px={4} pt={4} pb={1}>
+        <Heading size="sm" mb={3} color="rose.700" fontFamily="'Nunito', sans-serif">
           {isEdit ? "Edytuj cel" : "Nowy cel"}
         </Heading>
 
-        {/* Goal type selector */}
-        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Typ celu"}</Text>
-        <Flex gap={2} mb={3} flexWrap="wrap">
+        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>{"Typ celu"}</Text>
+        <Flex gap={1.5} mb={2.5} flexWrap="wrap">
           {GOAL_TYPES.map((gt) => (
             <Text
               key={gt.value}
@@ -120,13 +117,13 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
               fontSize="xs"
               fontWeight="600"
               px={3}
-              py={1.5}
+              py={1}
               borderRadius="full"
               cursor="pointer"
               bg={goalType === gt.value ? "rose.300" : "rose.50"}
               color={goalType === gt.value ? "white" : "rose.500"}
               _hover={{ bg: goalType === gt.value ? "rose.400" : "rose.100" }}
-              transition="all 0.2s"
+              transition="all 0.15s"
               onClick={() => setGoalType(gt.value)}
             >
               {gt.label}
@@ -134,14 +131,13 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
           ))}
         </Flex>
 
-        {/* Expense category picker — only for spending_limit */}
         {goalType === "spending_limit" && (
           <>
-            <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Kategoria wydatków *"}</Text>
+            <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>{"Kategoria wydatków *"}</Text>
             {catLoading ? (
-              <Flex py={2} mb={3}><Spinner size="sm" color="peach.400" /></Flex>
+              <Flex py={2} mb={2.5}><Spinner size="sm" color="peach.400" /></Flex>
             ) : (
-              <Flex gap={2} mb={3} flexWrap="wrap">
+              <Flex gap={1.5} mb={2.5} flexWrap="wrap">
                 {expenseCategories?.map((ec) => (
                   <Text
                     key={ec.id}
@@ -150,13 +146,13 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
                     fontSize="xs"
                     fontWeight="600"
                     px={3}
-                    py={1.5}
+                    py={1}
                     borderRadius="full"
                     cursor="pointer"
                     bg={linkedCategoryId === ec.id ? "peach.400" : "peach.50"}
                     color={linkedCategoryId === ec.id ? "white" : "peach.600"}
                     _hover={{ bg: linkedCategoryId === ec.id ? "peach.500" : "peach.100" }}
-                    transition="all 0.2s"
+                    transition="all 0.15s"
                     onClick={() => setLinkedCategoryId(linkedCategoryId === ec.id ? null : ec.id)}
                   >
                     {ec.name}
@@ -167,7 +163,7 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
           </>
         )}
 
-        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Tytuł *"}</Text>
+        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>{"Tytuł *"}</Text>
         <Input
           placeholder={goalType === "spending_limit"
             ? "np. Limit na jedzenie w marcu"
@@ -177,23 +173,31 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           autoFocus
-          mb={3}
+          size="sm"
+          mb={2.5}
+          bg="gray.50"
+          borderRadius="lg"
           borderColor="rose.200"
-          _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+          _focus={{ bg: "white", borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+          _placeholder={{ color: "gray.400" }}
         />
 
-        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Opis"}</Text>
+        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>{"Opis"}</Text>
         <Input
           placeholder={"Opis celu"}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          mb={3}
+          size="sm"
+          mb={2.5}
+          bg="gray.50"
+          borderRadius="lg"
           borderColor="rose.200"
-          _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+          _focus={{ bg: "white", borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+          _placeholder={{ color: "gray.400" }}
         />
 
-        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>{"Kategoria celu"}</Text>
-        <Flex gap={2} mb={3} flexWrap="wrap">
+        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>{"Kategoria celu"}</Text>
+        <Flex gap={1.5} mb={2.5} flexWrap="wrap">
           {CATEGORIES.map((cat) => (
             <Text
               key={cat.value}
@@ -202,13 +206,13 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
               fontSize="xs"
               fontWeight="600"
               px={3}
-              py={1.5}
+              py={1}
               borderRadius="full"
               cursor="pointer"
               bg={category === cat.value ? "rose.300" : "rose.50"}
               color={category === cat.value ? "white" : "rose.500"}
               _hover={{ bg: category === cat.value ? "rose.400" : "rose.100" }}
-              transition="all 0.2s"
+              transition="all 0.15s"
               onClick={() => setCategory(category === cat.value ? "" : cat.value)}
             >
               {cat.label}
@@ -216,10 +220,10 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
           ))}
         </Flex>
 
-        <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1}>
+        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>
           {goalType === "spending_limit" ? "Limit miesięczny *" : "Cel liczbowy"}
         </Text>
-        <Flex gap={2} mb={3} align="center">
+        <Flex gap={2} mb={2.5} align="center">
           <Input
             placeholder={isFinancial ? "np. 500" : "np. 10000"}
             type="number"
@@ -229,30 +233,37 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
             value={targetValue}
             onChange={(e) => setTargetValue(e.target.value)}
             flex={2}
+            size="sm"
+            bg="gray.50"
+            borderRadius="lg"
             borderColor="rose.200"
-            _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+            _focus={{ bg: "white", borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+            _placeholder={{ color: "gray.400" }}
           />
           {isFinancial ? (
-            <Flex align="center" justify="center" px={3} h="40px" bg="gray.50" borderRadius="md" minW="48px" flexShrink={0}>
-              <Text fontSize="sm" color="gray.500" fontWeight="600">{"zł"}</Text>
+            <Flex align="center" justify="center" px={3} h="32px" bg="rose.50" borderRadius="lg" minW="40px" flexShrink={0}>
+              <Text fontSize="xs" color="rose.500" fontWeight="600">{"zł"}</Text>
             </Flex>
           ) : (
             <Input
               placeholder={"np. km"}
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
-              maxW="90px"
+              maxW="80px"
               flexShrink={0}
               textAlign="center"
+              size="sm"
+              bg="gray.50"
+              borderRadius="lg"
               borderColor="rose.200"
-              _focus={{ borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+              _focus={{ bg: "white", borderColor: "rose.400", boxShadow: "0 0 0 1px var(--chakra-colors-rose-400)" }}
+              _placeholder={{ color: "gray.400" }}
             />
           )}
         </Flex>
 
-        {/* Info text for spending_limit */}
         {goalType === "spending_limit" && (
-          <Text fontSize="2xs" color="gray.400" mb={3}>
+          <Text fontSize="2xs" color="gray.400" mb={2.5}>
             {"Postęp będzie automatycznie liczony z wydatków w bieżącym miesiącu."}
           </Text>
         )}
@@ -264,23 +275,18 @@ export default function GoalFormDialog({ open, onClose, onSubmit, isLoading, goa
           label="Termin"
           placeholder="Wybierz termin"
           clearable
-          mb={2}
+          mb={1}
         />
       </Box>
 
-      {/* Sticky actions */}
       <DialogActions>
         <Flex gap={3} justify="flex-end">
-          <Text
-            as="button" type="button" onClick={onClose}
-            color="gray.500" fontWeight="500" cursor="pointer" px={4} py={2}
-            _hover={{ color: "textSecondary" }}
-          >
+          <Text as="button" type="button" onClick={onClose} color="gray.500" fontWeight="500" cursor="pointer" px={3} py={1.5} fontSize="sm" _hover={{ color: "textSecondary" }}>
             {"Anuluj"}
           </Text>
           <Text
             as="button" type="submit" bg="rose.300" color="white" fontWeight="600"
-            px={5} py={2} borderRadius="xl" cursor="pointer"
+            px={5} py={2} borderRadius="xl" cursor="pointer" fontSize="sm" transition="all 0.15s"
             opacity={canSubmit ? 1 : 0.5} _hover={{ bg: "rose.400" }}
           >
             {isLoading

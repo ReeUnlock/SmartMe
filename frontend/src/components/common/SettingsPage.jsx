@@ -19,6 +19,7 @@ import {
   LuTriangleAlert,
   LuMessageCircle,
   LuVolume2,
+  LuShieldCheck,
 } from "react-icons/lu";
 import { useAuth } from "../../hooks/useAuth";
 import { changePassword, resetAccount } from "../../api/auth";
@@ -494,7 +495,31 @@ export default function SettingsPage() {
           )}
         </SettingsCard>
 
-        {/* ── Section D: Strefa ostrożności ── */}
+        {/* ── Section D: Prawne ── */}
+        <SettingsCard>
+          <SectionTitle icon={LuShieldCheck} color="sage.400">
+            {"Informacje prawne"}
+          </SectionTitle>
+          <HStack
+            as="a"
+            href="/privacy-policy.html"
+            target="_blank"
+            rel="noopener"
+            justify="space-between"
+            _hover={{ bg: "sage.50" }}
+            borderRadius="xl"
+            mx={-2}
+            px={2}
+            py="1.5"
+            transition="background 0.15s"
+            textDecoration="none"
+          >
+            <Text fontSize="sm" color="gray.600">{"Polityka prywatności"}</Text>
+            <Icon as={LuChevronRight} boxSize="14px" color="gray.400" />
+          </HStack>
+        </SettingsCard>
+
+        {/* ── Section E: Strefa ostrożności ── */}
         <SettingsCard
           borderColor="red.50"
           shadow="0 1px 8px 0 rgba(0,0,0,0.02)"

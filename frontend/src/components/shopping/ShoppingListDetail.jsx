@@ -593,16 +593,17 @@ function SaveAsExpenseDialog({ open, listId, listItems, shoppingCategories, onCl
 
   return (
     <BottomSheetDialog open={open} onClose={onClose} maxW="400px" onSubmit={handleSubmit}>
-      <Box p={6} pb={0}>
-        <Flex align="center" gap={2} mb={4}>
-          <Icon as={LuWallet} boxSize={5} color="peach.500" />
-          <Heading size="md" color="peach.600" fontFamily="'Nunito', sans-serif">
+      <Box px={4} pt={4} pb={1}>
+        <Flex align="center" gap={2} mb={3}>
+          <Flex align="center" justify="center" w="32px" h="32px" borderRadius="lg" bg="peach.50" flexShrink={0}>
+            <Icon as={LuWallet} boxSize={4} color="peach.500" />
+          </Flex>
+          <Heading size="sm" color="peach.600" fontFamily="'Nunito', sans-serif">
             {"Zapisz jako wydatek"}
           </Heading>
         </Flex>
 
-        {/* Amount */}
-        <Text fontSize="sm" fontWeight="500" color="gray.600" mb={1}>{"Kwota (zł) *"}</Text>
+        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>{"Kwota (zł) *"}</Text>
         <Input
           placeholder={"np. 149.90"}
           inputMode="decimal"
@@ -612,25 +613,28 @@ function SaveAsExpenseDialog({ open, listId, listItems, shoppingCategories, onCl
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           autoFocus
-          mb={3}
+          size="sm"
+          mb={2.5}
+          bg="gray.50"
+          borderRadius="lg"
           borderColor="peach.200"
-          _focus={{ borderColor: "peach.400", boxShadow: "0 0 0 1px var(--chakra-colors-peach-400)" }}
+          _focus={{ bg: "white", borderColor: "peach.400", boxShadow: "0 0 0 1px var(--chakra-colors-peach-400)" }}
+          _placeholder={{ color: "gray.400" }}
         />
 
-        {/* Category split preview */}
         {splitPreview.length > 1 && val > 0 && (
-          <Box mb={3} p={3} bg="peach.50" borderRadius="xl">
-            <Text fontSize="2xs" fontWeight="700" color="peach.600" textTransform="uppercase" mb={2}>
+          <Box mb={2.5} p={2.5} bg="peach.50" borderRadius="lg" borderWidth="1px" borderColor="peach.100">
+            <Text fontSize="2xs" fontWeight="700" color="peach.600" textTransform="uppercase" letterSpacing="0.5px" mb={1}>
               {"Podział na kategorie"}
             </Text>
             <VStack gap={1} align="stretch">
               {splitPreview.map((s) => (
                 <Flex key={s.name} justify="space-between" align="center">
-                  <Text fontSize="xs" color="gray.600" fontWeight="500">
+                  <Text fontSize="2xs" color="gray.600" fontWeight="500">
                     {s.name}
-                    <Text as="span" color="gray.400" ml={1}>({s.count} {s.count === 1 ? "produkt" : s.count < 5 ? "produkty" : "produktów"})</Text>
+                    <Text as="span" color="gray.400" ml={1}>({s.count})</Text>
                   </Text>
-                  <Text fontSize="xs" fontWeight="600" color="peach.600">
+                  <Text fontSize="2xs" fontWeight="700" color="peach.600">
                     {s.amount.toFixed(2)} {"zł"}
                   </Text>
                 </Flex>
@@ -639,33 +643,27 @@ function SaveAsExpenseDialog({ open, listId, listItems, shoppingCategories, onCl
           </Box>
         )}
 
-        {/* Date */}
-        <Text fontSize="sm" fontWeight="500" color="gray.600" mb={1}>Data</Text>
-        <DateInput
-          value={date}
-          onChange={setDate}
-          accentColor="peach"
-          mb={3}
-        />
+        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>Data</Text>
+        <DateInput value={date} onChange={setDate} accentColor="peach" mb={2.5} />
 
-        {/* Paid by */}
         {members?.length > 0 && (
-          <Box mb={3}>
-            <Text fontSize="sm" fontWeight="500" color="gray.600" mb={1}>{"Kto płaci"}</Text>
-            <Flex gap={1}>
+          <Box mb={2.5}>
+            <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>{"Kto płaci"}</Text>
+            <Flex gap={1.5}>
               {members.map((m) => (
                 <Text
                   key={m.id}
                   as="button"
                   type="button"
                   fontSize="xs"
-                  px={2}
+                  fontWeight="600"
+                  px={3}
                   py={1}
-                  borderRadius="md"
+                  borderRadius="full"
                   bg={paidById === m.id ? "peach.400" : "peach.50"}
-                  color={paidById === m.id ? "white" : "gray.600"}
+                  color={paidById === m.id ? "white" : "peach.600"}
                   cursor="pointer"
-                  fontWeight="500"
+                  transition="all 0.15s"
                   onClick={() => setPaidById(paidById === m.id ? null : m.id)}
                   _hover={{ bg: paidById === m.id ? "peach.500" : "peach.100" }}
                 >
@@ -676,60 +674,40 @@ function SaveAsExpenseDialog({ open, listId, listItems, shoppingCategories, onCl
           </Box>
         )}
 
-        {/* Shared */}
         <Flex
           align="center"
           gap={2}
-          mb={2}
           cursor="pointer"
           onClick={() => setIsShared(!isShared)}
+          py={1.5}
+          px={2}
+          borderRadius="lg"
+          bg={isShared ? "peach.50" : "transparent"}
+          transition="all 0.15s"
+          _hover={{ bg: "peach.50" }}
         >
-          <Box
-            w="18px"
-            h="18px"
-            borderRadius="md"
-            border="2px solid"
+          <Flex
+            w="18px" h="18px" borderRadius="sm" border="2px solid"
             borderColor={isShared ? "peach.400" : "gray.300"}
             bg={isShared ? "peach.400" : "transparent"}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            transition="all 0.15s"
+            align="center" justify="center" transition="all 0.15s" flexShrink={0}
           >
-            {isShared && <Text color="white" fontSize="xs" fontWeight="700" lineHeight="1">{"✓"}</Text>}
-          </Box>
-          <Text fontSize="sm" color="gray.600">{"Wydatek wspólny"}</Text>
+            {isShared && <Text color="white" fontSize="2xs" fontWeight="700" lineHeight="1">{"✓"}</Text>}
+          </Flex>
+          <Text fontSize="sm" color={isShared ? "peach.600" : "gray.600"} fontWeight="500">{"Wydatek wspólny"}</Text>
         </Flex>
       </Box>
 
-      {/* Sticky actions */}
       <DialogActions>
         <Flex gap={3} justify="flex-end">
-          <Text
-            as="button"
-            type="button"
-            onClick={onClose}
-            color="gray.500"
-            fontWeight="500"
-            cursor="pointer"
-            px={4}
-            py={2}
-            _hover={{ color: "textSecondary" }}
-          >
+          <Text as="button" type="button" onClick={onClose} color="gray.500" fontWeight="500" cursor="pointer" px={3} py={1.5} fontSize="sm" _hover={{ color: "textSecondary" }}>
             Anuluj
           </Text>
           <Text
-            as="button"
-            type="submit"
-            bg="peach.400"
-            color="white"
-            fontWeight="600"
-            px={5}
-            py={2}
-            borderRadius="xl"
-            cursor="pointer"
+            as="button" type="submit" bg="peach.400" color="white" fontWeight="600"
+            px={5} py={2} borderRadius="xl" cursor="pointer" fontSize="sm"
             opacity={!amount || saveAsExpense.isPending ? 0.5 : 1}
-            _hover={{ bg: "peach.500" }}
+            _hover={{ bg: "peach.500" }} transition="all 0.15s"
           >
             {saveAsExpense.isPending ? "Zapisuję…" : "Zapisz wydatek"}
           </Text>
