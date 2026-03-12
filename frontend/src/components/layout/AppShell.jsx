@@ -21,8 +21,9 @@ export default function AppShell() {
           "linear-gradient(180deg, #FFF4F8 0%, #FFF7F3 45%, #FFF1EA 100%)",
       }}
     >
-      {/* Soft pastel background blobs — radial gradient instead of filter: blur(120px) for GPU perf */}
+      {/* Soft pastel background blobs — animated drift for ambient life */}
       <Box
+        className="sm-blob-drift-1"
         position="fixed"
         top="-10%"
         left="-10%"
@@ -36,6 +37,7 @@ export default function AppShell() {
         }}
       />
       <Box
+        className="sm-blob-drift-2"
         position="fixed"
         bottom="-10%"
         right="-10%"

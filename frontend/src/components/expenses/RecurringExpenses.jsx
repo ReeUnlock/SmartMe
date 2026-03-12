@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Box, Flex, Text, VStack, Input, Spinner, Icon } from "@chakra-ui/react";
+import { Box, Flex, Text, VStack, Input, Icon, Spinner } from "@chakra-ui/react";
+import SmartMeLoader from "../common/SmartMeLoader";
 import { LuPlus, LuTrash2, LuRepeat, LuCalendarDays, LuZap, LuCheck } from "react-icons/lu";
 import {
   useRecurring, useCreateRecurring, useDeleteRecurring,
@@ -118,7 +119,7 @@ export default function RecurringExpenses({ year, month }) {
   const totalMonthly = recurring?.reduce((s, r) => s + r.amount, 0) || 0;
 
   if (isLoading) {
-    return <Flex justify="center" py={12}><Spinner color="peach.500" size="lg" /></Flex>;
+    return <SmartMeLoader color="peach" />;
   }
 
   return (

@@ -1,5 +1,12 @@
 import { useEffect, useRef, useCallback } from "react";
 import useCelebration from "../../hooks/useCelebration";
+import {
+  CELEBRATION_TYPES,
+  CELEBRATION_PALETTES,
+  Z,
+  EASING,
+  PARTICLE_SAFETY_TIMEOUT,
+} from "../../config/motionConfig";
 
 // ─── Intensity hierarchy (tuned for emotional weight) ────────────
 //
@@ -9,108 +16,16 @@ import useCelebration from "../../hooks/useCelebration";
 //   achievement → ceremonial reveal (14 sparkles, rose halo, longer)
 //   levelup     → peak moment (20 sparkles, warm halo, biggest glow)
 
-const TYPES = {
-  progress: {
-    count: 3,
-    duration: 500,
-    glow: false,
-    glowColor: "200,180,230",
-    glowSize: 0,
-    glowOpacity: 0,
-    particleSpread: 40,
-    particleSizeMin: 2,
-    particleSizeMax: 3.5,
-    particleOpacity: 0.5,
-  },
-  affirmation: {
-    count: 6,
-    duration: 800,
-    glow: true,
-    glowColor: "252,194,215",
-    glowSize: 60,
-    glowOpacity: 0.4,
-    particleSpread: 70,
-    particleSizeMin: 2.5,
-    particleSizeMax: 5,
-    particleOpacity: 0.7,
-  },
-  reward: {
-    count: 10,
-    duration: 1000,
-    glow: true,
-    glowColor: "253,208,177",
-    glowSize: 100,
-    glowOpacity: 0.55,
-    particleSpread: 110,
-    particleSizeMin: 3,
-    particleSizeMax: 6,
-    particleOpacity: 0.8,
-  },
-  achievement: {
-    count: 14,
-    duration: 1200,
-    glow: true,
-    glowColor: "252,194,215",
-    glowSize: 120,
-    glowOpacity: 0.6,
-    particleSpread: 130,
-    particleSizeMin: 3,
-    particleSizeMax: 7,
-    particleOpacity: 0.85,
-  },
-  levelup: {
-    count: 20,
-    duration: 1500,
-    glow: true,
-    glowColor: "249,145,94",
-    glowSize: 180,
-    glowOpacity: 0.7,
-    particleSpread: 170,
-    particleSizeMin: 3.5,
-    particleSizeMax: 8,
-    particleOpacity: 0.9,
-  },
-};
+// Track all active particle elements for safety cleanup
+const activeElements = new Set();
 
-// Soft pastel palette — consistent across all types
-const SPARKLE_PALETTES = {
-  progress: [
-    "rgba(200,180,230,0.6)",
-    "rgba(232,213,245,0.5)",
-    "rgba(255,255,255,0.5)",
-  ],
-  affirmation: [
-    "rgba(252,194,215,0.8)",
-    "rgba(253,208,177,0.7)",
-    "rgba(255,255,255,0.85)",
-    "rgba(232,191,232,0.6)",
-  ],
-  reward: [
-    "rgba(253,208,177,0.85)",
-    "rgba(255,223,107,0.7)",
-    "rgba(252,194,215,0.75)",
-    "rgba(255,255,255,0.9)",
-    "rgba(200,230,201,0.6)",
-  ],
-  achievement: [
-    "rgba(252,194,215,0.9)",
-    "rgba(232,191,232,0.8)",
-    "rgba(255,255,255,0.9)",
-    "rgba(253,208,177,0.7)",
-    "rgba(255,223,107,0.65)",
-  ],
-  levelup: [
-    "rgba(249,145,94,0.85)",
-    "rgba(252,194,215,0.9)",
-    "rgba(255,223,107,0.8)",
-    "rgba(253,208,177,0.85)",
-    "rgba(255,255,255,0.95)",
-    "rgba(232,191,232,0.7)",
-  ],
-};
+function safeRemove(el) {
+  activeElements.delete(el);
+  if (el.parentNode) el.remove();
+}
 
 function createParticle(config, type, index, total, originX, originY, intensity) {
-  const palette = SPARKLE_PALETTES[type] || SPARKLE_PALETTES.reward;
+  const palette = CELEBRATION_PALETTES[type] || CELEBRATION_PALETTES.reward;
   const angle = (Math.PI * 2 * index) / total + (Math.random() - 0.5) * 0.7;
   const spread = config.particleSpread * intensity;
   const dist = spread * (0.35 + Math.random() * 0.65);
@@ -131,13 +46,15 @@ function createParticle(config, type, index, total, originX, originY, intensity)
     height: ${size}px;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 600;
+    z-index: ${Z.celebrationParticle};
     opacity: 0;
     background: ${color};
     will-change: transform, opacity;
   `;
 
   let start = null;
+  let safetyTimer = null;
+
   const animate = (ts) => {
     if (!start) start = ts;
     const elapsed = ts - start - delay;
@@ -161,9 +78,13 @@ function createParticle(config, type, index, total, originX, originY, intensity)
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
-      el.remove();
+      clearTimeout(safetyTimer);
+      safeRemove(el);
     }
   };
+
+  // Safety timeout: force-remove particle if RAF loop fails
+  safetyTimer = setTimeout(() => safeRemove(el), PARTICLE_SAFETY_TIMEOUT);
 
   return { el, animate };
 }
@@ -180,7 +101,7 @@ function createGlow(config, originX, originY, intensity) {
     height: ${size}px;
     border-radius: 50%;
     pointer-events: none;
-    z-index: 599;
+    z-index: ${Z.celebrationGlow};
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.2);
     background: radial-gradient(circle, rgba(${glowColor},${(glowOpacity * 0.5).toFixed(2)}) 0%, rgba(${glowColor},${(glowOpacity * 0.15).toFixed(2)}) 40%, transparent 70%);
@@ -188,6 +109,8 @@ function createGlow(config, originX, originY, intensity) {
   `;
 
   let start = null;
+  let safetyTimer = null;
+
   const animate = (ts) => {
     if (!start) start = ts;
     const progress = Math.min((ts - start) / duration, 1);
@@ -202,9 +125,13 @@ function createGlow(config, originX, originY, intensity) {
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
-      el.remove();
+      clearTimeout(safetyTimer);
+      safeRemove(el);
     }
   };
+
+  // Safety timeout
+  safetyTimer = setTimeout(() => safeRemove(el), PARTICLE_SAFETY_TIMEOUT);
 
   return { el, animate };
 }
@@ -213,7 +140,7 @@ function createGlow(config, originX, originY, intensity) {
 const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
 function runCelebration(type, options = {}) {
-  const config = TYPES[type] || TYPES.reward;
+  const config = CELEBRATION_TYPES[type] || CELEBRATION_TYPES.reward;
   const originX = options.originX ?? 50;
   const originY = options.originY ?? 50;
   const intensity = Math.max(0.3, Math.min(2, options.intensity ?? 1));
@@ -222,6 +149,7 @@ function runCelebration(type, options = {}) {
   if (config.glow && !isMobile) {
     const glow = createGlow(config, originX, originY, intensity);
     document.body.appendChild(glow.el);
+    activeElements.add(glow.el);
     requestAnimationFrame(glow.animate);
   }
 
@@ -232,6 +160,7 @@ function runCelebration(type, options = {}) {
   for (let i = 0; i < count; i++) {
     const p = createParticle(config, type, i, count, originX, originY, intensity);
     document.body.appendChild(p.el);
+    activeElements.add(p.el);
     particles.push(p);
   }
   requestAnimationFrame((ts) => {
@@ -239,6 +168,17 @@ function runCelebration(type, options = {}) {
   });
 
   return config.duration + 50;
+}
+
+/**
+ * Force-clean all active celebration particles from the DOM.
+ * Called as a safety measure on unmount or navigation.
+ */
+export function cleanupAllParticles() {
+  for (const el of activeElements) {
+    if (el.parentNode) el.remove();
+  }
+  activeElements.clear();
 }
 
 export default function CelebrationOverlay() {
@@ -256,6 +196,11 @@ export default function CelebrationOverlay() {
     const timer = setTimeout(stableDismiss, totalDuration);
     return () => clearTimeout(timer);
   }, [active, stableDismiss]);
+
+  // Cleanup all particles on unmount (route change safety net)
+  useEffect(() => {
+    return () => cleanupAllParticles();
+  }, []);
 
   return null;
 }

@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Box, Flex, Text, VStack, Spinner, Icon, Input } from "@chakra-ui/react";
+import { Box, Flex, Text, VStack, Icon, Input } from "@chakra-ui/react";
 import { LuPlus, LuTrash2, LuWallet, LuUsers, LuTag, LuPencil, LuSearch, LuX } from "react-icons/lu";
+import SmartMeLoader from "../common/SmartMeLoader";
+import EmptyState from "../common/EmptyState";
 import { useExpenses, useDeleteExpense, useCreateExpense, useUpdateExpense, useExpenseCategories, useMembers } from "../../hooks/useExpenses";
 import useExpenseUndo from "../../hooks/useExpenseUndo";
 import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useChallenges from "../../hooks/useChallenges";
 import AddExpenseDialog from "./AddExpenseDialog";
+import { playSound } from "../../utils/soundManager";
 
 function ExpenseRow({ expense, onDelete, onEdit, confirmingId }) {
   const isConfirming = confirmingId === expense.id;
@@ -189,6 +192,7 @@ export default function ExpensesList({ year, month }) {
       } else {
         const created = await createExpense.mutateAsync(data);
         pushUndo({ type: "create", expense: created });
+        playSound("expenseAdded");
         grantReward("expense_added");
         trackProgress("expenses_logged", 1, addBonusSparks);
         trackChallenge("expense", addBonusSparks);
@@ -249,7 +253,7 @@ export default function ExpensesList({ year, month }) {
   const filteredCount = filtered?.length || 0;
 
   if (isLoading) {
-    return <Flex justify="center" py={12}><Spinner color="peach.500" size="lg" /></Flex>;
+    return <SmartMeLoader color="peach" />;
   }
 
   return (
@@ -443,17 +447,14 @@ export default function ExpensesList({ year, month }) {
 
       {/* Expenses list */}
       {!dates.length ? (
-        <VStack py={16} gap={3}>
-          <Icon as={hasActiveFilters ? LuSearch : LuWallet} boxSize={16} strokeWidth={1} color="peach.200" />
-          <Text fontSize="lg" fontWeight="600" color="gray.500">
-            {hasActiveFilters ? "Brak wyników" : "Brak wydatków"}
-          </Text>
-          <Text fontSize="sm" textAlign="center" color="gray.400">
-            {hasActiveFilters
-              ? "Spróbuj zmienić filtry lub wyszukiwaną frazę"
-              : "Kliknij \"Nowy wydatek\" aby dodać swój pierwszy wydatek"}
-          </Text>
-        </VStack>
+        <EmptyState
+          icon={hasActiveFilters ? LuSearch : LuWallet}
+          title={hasActiveFilters ? "Brak wyników" : "Brak wydatków"}
+          description={hasActiveFilters
+            ? "Spróbuj zmienić filtry lub wyszukiwaną frazę"
+            : "Kliknij \"Nowy wydatek\" aby dodać swój pierwszy wydatek"}
+          color="peach"
+        />
       ) : (
         <VStack gap={5} align="stretch">
           {dates.map((dateStr) => {

@@ -4,6 +4,7 @@ import { Flex, Text, Icon } from "@chakra-ui/react";
 import { LuUndo2 } from "react-icons/lu";
 import useExpenseUndo from "../../hooks/useExpenseUndo";
 import { useUndoExpense } from "../../hooks/useExpenses";
+import { EASING, Z } from "../../config/motionConfig";
 
 const UNDO_LABELS = {
   create: "Wydatek dodany",
@@ -60,11 +61,11 @@ export default function ExpenseUndoBar() {
       py={2.5}
       align="center"
       gap={3}
-      zIndex={250}
+      zIndex={Z.undoBar}
       maxW="360px"
       w="auto"
       style={{
-        animation: "undoSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
+        animation: `undoSlideUp 300ms ${EASING.out}`,
       }}
     >
       <style>{`

@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Box, Flex, Heading, Text, Icon, VStack, Spinner } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text, Icon, VStack } from "@chakra-ui/react";
 import { LuPlus, LuShoppingCart } from "react-icons/lu";
+import SmartMeLoader from "../common/SmartMeLoader";
+import EmptyState from "../common/EmptyState";
 import { useShoppingLists, useCreateList, useDeleteList, useAddItem } from "../../hooks/useShopping";
 import ShoppingListCard from "./ShoppingListCard";
 import ShoppingListDetail from "./ShoppingListDetail";
@@ -86,15 +88,14 @@ export default function ShoppingPage() {
       </Flex>
 
       {isLoading ? (
-        <Flex justify="center" py={12}>
-          <Spinner color="sage.500" size="lg" />
-        </Flex>
+        <SmartMeLoader color="sage" />
       ) : !lists?.length ? (
-        <VStack py={16} gap={3} color="gray.400">
-          <Icon as={LuShoppingCart} boxSize={16} strokeWidth={1} color="sage.200" />
-          <Text fontSize="lg" fontWeight="600">{"Brak list zakupów"}</Text>
-          <Text fontSize="sm" textAlign="center">{'Utwórz pierwsz\u0105 list\u0119, klikaj\u0105c \u201ENowa lista\u201D'}</Text>
-        </VStack>
+        <EmptyState
+          icon={LuShoppingCart}
+          title={"Brak list zakupów"}
+          description={'Utwórz pierwsz\u0105 list\u0119, klikaj\u0105c \u201ENowa lista\u201D'}
+          color="sage"
+        />
       ) : (
         <VStack gap={3} align="stretch">
           {lists.map((list) => (

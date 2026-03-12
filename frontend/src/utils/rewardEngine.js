@@ -135,20 +135,6 @@ export function processStreak(state) {
 // --- Reward rules ---
 
 const REWARD_RULES = {
-  mood: {
-    sparks: 3,
-    validate(state) {
-      // 6-hour rolling cooldown
-      if (isCooldownActive(state.lastMoodTime, 6)) {
-        return { ok: false, reason: "cooldown" };
-      }
-      return { ok: true };
-    },
-    apply(state) {
-      return { ...state, lastMoodTime: dayjs().toISOString() };
-    },
-  },
-
   affirmation: {
     sparks: 5,
     validate(state) {
@@ -276,7 +262,6 @@ export function createInitialState() {
     xpToNextLevel: 40,
     streakDays: 0,
     lastActiveDate: null,
-    lastMoodTime: null,
     lastAffirmationTime: null,
     dailyExpensePoints: 0,
     dailyGoalRewardDate: null,

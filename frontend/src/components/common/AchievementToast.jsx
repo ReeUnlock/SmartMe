@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Box, Flex, Text } from "@chakra-ui/react";
 import useAchievements from "../../hooks/useAchievements";
 import useChallenges from "../../hooks/useChallenges";
+import { EASING, DURATION, Z } from "../../config/motionConfig";
 
 // Soft celebration particles — sparkles and stars
 function CelebrationParticles({ onDone }) {
@@ -29,9 +30,9 @@ function CelebrationParticles({ onDone }) {
         top: ${startY}%;
         font-size: ${10 + Math.random() * 14}px;
         pointer-events: none;
-        z-index: 500;
+        z-index: ${Z.toast};
         opacity: 0;
-        transition: all ${800 + Math.random() * 400}ms cubic-bezier(0.22, 1, 0.36, 1);
+        transition: all ${800 + Math.random() * 400}ms ${EASING.out};
       `;
       document.body.appendChild(span);
       particles.push(span);
@@ -120,7 +121,7 @@ function ToastItem({ toast, onDone, showCelebration }) {
           transform: visible
             ? "translateY(0) scale(1)"
             : "translateY(12px) scale(0.9)",
-          transition: "all 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
+          transition: `all 450ms ${EASING.out}`,
         }}
       >
         <Text fontSize="lg" lineHeight="1" mb={0.5}>
@@ -162,7 +163,7 @@ export default function AchievementToast() {
       top="60px"
       left="50%"
       transform="translateX(-50%)"
-      zIndex={500}
+      zIndex={Z.toast}
       display="flex"
       flexDirection="column"
       alignItems="center"

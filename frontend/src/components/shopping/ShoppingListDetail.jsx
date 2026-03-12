@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import {
-  Box, Flex, Heading, Text, Icon, Input, VStack, Spinner,
+  Box, Flex, Heading, Text, Icon, Input, VStack,
 } from "@chakra-ui/react";
 import { LuArrowLeft, LuPlus, LuTrash2, LuArrowUpDown, LuPencil, LuBookmark, LuWallet, LuCheck } from "react-icons/lu";
 import {
@@ -12,6 +12,9 @@ import DateInput from "../common/DateInput";
 import { parseItemInput, inferCategoryId } from "../../utils/shoppingUtils";
 import { useShoppingTemplates } from "../../hooks/useShoppingTemplates";
 import { useItemHistory } from "../../hooks/useItemHistory";
+import { playSound } from "../../utils/soundManager";
+import SmartMeLoader from "../common/SmartMeLoader";
+import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 
 export default function ShoppingListDetail({ listId, onBack }) {
   const { data: list, isLoading } = useShoppingList(listId);
@@ -98,11 +101,7 @@ export default function ShoppingListDetail({ listId, onBack }) {
   };
 
   if (isLoading) {
-    return (
-      <Flex justify="center" py={12}>
-        <Spinner color="sage.500" size="lg" />
-      </Flex>
-    );
+    return <SmartMeLoader color="sage" />;
   }
 
   if (!list) return null;
@@ -435,19 +434,19 @@ export default function ShoppingListDetail({ listId, onBack }) {
         </Box>
       ) : null}
 
-      {showExpenseDialog && (
-        <SaveAsExpenseDialog
-          listId={listId}
-          listItems={allItems}
-          shoppingCategories={categories}
-          onClose={() => setShowExpenseDialog(false)}
-          onSuccess={() => {
-            setShowExpenseDialog(false);
-            setExpenseSaved(true);
-          }}
-          saveAsExpense={saveAsExpense}
-        />
-      )}
+      <SaveAsExpenseDialog
+        open={showExpenseDialog}
+        listId={listId}
+        listItems={allItems}
+        shoppingCategories={categories}
+        onClose={() => setShowExpenseDialog(false)}
+        onSuccess={() => {
+          setShowExpenseDialog(false);
+          setExpenseSaved(true);
+          playSound("expenseAdded");
+        }}
+        saveAsExpense={saveAsExpense}
+      />
     </Box>
   );
 }
@@ -556,7 +555,7 @@ function computeSplitPreview(items, shoppingCategories, totalAmount) {
   return splits;
 }
 
-function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, onSuccess, saveAsExpense }) {
+function SaveAsExpenseDialog({ open, listId, listItems, shoppingCategories, onClose, onSuccess, saveAsExpense }) {
   const [amount, setAmount] = useState("");
   const [paidById, setPaidById] = useState(null);
   const [isShared, setIsShared] = useState(false);
@@ -593,23 +592,8 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
   };
 
   return (
-    <Box position="fixed" inset={0} zIndex={400} display="flex" alignItems={{ base: "flex-end", md: "center" }} justifyContent="center">
-      <Box position="absolute" inset={0} bg="blackAlpha.400" onClick={onClose} />
-      <Box
-        as="form"
-        onSubmit={handleSubmit}
-        bg="white"
-        borderRadius={{ base: "2xl 2xl 0 0", md: "2xl" }}
-        p={6}
-        w={{ base: "100%", md: "90%" }}
-        maxW="400px"
-        shadow="xl"
-        position="relative"
-        zIndex={1}
-        maxH={{ base: "90dvh", md: "90vh" }}
-        overflowY="auto"
-        pb={{ base: "calc(24px + env(safe-area-inset-bottom, 0px))", md: "24px" }}
-      >
+    <BottomSheetDialog open={open} onClose={onClose} maxW="400px" onSubmit={handleSubmit}>
+      <Box p={6} pb={0}>
         <Flex align="center" gap={2} mb={4}>
           <Icon as={LuWallet} boxSize={5} color="peach.500" />
           <Heading size="md" color="peach.600" fontFamily="'Nunito', sans-serif">
@@ -678,12 +662,12 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
                   px={2}
                   py={1}
                   borderRadius="md"
-                  bg={paidById === m.id ? "peach.500" : "gray.100"}
+                  bg={paidById === m.id ? "peach.400" : "peach.50"}
                   color={paidById === m.id ? "white" : "gray.600"}
                   cursor="pointer"
                   fontWeight="500"
                   onClick={() => setPaidById(paidById === m.id ? null : m.id)}
-                  _hover={{ bg: paidById === m.id ? "peach.600" : "gray.200" }}
+                  _hover={{ bg: paidById === m.id ? "peach.500" : "peach.100" }}
                 >
                   {m.name}
                 </Text>
@@ -696,7 +680,7 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
         <Flex
           align="center"
           gap={2}
-          mb={4}
+          mb={2}
           cursor="pointer"
           onClick={() => setIsShared(!isShared)}
         >
@@ -705,8 +689,8 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
             h="18px"
             borderRadius="md"
             border="2px solid"
-            borderColor={isShared ? "peach.500" : "gray.300"}
-            bg={isShared ? "peach.500" : "transparent"}
+            borderColor={isShared ? "peach.400" : "gray.300"}
+            bg={isShared ? "peach.400" : "transparent"}
             display="flex"
             alignItems="center"
             justifyContent="center"
@@ -716,8 +700,10 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
           </Box>
           <Text fontSize="sm" color="gray.600">{"Wydatek wspólny"}</Text>
         </Flex>
+      </Box>
 
-        {/* Actions */}
+      {/* Sticky actions */}
+      <DialogActions>
         <Flex gap={3} justify="flex-end">
           <Text
             as="button"
@@ -735,7 +721,7 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
           <Text
             as="button"
             type="submit"
-            bg="peach.500"
+            bg="peach.400"
             color="white"
             fontWeight="600"
             px={5}
@@ -743,12 +729,12 @@ function SaveAsExpenseDialog({ listId, listItems, shoppingCategories, onClose, o
             borderRadius="xl"
             cursor="pointer"
             opacity={!amount || saveAsExpense.isPending ? 0.5 : 1}
-            _hover={{ bg: "peach.600" }}
+            _hover={{ bg: "peach.500" }}
           >
             {saveAsExpense.isPending ? "Zapisuję…" : "Zapisz wydatek"}
           </Text>
         </Flex>
-      </Box>
-    </Box>
+      </DialogActions>
+    </BottomSheetDialog>
   );
 }

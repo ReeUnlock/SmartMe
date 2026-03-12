@@ -6,6 +6,7 @@ import useExpenseUndo from "../../hooks/useExpenseUndo";
 import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useChallenges from "../../hooks/useChallenges";
+import { playSound } from "../../utils/soundManager";
 
 const QUICK_AMOUNTS = [10, 20, 50, 100];
 
@@ -52,6 +53,7 @@ export default function QuickAdd({ year, month }) {
         paid_by_id: selectedMember,
       });
       pushUndo({ type: "create", expense: created });
+      playSound("expenseAdded");
       grantReward("expense_added");
       trackProgress("expenses_logged", 1, addBonusSparks);
       trackChallenge("expense", addBonusSparks);
@@ -74,6 +76,7 @@ export default function QuickAdd({ year, month }) {
         paid_by_id: selectedMember,
       });
       pushUndo({ type: "create", expense: created });
+      playSound("expenseAdded");
       grantReward("expense_added");
       trackProgress("expenses_logged", 1, addBonusSparks);
       trackChallenge("expense", addBonusSparks);

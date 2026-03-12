@@ -11,20 +11,6 @@
 // ─── Per-avatar personality pools ────────────────────────────────
 
 const SOL_REACTIONS = {
-  mood_positive: [
-    { message: "Pięknie Ci dziś idzie!", emoji: "☀️" },
-    { message: "Twoja energia dziś świeci!", emoji: "✨" },
-    { message: "Dobry nastrój Ci służy!", emoji: "☀️" },
-    { message: "Masz w sobie dużo światła.", emoji: "🌟" },
-    { message: "To jest Twój dzień!", emoji: "✨" },
-  ],
-  mood_negative: [
-    { message: "Nawet po deszczu wychodzi słońce.", emoji: "🌤️" },
-    { message: "Jutro będzie jaśniej, zobaczysz.", emoji: "☀️" },
-    { message: "Ciepło wróci — zawsze wraca.", emoji: "✨" },
-    { message: "Jesteś silniejsza, niż myślisz.", emoji: "🌟" },
-    { message: "Daj sobie chwilę ciepła.", emoji: "☀️" },
-  ],
   affirmation_reveal: [
     { message: "Niech te słowa Cię ogrzeją.", emoji: "☀️" },
     { message: "Piękne słowa na piękny dzień!", emoji: "✨" },
@@ -59,21 +45,6 @@ const SOL_REACTIONS = {
 };
 
 const NOX_REACTIONS = {
-  mood_positive: [
-    { message: "Dobrze, że się uśmiechasz.", emoji: "🌙" },
-    { message: "Spokojny, dobry dzień.", emoji: "💜" },
-    { message: "Cieszę się razem z Tobą.", emoji: "🌙" },
-    { message: "Miło widzieć Twój spokój.", emoji: "✨" },
-    { message: "Piękny nastrój dziś.", emoji: "🌙" },
-  ],
-  mood_negative: [
-    { message: "Spokojnie, to też jest postęp.", emoji: "🌙" },
-    { message: "Dziś wystarczy mały krok.", emoji: "💜" },
-    { message: "Dobrze, że jesteś.", emoji: "🌙" },
-    { message: "Pozwól sobie na ciszę.", emoji: "✨" },
-    { message: "Noc też ma swoją mądrość.", emoji: "🌙" },
-    { message: "Odpoczynek to też droga.", emoji: "💜" },
-  ],
   affirmation_reveal: [
     { message: "Niech te słowa Cię otulą.", emoji: "🌙" },
     { message: "Cisza pomaga je usłyszeć.", emoji: "💜" },
@@ -108,20 +79,6 @@ const NOX_REACTIONS = {
 };
 
 const BLOOM_REACTIONS = {
-  mood_positive: [
-    { message: "Rozkwitasz dziś pięknie!", emoji: "🌸" },
-    { message: "Twoja radość jest zaraźliwa.", emoji: "🌸" },
-    { message: "Piękny dzień na rozkwit!", emoji: "💮" },
-    { message: "Tak trzymaj, kwitniesz!", emoji: "🌸" },
-    { message: "Dobra energia Ci służy.", emoji: "🌿" },
-  ],
-  mood_negative: [
-    { message: "Nawet kwiaty potrzebują deszczu.", emoji: "🌸" },
-    { message: "To mały krok, ale ważny.", emoji: "🌿" },
-    { message: "Rośniesz nawet w trudniejsze dni.", emoji: "🌸" },
-    { message: "Daj sobie czas — zakwitniesz.", emoji: "💮" },
-    { message: "Każdy ogród ma swoje pory.", emoji: "🌸" },
-  ],
   affirmation_reveal: [
     { message: "Słowa, które pomagają rosnąć.", emoji: "🌸" },
     { message: "Niech to zakwitnie w Tobie.", emoji: "🌿" },
@@ -156,20 +113,6 @@ const BLOOM_REACTIONS = {
 };
 
 const AURA_REACTIONS = {
-  mood_positive: [
-    { message: "Twoja aura dziś lśni.", emoji: "💫" },
-    { message: "Czuję Twoją dobrą energię.", emoji: "✨" },
-    { message: "Harmonia Ci dziś towarzyszy.", emoji: "💫" },
-    { message: "Piękna równowaga.", emoji: "✨" },
-    { message: "Wewnętrzny blask jest widoczny.", emoji: "💫" },
-  ],
-  mood_negative: [
-    { message: "W Twoim tempie też jest siła.", emoji: "💫" },
-    { message: "Zaufaj sobie.", emoji: "✨" },
-    { message: "Nawet cisza jest formą energii.", emoji: "💫" },
-    { message: "Twoja siła jest wewnątrz.", emoji: "✨" },
-    { message: "To też jest część drogi.", emoji: "💫" },
-  ],
   affirmation_reveal: [
     { message: "Słowa, które rezonują.", emoji: "💫" },
     { message: "Poczuj ich energię.", emoji: "✨" },
@@ -235,8 +178,6 @@ export const AVATAR_LABEL_THEMES = {
 // ─── Reaction mechanics (unchanged) ──────────────────────────────
 
 export const REACTION_CONFIG = {
-  mood_positive:      { probability: 0.4, cooldownMs: 10 * 60 * 1000 },
-  mood_negative:      { probability: 0.6, cooldownMs: 10 * 60 * 1000 },
   affirmation_reveal: { probability: 0.3, cooldownMs: 15 * 60 * 1000 },
   goal_completed:     { probability: 0.8, cooldownMs: 5 * 60 * 1000 },
   streak_milestone:   { probability: 1.0, cooldownMs: 0 },

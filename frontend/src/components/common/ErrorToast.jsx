@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { create } from "zustand";
+import { EASING, DURATION, Z } from "../../config/motionConfig";
 
 // ─── Error toast store ────────────────────────────────────────
 const useErrorToast = create((set) => ({
@@ -48,7 +49,7 @@ function Toast({ toast, onDone }) {
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0) scale(1)" : "translateY(10px) scale(0.92)",
-        transition: "all 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
+        transition: `all ${DURATION.toast}ms ${EASING.out}`,
       }}
     >
       <Text fontSize="sm" lineHeight="1" color="red.400">{"!"}</Text>
@@ -72,7 +73,7 @@ export default function ErrorToast() {
       bottom={{ base: "140px", md: "24px" }}
       left="50%"
       transform="translateX(-50%)"
-      zIndex={500}
+      zIndex={Z.toast}
       display="flex"
       flexDirection="column"
       alignItems="center"

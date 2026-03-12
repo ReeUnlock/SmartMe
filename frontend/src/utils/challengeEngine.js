@@ -7,7 +7,7 @@ dayjs.extend(isoWeek);
 
 /**
  * Each challenge template:
- *   type → maps to progress key (mood, affirmation, expense, goal_create, goal_complete, active_day)
+ *   type → maps to progress key (affirmation, expense, goal_create, goal_complete, active_day)
  *   target → number to reach
  *   reward → bonus sparks
  *   title → Polish display text
@@ -16,14 +16,6 @@ dayjs.extend(isoWeek);
  */
 
 const DAILY_POOL = [
-  {
-    type: "mood",
-    target: 1,
-    reward: 8,
-    title: "Chwila refleksji",
-    description: "Zapisz swój nastrój",
-    icon: "✨",
-  },
   {
     type: "affirmation",
     target: 1,
@@ -75,22 +67,6 @@ const DAILY_POOL = [
 ];
 
 const WEEKLY_POOL = [
-  {
-    type: "mood",
-    target: 3,
-    reward: 25,
-    title: "Uważna obserwatorka",
-    description: "Zapisz nastrój 3 razy",
-    icon: "✨",
-  },
-  {
-    type: "mood",
-    target: 5,
-    reward: 35,
-    title: "Rytm nastrojów",
-    description: "Zapisz nastrój 5 razy",
-    icon: "🌈",
-  },
   {
     type: "affirmation",
     target: 4,
@@ -274,7 +250,6 @@ export function generateWeeklyChallenges(wKey) {
  * Map action types to challenge types.
  */
 const ACTION_TO_CHALLENGE_TYPE = {
-  mood: "mood",
   affirmation: "affirmation",
   expense: "expense",
   goal_create: "goal_create",

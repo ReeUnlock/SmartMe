@@ -9,6 +9,8 @@ import {
   LuTarget,
 } from "react-icons/lu";
 import { useKeyboardOpen } from "../../hooks/useKeyboardOpen";
+import { EASING, DURATION_CSS, Z } from "../../config/motionConfig";
+
 const navItems = [
   { path: "/", label: "Menu", icon: LuLayoutGrid, color: "rose.400", muted: "rose.300", bg: "rose.50", exact: true },
   { path: "/kalendarz", label: "Kalendarz", icon: LuCalendar, color: "lavender.500", muted: "lavender.300", bg: "lavender.50" },
@@ -31,7 +33,7 @@ export default memo(function BottomNav() {
       borderTopWidth="1px"
       borderColor="rose.100"
       shadow="0 -2px 16px 0 rgba(231, 73, 128, 0.05)"
-      zIndex="200"
+      zIndex={Z.bottomNav}
       display={{ base: "block", md: "none" }}
       pb="env(safe-area-inset-bottom)"
       className="sm-kbd-hide"
@@ -50,11 +52,13 @@ export default memo(function BottomNav() {
               gap="1"
               cursor="pointer"
               onClick={() => navigate(item.path)}
-              transition="all 0.2s"
               px="2"
               py="1"
               borderRadius="xl"
               minW="0"
+              style={{
+                transition: `all ${DURATION_CSS.fast} ${EASING.out}`,
+              }}
               _active={{ transform: "scale(0.92)" }}
             >
               <Flex
@@ -64,24 +68,32 @@ export default memo(function BottomNav() {
                 h="44px"
                 borderRadius="xl"
                 bg={isActive ? item.bg : "transparent"}
-                transition="all 0.2s"
+                style={{
+                  transition: `all ${DURATION_CSS.toast} ${EASING.out}`,
+                  transform: isActive ? "translateY(-2px)" : "translateY(0)",
+                }}
               >
                 <Icon
                   as={item.icon}
                   boxSize="18px"
                   color={isActive ? item.color : item.muted}
                   strokeWidth={isActive ? "2.5" : "1.8"}
-                  transition="all 0.2s"
-                  opacity={isActive ? 1 : 0.7}
+                  opacity={isActive ? 1 : 0.55}
+                  style={{
+                    transition: `all ${DURATION_CSS.toast} ${EASING.out}`,
+                    transform: isActive ? "scale(1.08)" : "scale(1)",
+                  }}
                 />
               </Flex>
               <Text
                 fontSize="2xs"
                 fontWeight={isActive ? "700" : "600"}
                 color={isActive ? item.color : item.muted}
-                opacity={isActive ? 1 : 0.8}
+                opacity={isActive ? 1 : 0.65}
                 lineHeight="1"
-                transition="all 0.2s"
+                style={{
+                  transition: `all ${DURATION_CSS.toast} ${EASING.out}`,
+                }}
               >
                 {item.label}
               </Text>

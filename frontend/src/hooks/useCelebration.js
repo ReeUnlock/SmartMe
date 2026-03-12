@@ -1,4 +1,8 @@
 import { create } from "zustand";
+import {
+  CELEBRATION_PRIORITY,
+  CELEBRATION_COOLDOWNS,
+} from "../config/motionConfig";
 
 /**
  * Celebration types (lowest → highest priority):
@@ -14,23 +18,6 @@ import { create } from "zustand";
  *   options.intensity — multiplier 0-2 (default 1)
  */
 
-const PRIORITY = {
-  progress: 0,
-  affirmation: 1,
-  reward: 2,
-  achievement: 3,
-  levelup: 4,
-};
-
-// Throttle cooldowns per type (ms) — prevents spam for low-priority events
-const COOLDOWNS = {
-  progress: 3000,
-  affirmation: 2000,
-  reward: 1500,
-  achievement: 0, // never suppress
-  levelup: 0, // never suppress
-};
-
 const useCelebration = create((set, get) => ({
   active: null, // { type, id, options }
   _lastFired: {}, // { [type]: timestamp } for throttling
@@ -40,7 +27,7 @@ const useCelebration = create((set, get) => ({
     const current = get();
 
     // Throttle low-priority events
-    const cooldown = COOLDOWNS[type] ?? 0;
+    const cooldown = CELEBRATION_COOLDOWNS[type] ?? 0;
     if (cooldown > 0) {
       const lastFired = current._lastFired[type] || 0;
       if (now - lastFired < cooldown) return;
@@ -48,8 +35,8 @@ const useCelebration = create((set, get) => ({
 
     // Priority check: don't interrupt higher-priority active celebration
     if (current.active) {
-      const activePriority = PRIORITY[current.active.type] ?? 0;
-      const newPriority = PRIORITY[type] ?? 0;
+      const activePriority = CELEBRATION_PRIORITY[current.active.type] ?? 0;
+      const newPriority = CELEBRATION_PRIORITY[type] ?? 0;
       if (newPriority < activePriority) return; // ignore lower-priority
     }
 

@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react"
 import { Box, Flex } from "@chakra-ui/react";
 import DashboardGreeting from "../dashboard/DashboardGreeting";
 import TodayWidget from "../dashboard/TodayWidget";
-import MoodCheck from "../dashboard/MoodCheck";
 import GoalsWidget from "../dashboard/GoalsWidget";
 import BudgetWidget from "../dashboard/BudgetWidget";
 import ShoppingWidget from "../dashboard/ShoppingWidget";
@@ -250,20 +249,13 @@ export default function DashboardPage() {
         </Box>
       </FadeIn>
 
-      {/* 4. Jak się dziś czujesz? */}
+      {/* 4-6. Goals, Budget, Shopping (reorderable) */}
       <FadeIn delay={0.18}>
-        <Box mb={3.5}>
-          <MoodCheck />
-        </Box>
-      </FadeIn>
-
-      {/* 5-7. Goals, Budget, Shopping (reorderable) */}
-      <FadeIn delay={0.24}>
         <ReorderableTiles />
       </FadeIn>
 
-      {/* 8. Challenges (lazy — below fold) */}
-      <FadeIn delay={0.32}>
+      {/* 7. Challenges (lazy — below fold) */}
+      <FadeIn delay={0.26}>
         <Box mb={3.5}>
           <Suspense fallback={null}>
             <ChallengesWidget />
@@ -271,15 +263,15 @@ export default function DashboardPage() {
         </Box>
       </FadeIn>
 
-      {/* 9. XP / Level progress */}
-      <FadeIn delay={0.36}>
+      {/* 8. XP / Level progress */}
+      <FadeIn delay={0.30}>
         <Box mb={3.5}>
           <RewardBar />
         </Box>
       </FadeIn>
 
-      {/* 10. Attention widget (lazy — below fold, auto-hides when empty) */}
-      <FadeIn delay={0.40}>
+      {/* 9. Attention widget (lazy — below fold, auto-hides when empty) */}
+      <FadeIn delay={0.34}>
         <Box mb={3.5}>
           <Suspense fallback={null}>
             <AttentionWidget />

@@ -15,7 +15,6 @@ function createInitialState() {
   return {
     unlocked: [],
     progress: {
-      moods_logged: 0,
       affirmations_read: 0,
       max_streak: 0,
       expenses_logged: 0,
@@ -24,7 +23,6 @@ function createInitialState() {
     },
     unlockedFeatures: {
       affirmationAnimations: ["sparkles"],
-      moodEmojis: ["default"],
       cloudThemes: ["default"],
     },
     lastCheckedLevel: 1,
@@ -56,7 +54,7 @@ const useAchievements = create((set, get) => ({
 
   /**
    * Track a progress event. Automatically checks for new achievements.
-   * @param {string} key - progress key (e.g. "moods_logged", "expenses_logged")
+   * @param {string} key - progress key (e.g. "expenses_logged", "goals_created")
    * @param {number} [increment=1] - how much to increment
    * @param {Function} [addSparks] - callback to add bonus sparks (from useRewards)
    */

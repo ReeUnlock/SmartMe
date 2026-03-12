@@ -30,17 +30,6 @@ const TIER_SPARKS = {
 export const ACHIEVEMENTS = [
   // ── Self-care ──
   {
-    id: "first_mood",
-    category: "selfcare",
-    tier: "small",
-    title: "Pierwsza chwila dla siebie",
-    description: "Zapisz swój nastrój po raz pierwszy",
-    icon: "✨",
-    progressKey: "moods_logged",
-    target: 1,
-    check: (p) => (p.moods_logged || 0) >= 1,
-  },
-  {
     id: "affirmation_reader_10",
     category: "selfcare",
     tier: "small",
@@ -212,13 +201,6 @@ export const LEVEL_MILESTONES = [
     value: "sunrise",
     label: "Nowy styl chmurki",
     description: "Wsch\u00f3d s\u0142o\u0144ca",
-  },
-  {
-    level: 8,
-    feature: "moodEmojis",
-    value: "pastel",
-    label: "Nowe emoji nastrojów",
-    description: "Pastelowe",
   },
   {
     level: 10,

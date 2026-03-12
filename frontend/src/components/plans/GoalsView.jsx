@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { Box, Flex, Text, Icon, VStack, Spinner, Input } from "@chakra-ui/react";
+import { Box, Flex, Text, Icon, VStack, Input } from "@chakra-ui/react";
 import { LuPlus, LuTarget, LuSearch } from "react-icons/lu";
+import SmartMeLoader from "../common/SmartMeLoader";
+import EmptyState from "../common/EmptyState";
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "../../hooks/usePlans";
 import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
@@ -225,29 +227,16 @@ export default function GoalsView() {
       </Flex>
 
       {isLoading ? (
-        <Flex justify="center" py={12}>
-          <Spinner color="rose.400" size="lg" />
-        </Flex>
+        <SmartMeLoader color="rose" />
       ) : !filtered.length ? (
-        <VStack py={12} gap={3}>
-          <Flex
-            align="center"
-            justify="center"
-            w="64px"
-            h="64px"
-            borderRadius="full"
-            bg="rose.50"
-          >
-            <Icon as={LuTarget} boxSize={8} strokeWidth={1.5} color="rose.300" />
-          </Flex>
-          <Text fontSize="md" fontWeight="700" color="textSecondary">
-            {hasFilters ? "Brak wyników" : "Nie masz jeszcze celów"}
-          </Text>
-          <Text fontSize="sm" color="gray.400" textAlign="center" maxW="240px" lineHeight="1.5">
-            {hasFilters
-              ? "Spróbuj zmienić filtry lub wyszukiwaną frazę"
-              : "Dodaj pierwszy cel i zacznij małymi krokami"}
-          </Text>
+        <EmptyState
+          icon={hasFilters ? LuSearch : LuTarget}
+          title={hasFilters ? "Brak wyników" : "Nie masz jeszcze celów"}
+          description={hasFilters
+            ? "Spróbuj zmienić filtry lub wyszukiwaną frazę"
+            : "Dodaj pierwszy cel i zacznij małymi krokami"}
+          color="rose"
+        >
           {!hasFilters && (
             <Flex
               align="center"
@@ -270,7 +259,7 @@ export default function GoalsView() {
               <Text>{"Nowy cel"}</Text>
             </Flex>
           )}
-        </VStack>
+        </EmptyState>
       ) : (
         <VStack gap={3} align="stretch">
           {filtered.map((goal) => (

@@ -96,7 +96,7 @@ const useChallenges = create((set, get) => ({
 
   /**
    * Track a challenge action.
-   * @param {string} actionType - mood | affirmation | expense | goal_create | goal_complete
+   * @param {string} actionType - affirmation | expense | goal_create | goal_complete
    * @param {Function} [addSparks] - callback to grant sparks
    */
   trackAction(actionType, addSparks) {
