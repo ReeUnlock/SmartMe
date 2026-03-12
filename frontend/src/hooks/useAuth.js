@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getMe } from "../api/auth";
+import { setSentryUser } from "../sentry";
 
 function isTokenExpired(token) {
   try {
@@ -45,9 +46,11 @@ export const useAuth = create((set, get) => ({
           setTimeout(() => reject(new Error("Timeout")), 10000)
         ),
       ]);
+      setSentryUser(user);
       set({ user, isLoading: false });
     } catch {
       clearAuthStorage();
+      setSentryUser(null);
       set({ user: null, token: null, isLoading: false });
     }
   },
@@ -59,6 +62,7 @@ export const useAuth = create((set, get) => ({
 
   logout: () => {
     clearAuthStorage();
+    setSentryUser(null);
     set({ user: null, token: null });
     window.location.href = "/login";
   },

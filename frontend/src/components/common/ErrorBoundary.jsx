@@ -1,5 +1,6 @@
 import { Component } from "react";
 import { Box, Heading, Text, Button } from "@chakra-ui/react";
+import { Sentry } from "../../sentry";
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -12,6 +13,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo?.componentStack } } });
     if (import.meta.env.DEV) console.error("ErrorBoundary caught:", error, errorInfo);
   }
 
