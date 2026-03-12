@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# Cancel in-progress runs for the same branch
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
@@ -49,10 +48,6 @@ jobs:
             -project App.xcodeproj \
             -scheme App
 
-      # ─── Unsigned build validation ───
-      # This builds the project without code signing to validate
-      # that the Swift/ObjC code compiles and links correctly.
-      # A real signed build requires secrets (see signed-build job).
       - name: Build iOS (unsigned validation)
         working-directory: frontend/ios/App
         run: |
@@ -65,32 +60,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             | tail -20
-
-  # ─── Signed release build (runs only when secrets are configured) ───
-  # To enable this job, add the following GitHub repository secrets:
-  #
-  #   IOS_CERTIFICATE_P12_BASE64
-  #     Base64-encoded .p12 distribution certificate
-  #     Generate: base64 -i Certificates.p12 | pbcopy
-  #
-  #   IOS_CERTIFICATE_PASSWORD
-  #     Password for the .p12 certificate
-  #
-  #   IOS_PROVISION_PROFILE_BASE64
-  #     Base64-encoded .mobileprovision file
-  #     Generate: base64 -i SmartMe.mobileprovision | pbcopy
-  #
-  #   IOS_KEYCHAIN_PASSWORD
-  #     Arbitrary password for the temporary CI keychain
-  #     (any random string, e.g. from: openssl rand -hex 16)
-  #
-  #   IOS_TEAM_ID
-  #     Apple Developer Team ID (10-char alphanumeric)
-  #
-  # Optional (for App Store upload):
-  #   APPSTORE_API_KEY_ID        — App Store Connect API key ID
-  #   APPSTORE_API_ISSUER_ID     — App Store Connect issuer ID
-  #   APPSTORE_API_KEY_BASE64    — Base64-encoded .p8 private key
 
   ios-signed-build:
     name: iOS Signed Build (TestFlight)
@@ -119,10 +88,6 @@ jobs:
         working-directory: frontend
         run: npx vite build --mode capacitor
         env:
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_RELEASE: smartme@${{ github.sha }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           VITE_SENTRY_RELEASE: smartme@${{ github.sha }}
           VITE_APP_VERSION: ${{ github.sha }}
@@ -137,17 +102,14 @@ jobs:
           P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
         run: |
-          # Decode certificate
           CERT_PATH=$RUNNER_TEMP/certificate.p12
           echo "$P12_BASE64" | base64 --decode > "$CERT_PATH"
 
-          # Create temporary keychain
           KC_PATH=$RUNNER_TEMP/app-signing.keychain-db
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KC_PATH"
           security set-keychain-settings -lut 21600 "$KC_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KC_PATH"
 
-          # Import certificate
           security import "$CERT_PATH" \
             -P "$P12_PASSWORD" \
             -A -t cert -f pkcs12 \
@@ -164,7 +126,6 @@ jobs:
           PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
 
-          # Install and extract UUID for later use
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< \
             $(security cms -D -i "$PROFILE_PATH"))
@@ -179,15 +140,11 @@ jobs:
             -project App.xcodeproj \
             -scheme App
 
-      # ─── Set build number to unique value for TestFlight ───
-      # TestFlight rejects duplicate build numbers for the same version.
-      # Using github.run_number ensures monotonically increasing values.
       - name: Set build number
         working-directory: frontend/ios/App
         run: |
           BUILD_NUMBER=${{ github.run_number }}
           echo "Build number: $BUILD_NUMBER"
-          # Update CURRENT_PROJECT_VERSION in both Debug and Release configs
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" \
             App.xcodeproj/project.pbxproj
 
@@ -210,7 +167,6 @@ jobs:
         env:
           TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
         run: |
-          # Create export options plist with full signing configuration
           cat > $RUNNER_TEMP/ExportOptions.plist << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -246,25 +202,17 @@ jobs:
           path: ${{ runner.temp }}/ipa-output/*.ipa
           retention-days: 14
 
-      # ─── Optional: Upload to TestFlight ───
-      # Runs only when App Store Connect API key secrets are configured.
-      # If not present, the IPA is still available as a GitHub artifact
-      # and can be uploaded manually via Transporter.app.
       - name: Upload to TestFlight
-        if: ${{ secrets.APPSTORE_API_KEY_BASE64 != '' }}
         env:
           API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
           API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
           API_KEY_BASE64: ${{ secrets.APPSTORE_API_KEY_BASE64 }}
         run: |
-          # Install App Store Connect API key
           mkdir -p ~/private_keys
           echo "$API_KEY_BASE64" | base64 --decode > ~/private_keys/AuthKey_${API_KEY_ID}.p8
 
-          # Find the IPA
           IPA_PATH=$(find $RUNNER_TEMP/ipa-output -name "*.ipa" | head -1)
 
-          # Upload via xcrun notarytool alternative: altool
           xcrun altool --upload-app \
             --file "$IPA_PATH" \
             --type ios \
