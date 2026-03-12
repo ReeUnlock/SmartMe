@@ -147,20 +147,21 @@ textarea::placeholder {
   z-index: 1;
   background: white;
   width: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  /* Flex column: body scrolls independently, actions anchored at bottom */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   /* Mobile: bottom-sheet with flat bottom */
   border-radius: var(--chakra-radii-2xl) var(--chakra-radii-2xl) 0 0;
-  max-height: 90dvh;
-  max-height: 90vh; /* fallback */
-  max-height: 90dvh;
+  max-height: 92dvh;
+  max-height: 92vh; /* fallback */
+  max-height: 92dvh;
   box-shadow: 0 -4px 40px -8px rgba(0, 0, 0, 0.12),
               0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 @supports (height: 1dvh) {
   .sm-dialog-content {
-    max-height: 90dvh;
+    max-height: 92dvh;
   }
 }
 @media (min-width: 768px) {
@@ -172,16 +173,23 @@ textarea::placeholder {
   }
 }
 
-/* Sticky action footer inside dialogs */
+/* Scrollable body area inside dialogs — fills available space above actions */
+.sm-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Anchored action footer inside dialogs — always visible */
 .sm-dialog-actions {
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
   background: white;
   padding: 12px 24px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   z-index: 2;
-  flex-shrink: 0;
 }
 @media (min-width: 768px) {
   .sm-dialog-actions {
@@ -193,9 +201,9 @@ textarea::placeholder {
   padding-bottom: 12px;
 }
 
-/* Hide scrollbar inside dialogs for cleaner look */
-.sm-dialog-content::-webkit-scrollbar { display: none; }
-.sm-dialog-content { scrollbar-width: none; }
+/* Hide scrollbar inside dialog body for cleaner look */
+.sm-dialog-body::-webkit-scrollbar { display: none; }
+.sm-dialog-body { scrollbar-width: none; }
 
 /* ── iOS keyboard-safe utilities ────────────────────────────────── */
 /* Hide fixed bottom UI when virtual keyboard is open (iOS Safari) */

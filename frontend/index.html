@@ -17,13 +17,11 @@
       }
       html {
         overflow: hidden;
-        /* Prevent iOS rubber-band bounce on the whole page */
-        position: fixed;
-        width: 100%;
       }
       body {
         overflow: hidden;
-        overscroll-behavior-y: none;
+        /* Allow pull-to-refresh on Android Chrome (don't block overscroll) */
+        overscroll-behavior-y: auto;
         /* Prevent iOS double-tap zoom */
         touch-action: manipulation;
       }

@@ -656,21 +656,21 @@ Wszystkie trasy poza `/setup`, `/login`, `/witaj` chronione przez `ProtectedRout
 - Streak bonusy: Phase 1 (dni 1-10: +5/dzień), Phase 2 (11-30: +18 co 2 dni), Phase 3 (31+: +25 co 3 dni)
 - Super streak: 10/20/30 dni → +50 sparks
 - Daily reset: per-calendar-day spark caps
-- Action rewards: mood(3), affirmation(5), expense_added(2), goal_created(5)
-- Cooldowns: mood & affirmation (6h)
+- Action rewards: affirmation(5), expense_added(2), goal_created(5)
+- Cooldowns: affirmation (6h)
 
-### `achievementEngine.js` — 18 osiągnięć
+### `achievementEngine.js` — 17 osiągnięć
 
 - 3 kategorie: selfcare, finance, growth
 - 3 tiers: small(20 sparks), medium(40), large(80)
 - Condition checks per achievement
-- 7 level milestones (levels: 5, 10, 15, 20, 25, 30, 50)
-- Feature unlocks: affirmationAnimations, moodEmojis, cloudThemes
+- 6 level milestones (levels: 3, 5, 10, 15, 20, 25, 30, 50)
+- Feature unlocks: affirmationAnimations, cloudThemes
 
 ### `challengeEngine.js` — Wyzwania
 
-- DAILY_POOL: 7 szablonów (mood, affirmation×2, expense×2, goal_create, goal_complete)
-- WEEKLY_POOL: 10 szablonów (te same typy, wyższe cele)
+- DAILY_POOL: 6 szablonów (affirmation×2, expense×2, goal_create, goal_complete)
+- WEEKLY_POOL: 8 szablonów (te same typy, wyższe cele)
 - Seeded random generation per dzień/tydzień
 - Bonus: all-daily, all-weekly completion sparks
 - Active day tracking dla weekly active_day challenges
@@ -773,7 +773,6 @@ Pomocniczo: `eventIcons.js` — mapowanie emoji ikon
 | `ShoppingWidget` | Shopping preview |
 | `ChallengesWidget` | Wyzwania preview (lazy) |
 | `AttentionWidget` | Alerty i przypomnienia (lazy) |
-| `MoodCheck` | Tracker nastroju |
 | `AchievementsPage` | Gablotka: kolekcja, postęp, kategorie, level rewards |
 | `ChallengesPage` | Dzienne (lavender) + tygodniowe (rose/peach) wyzwania |
 | `QuickNav` | Szybka nawigacja |
@@ -847,7 +846,6 @@ User Action
 
 | Akcja | Sparki | Limit |
 |-------|--------|-------|
-| mood | 3 | cooldown 6h |
 | affirmation | 5 | cooldown 6h |
 | expense_added | 2 | daily cap 10 |
 | goal_created | 5 | 1/dzień |
@@ -856,7 +854,7 @@ User Action
 - Streak bonusy: Phase 1 (+5/dzień), Phase 2 (+18 co 2 dni), Phase 3 (+25 co 3 dni)
 - Super streak: 10/20/30 dni → +50 sparks
 
-### Osiągnięcia (18 total)
+### Osiągnięcia (17 total)
 
 Kategorie: selfcare, finance, growth
 
@@ -866,7 +864,7 @@ Kategorie: selfcare, finance, growth
 | medium | 40 |
 | large | 80 |
 
-Przykłady: first_mood, seven_day_streak, first_expense, fifty_expenses, ten_goals, goals_completed_20
+Przykłady: seven_day_streak, first_expense, fifty_expenses, ten_goals, goals_completed_20
 
 ### Level Milestones (7)
 
@@ -874,18 +872,17 @@ Przykłady: first_mood, seven_day_streak, first_expense, fifty_expenses, ten_goa
 |-------|---------|
 | 3 | Hearts animation |
 | 5 | Avatar Bloom + sunrise theme |
-| 8 | Pastel mood emoji |
 | 10 | Avatar Aura + badge |
 | 15 | Premium affirmations |
 
-Feature unlocks: affirmationAnimations, moodEmojis, cloudThemes
+Feature unlocks: affirmationAnimations, cloudThemes
 
 ### Wyzwania
 
-- **Dzienne**: 3 losowe z puli 7, seeded random per dzień
-- **Tygodniowe**: 3 losowe z puli 10, seeded random per tydzień
+- **Dzienne**: 3 losowe z puli 6, seeded random per dzień
+- **Tygodniowe**: 3 losowe z puli 8, seeded random per tydzień
 - **Bonus**: all-daily completion, all-weekly completion → dodatkowe sparki
-- **Typy**: mood, affirmation, expense, goal_create, goal_complete, active_day
+- **Typy**: affirmation, expense, goal_create, goal_complete, active_day
 
 ### Celebracje
 
@@ -969,7 +966,6 @@ Single source of truth dla:
 | background | 0 |
 | content | 1 |
 | stickyControls | 10 |
-| moodPopover | 20 |
 | bottomNav | 200 |
 | undoBar | 250 |
 | voiceFab | 300 |
@@ -1044,12 +1040,10 @@ Plik: `utils/soundManager.js`
 
 ### Reakcje avatara
 
-Każdy avatar ma unikalne wiadomości na 7 typów zdarzeń:
+Każdy avatar ma unikalne wiadomości na 5 typów zdarzeń:
 
 | Typ zdarzenia | Probability | Cooldown |
 |---------------|-------------|----------|
-| mood_positive | 0.4 | 10min |
-| mood_negative | 0.6 | 10min |
 | affirmation_reveal | 0.3 | 15min |
 | goal_completed | 0.8 | 5min |
 | streak_milestone | 1.0 | brak |

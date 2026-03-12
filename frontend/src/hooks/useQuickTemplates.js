@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 const STORAGE_KEY = "anelka_quick_templates";
-const MAX_TEMPLATES = 8;
+const MAX_TEMPLATES = 12;
 
 // Default starter templates — used on first launch
 const DEFAULT_TEMPLATES = [

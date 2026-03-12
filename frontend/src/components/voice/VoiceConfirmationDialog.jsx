@@ -189,7 +189,7 @@ export default function VoiceConfirmationDialog() {
             </Flex>
           </DialogHeader>
 
-          <DialogBody py="3" px="5">
+          <DialogBody py="3" px="5" overflowY="auto" flex="1" css={{ WebkitOverflowScrolling: "touch" }}>
             <VStack gap="3" align="stretch">
               {transcript && <TranscriptBox transcript={transcript} />}
 

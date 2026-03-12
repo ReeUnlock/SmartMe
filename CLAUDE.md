@@ -147,7 +147,6 @@ frontend/src/
       ShoppingWidget.jsx         — shopping preview
       ChallengesWidget.jsx       — challenges preview (lazy)
       AttentionWidget.jsx        — alerts/reminders (lazy)
-      MoodCheck.jsx              — mood tracker
       AchievementsPage.jsx       — gablotka: kolekcja, postęp, kategorie, level rewards
       ChallengesPage.jsx         — dzienne (lavender) + tygodniowe (rose/peach) wyzwania
 ```
@@ -261,7 +260,6 @@ User Action
 ### Sparki i akcje
 | Akcja | Sparki | Limit |
 |-------|--------|-------|
-| mood | 3 | cooldown 6h |
 | affirmation | 5 | cooldown 6h |
 | expense_added | 2 | daily cap 10 |
 | goal_created | 5 | 1/dzień |

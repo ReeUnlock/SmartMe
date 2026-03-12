@@ -83,7 +83,7 @@ export default function DayEventsDrawer({
             </Flex>
           </DrawerHeader>
 
-          <DrawerBody py="4">
+          <DrawerBody py="4" pb={{ base: "calc(16px + env(safe-area-inset-bottom, 0px))", md: "4" }}>
             {dayEvents.length === 0 ? (
               <Flex direction="column" align="center" py="8" gap="2">
                 <Text fontSize="3xl">

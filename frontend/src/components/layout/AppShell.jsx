@@ -70,7 +70,7 @@ export default function AppShell() {
           pb={{ base: "calc(140px + env(safe-area-inset-bottom, 0px))", md: "4" }}
           overflowY="auto"
           overflowX="hidden"
-          css={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
+          css={{ WebkitOverflowScrolling: "touch" }}
         >
           <PageTransition key={location.pathname}>
             <Outlet />

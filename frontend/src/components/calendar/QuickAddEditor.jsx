@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Box, Flex, Text, Input, Heading, VStack } from "@chakra-ui/react";
 import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 import { EVENT_ICONS, getIconEmoji } from "./eventIcons";
@@ -18,6 +18,7 @@ const EVENT_COLORS = [
 export default function QuickAddEditor({ open, onClose, templates, onSave }) {
   const [items, setItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const expandRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -25,6 +26,16 @@ export default function QuickAddEditor({ open, onClose, templates, onSave }) {
       setEditingId(null);
     }
   }, [open, templates]);
+
+  // Auto-scroll expanded editor into view
+  useEffect(() => {
+    if (editingId && expandRef.current) {
+      const timer = setTimeout(() => {
+        expandRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [editingId]);
 
   const editingItem = editingId ? items.find((t) => t.id === editingId) : null;
 
@@ -196,7 +207,7 @@ export default function QuickAddEditor({ open, onClose, templates, onSave }) {
 
                 {/* Expanded editor */}
                 {isEditing && (
-                  <Box px={2} pb={3} className="sm-expand-in">
+                  <Box ref={expandRef} px={2} pb={3} className="sm-expand-in">
                     {/* Name */}
                     <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1} mt={1}>{"Nazwa"}</Text>
                     <Input

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Children, isValidElement } from "react";
 
 /**
  * Shared bottom-sheet dialog wrapper.
@@ -103,6 +103,20 @@ export default function BottomSheetDialog({
     ? { maxWidth: maxW, maxHeight: `${vvHeight}px` }
     : { maxWidth: maxW };
 
+  // Split children: body content scrolls, DialogActions stays anchored
+  const childArray = Children.toArray(children);
+  const actionsIdx = childArray.findIndex(
+    (child) => isValidElement(child) && child.type === DialogActions,
+  );
+  let bodyChildren, actionsChildren;
+  if (actionsIdx >= 0) {
+    bodyChildren = childArray.slice(0, actionsIdx);
+    actionsChildren = childArray.slice(actionsIdx);
+  } else {
+    bodyChildren = childArray;
+    actionsChildren = [];
+  }
+
   return (
     <>
       <div className="sm-dialog-backdrop" onClick={onClose} />
@@ -119,7 +133,8 @@ export default function BottomSheetDialog({
           onClick={(e) => e.stopPropagation()}
           {...tagProps}
         >
-          {children}
+          <div className="sm-dialog-body">{bodyChildren}</div>
+          {actionsChildren}
         </ActualTag>
       </div>
     </>
