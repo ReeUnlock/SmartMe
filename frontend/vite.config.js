@@ -23,7 +23,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "0.0.0.0",
-    allowedHosts: ["www.smartme.life"],
+    allowedHosts: ["app.smartme.life"],
     watch: {
       usePolling: true,
       interval: 1000,

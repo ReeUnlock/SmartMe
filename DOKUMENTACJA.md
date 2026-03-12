@@ -1,7 +1,7 @@
 # SmartMe — Kompletna Dokumentacja Aplikacji
 
 > Personalny hub zarządzania życiem. Mobile-first, ciepłe pastele, UI po polsku.
-> Domena: `www.smartme.life`
+> Domena: `app.smartme.life`
 
 ---
 
@@ -114,7 +114,7 @@ Aplikacja dostępna pod `http://localhost:81`
 ### Vite Config
 
 - Code splitting: `vendor-react`, `vendor-chakra`, `vendor-query`, `vendor-utils`
-- `allowedHosts`: `["www.smartme.life"]`
+- `allowedHosts`: `["app.smartme.life"]`
 - Watch: polling co 1000ms (Docker na Windows)
 - Dev server: host 0.0.0.0, port 3000
 
@@ -1211,7 +1211,7 @@ In-memory sliding window per IP (nie distributed).
 
 Konfigurowalny przez env `CORS_ORIGINS` (lista origins oddzielona przecinkami).
 - Dev: `http://localhost:81, http://localhost:3001`
-- Prod: `https://www.smartme.life`
+- Prod: `https://app.smartme.life`
 
 Dodatkowo backend zawsze dodaje origins Capacitor WebView:
 - `https://localhost` (Android Capacitor)
@@ -1238,7 +1238,7 @@ GZip na backendzie (FastAPI middleware, min 500B) + nginx (gzip level 4, min 256
 |---------|---------|
 | VPS | Hetzner CX23, Ubuntu |
 | IP | 89.167.123.192 |
-| Domena | www.smartme.life |
+| Domena | app.smartme.life |
 | SSL | Let's Encrypt (ważny do 2026-06-08) |
 | SSH | `ssh root@89.167.123.192` (klucz ed25519) |
 | Pliki | `/root/anelka/` |
@@ -1252,7 +1252,7 @@ GZip na backendzie (FastAPI middleware, min 500B) + nginx (gzip level 4, min 256
 | Frontend Dockerfile | Dockerfile | Dockerfile.prod (multi-stage) |
 | Nginx config | nginx.conf | nginx.prod.conf (SSL, HSTS) |
 | Porty | 81, 8001, 3001, 5433 | 80, 443 (SSL) |
-| CORS | localhost | https://www.smartme.life |
+| CORS | localhost | https://app.smartme.life |
 | SSL | Brak | Let's Encrypt + HSTS |
 
 ### Procedura deploy
@@ -1270,7 +1270,7 @@ ssh root@89.167.123.192 'cd /root/anelka && docker compose -f docker-compose.pro
 ssh root@89.167.123.192 'sleep 15 && docker restart anelka-nginx'
 
 # 4. Weryfikacja
-ssh root@89.167.123.192 'curl -s https://www.smartme.life/api/health'
+ssh root@89.167.123.192 'curl -s https://app.smartme.life/api/health'
 # → {"status":"ok","database":"ok"}
 ```
 
@@ -1333,7 +1333,7 @@ frontend/
   capacitor.config.ts       — Capacitor config (appId, appName, webDir, plugins)
   .env                      — Dev env (VITE_API_URL unset → "/api")
   .env.production           — Web prod env (VITE_API_URL unset → "/api")
-  .env.capacitor            — Native builds (VITE_API_URL=https://www.smartme.life/api)
+  .env.capacitor            — Native builds (VITE_API_URL=https://app.smartme.life/api)
   android/                  — Android platform (Gradle project)
     app/src/main/
       AndroidManifest.xml   — Permissions: INTERNET, RECORD_AUDIO
@@ -1355,7 +1355,7 @@ frontend/
 
 Frontend `client.js` czyta `import.meta.env.VITE_API_URL || "/api"`:
 - **Web** (dev/prod): nginx proxy → `/api` → backend — relative path działa
-- **Native** (Capacitor): brak nginx, absolutny URL wymagany → `.env.capacitor` ustawia `VITE_API_URL=https://www.smartme.life/api`
+- **Native** (Capacitor): brak nginx, absolutny URL wymagany → `.env.capacitor` ustawia `VITE_API_URL=https://app.smartme.life/api`
 - Scripty `cap:build:android` / `cap:build:ios` automatycznie używają `--mode capacitor`
 
 ### Uprawnienia
@@ -1486,7 +1486,7 @@ npm run cap:open:ios          # Otwórz w Xcode
 ### Polityka prywatności
 
 - **Plik**: `frontend/public/privacy-policy.html` (standalone HTML, po polsku)
-- **URL**: `https://www.smartme.life/privacy-policy.html`
+- **URL**: `https://app.smartme.life/privacy-policy.html`
 - **Link w apce**: Ustawienia → "Informacje prawne" → "Polityka prywatności"
 - **Treść obejmuje**: zbierane dane, przetwarzanie głosu (OpenAI), usługi zewnętrzne, przechowywanie danych, usunięcie konta, prawa RODO, kontakt
 
