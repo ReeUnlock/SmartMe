@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Box, Flex, Text, VStack, Icon, Input, Heading } from "@chakra-ui/react";
-import { LuCamera, LuImage, LuReceipt, LuTrash2, LuPlus, LuCheck, LuChevronLeft, LuAlertTriangle } from "react-icons/lu";
+import { LuCamera, LuImage, LuReceipt, LuTrash2, LuPlus, LuCheck, LuChevronLeft, LuTriangleAlert } from "react-icons/lu";
 import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 import SmartMeLoader from "../common/SmartMeLoader";
 import DateInput from "../common/DateInput";
@@ -309,7 +309,7 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
             bg={confidence === "none" || confidence === "weak" ? "orange.50" : "sky.50"}
             borderRadius="xl" p={3} mb={3} align="flex-start" gap={2}
           >
-            <Icon as={LuAlertTriangle} boxSize={4} color={confidence === "none" || confidence === "weak" ? "orange.400" : "sky.400"} mt="1px" flexShrink={0} />
+            <Icon as={LuTriangleAlert} boxSize={4} color={confidence === "none" || confidence === "weak" ? "orange.400" : "sky.400"} mt="1px" flexShrink={0} />
             <Text fontSize="xs" color={confidence === "none" || confidence === "weak" ? "orange.700" : "sky.700"}>
               {confidenceMsg}
             </Text>
