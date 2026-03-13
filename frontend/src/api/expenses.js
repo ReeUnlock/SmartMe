@@ -34,6 +34,10 @@ export function deleteExpense(id) {
   return apiFetch(`/expenses/${id}`, { method: "DELETE" });
 }
 
+export function deleteExpensesInMonth(year, month) {
+  return apiFetch(`/expenses/month?year=${year}&month=${month}`, { method: "DELETE" });
+}
+
 // ─── Categories ─────────────────────────────────────────────
 
 export function getExpenseCategories() {

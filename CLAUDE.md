@@ -2,7 +2,7 @@
 
 ## Projekt
 Personalny hub zarządzania życiem dla jednej kobiety. Mobile-first, ciepłe pastele, UI po polsku.
-Domena produkcyjna: `smartme.life`
+Domeny produkcyjne: `smartme.life` (landing page), `app.smartme.life` (web app)
 
 ## Stack
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL 16, Alembic
@@ -12,6 +12,10 @@ Domena produkcyjna: `smartme.life`
 - **CI/CD**: GitHub Actions (build + Android APK + iOS validation)
 - **AI**: OpenAI API (Whisper transkrypcja + GPT-4o-mini parsowanie intencji)
 - **OCR**: Tesseract (lokalnie, język polski)
+- **Billing**: Stripe (checkout, customer portal, webhooks for subscription lifecycle)
+- **Email**: Resend (transactional emails — welcome, upgrade, downgrade, support)
+- **Monitoring**: Sentry (frontend @sentry/react), PostHog (analytics, EU, opt-in via cookie consent)
+- **Analytics**: PostHog (`posthog-js`) — initialized only after cookie consent
 
 ## Porty (inne projekty zajmują domyślne)
 - DB: `5433:5432`
@@ -34,18 +38,25 @@ backend/app/
   feedback/         — anonimowy feedback (bug/idea/opinion/broken)
   voice/            — transkrypcja (Whisper) + parsowanie intencji (GPT) + executors + calendar_validator + prompts.py
   receipts/         — OCR paragonów (Tesseract pol), heurystyczny parser (sklep, data, suma, produkty)
-  common/           — TimestampMixin, pagination
+  common/           — TimestampMixin, pagination, email.py (Resend transactional emails)
+  billing/          — Stripe billing: checkout, portal, webhooks, subscription model, feature limits
   notifications/    — (puste — przyszłe push notifications, pywebpush zainstalowany)
   ai/               — (puste — przyszłe AI features)
 backend/alembic/    — migracje DB (16 plików, env.py importuje wszystkie modele)
+landing/            — statyczny landing page (smartme.life), serwowany przez nginx
+  index.html        — główna strona (hero, features, how-it-works, pricing, FAQ, CTA, footer)
+  privacy.html      — polityka prywatności
+  terms.html        — regulamin
+  cookies.html      — polityka cookies
+  icons/            — favicon, apple-touch (kopia z frontend/public/icons)
 ```
 
 ## Struktura frontendu
 ```
 frontend/src/
-  App.jsx           — Router + ChakraProvider + QueryClientProvider + ErrorBoundary + Global Overlays (lazy)
+  App.jsx           — Router + ChakraProvider + QueryClientProvider + ErrorBoundary + Global Overlays (lazy) + CookieConsent
   theme.js          — pastelowa paleta: rose, peach, sage, sky, lavender + semantic tokens
-  api/              — client.js (apiFetch + apiUpload z JWT, VITE_API_URL env), pliki per moduł (auth, calendar, shopping, expenses, plans, voice, receipts)
+  api/              — client.js (apiFetch + apiUpload z JWT, VITE_API_URL env), pliki per moduł (auth, calendar, shopping, expenses, plans, voice, receipts, billing)
   config/
     motionConfig.js   — centralna konfiguracja animacji: EASING, DURATION, Z-index, celebration presets, micro-feedback, module themes
   styles/
@@ -58,12 +69,13 @@ frontend/src/
     shoppingUtils.js  — parseItemInput ("2kg ziemniaki"), inferCategoryId (400+ weighted keywords)
     imageCompressor.js — client-side image resize+JPEG compression before upload (max 1920px, 0.85 quality)
     reactionConfig.js — per-avatar personality pools, 7 event types, bubble/label themes
+    posthog.js — PostHog init (initPostHog, trackEvent), reads VITE_POSTHOG_KEY env
   hooks/
     useAuth.js          — zustand, single-user JWT auth, token expiry check (60s buffer)
     useCalendar.js      — TanStack Query, events CRUD + useEventHistory integration
     useEventHistory.js  — zustand, undo/redo (max 3 kroki)
     useShopping.js      — TanStack Query, optimistic toggle, categories (staleTime 5min)
-    useExpenses.js      — TanStack Query, CRUD + recurring + budget + summary + comparison
+    useExpenses.js      — TanStack Query, CRUD + recurring + budget + summary + comparison + bulk delete month
     useExpenseUndo.js   — zustand, undo stack (max 5)
     usePlans.js         — TanStack Query, goals + milestones + bucket + summary
     useRewards.js       — zustand+localStorage, sparks/level/streak, reward(action), addBonusSparks
@@ -100,7 +112,7 @@ frontend/src/
       NewListDialog.jsx      — dialog tworzenia (z szablonami)
     expenses/       — Wydatki (kolor: peach/brzoskwinia)
       ExpensesPage.jsx       — header + month nav + tab bar (Dashboard/Lista/Budżet/Cykliczne)
-      ExpensesList.jsx       — lista z search, filtry, delete z undo
+      ExpensesList.jsx       — lista z search, filtry, delete z undo, bulk delete w miesiącu z potwierdzeniem
       ExpensesDashboard.jsx  — summary: total, by_category, trend
       BudgetView.jsx         — budżet per kategoria
       RecurringExpenses.jsx  — wydatki cykliczne
@@ -127,6 +139,7 @@ frontend/src/
       AchievementToast.jsx   — portal odznaki/challenge (3.5s, gradient card)
       SuccessToast.jsx       — success notification
       ErrorToast.jsx         — error notification
+      CookieConsent.jsx      — cookie consent banner (PostHog opt-in), localStorage key: smartme_cookie_consent
       DateTimeInput.jsx      — date+time picker z accent color
       DateInput.jsx          — date-only picker
       SmartMeLogo.jsx        — logo (image fallback)
@@ -141,6 +154,8 @@ frontend/src/
       reactionConfig.js        — message pools per avatar × event type, bubble/label themes
       shared.jsx               — HeartSvg, StarSvg, particle utils
       avatars/                 — SolSun, NoxMoon, BloomFlower, AuraOrb (SVG components)
+    billing/        — PricingCard, PricingSection (plany Free/Pro, Chakra UI)
+    landing/        — LandingPage (hero, features, pricing, footer — public /start)
     celebration/    — CelebrationOverlay (imperative RAF particle + glow engine, safety timeout 5s)
     dashboard/
       DashboardPage.jsx          — ReorderableTiles (drag-reorder, localStorage order)
@@ -156,9 +171,9 @@ frontend/src/
       ChallengesPage.jsx         — dzienne (lavender) + tygodniowe (rose/peach) wyzwania
 ```
 
-## Baza danych — tabele (13)
+## Baza danych — tabele (14)
 ```
-users               — single-user auth (username, email, hashed_password, onboarding_completed)
+users               — single-user auth (username, email, hashed_password, onboarding_completed, plan: free/pro)
 events              — kalendarz (title, start_at, end_at, all_day, color, icon, rrule)
 shopping_lists      — listy zakupów (name, store_name, is_completed)
 shopping_categories — kategorie produktów (defaults: Owoce i warzywa, Nabiał, Pieczywo, Mięso i ryby, Napoje, Chemia, Przekąski, Inne)
@@ -171,11 +186,13 @@ monthly_budgets     — budżet miesięczny (year, month, amount — unique per 
 goals               — cele (title, category, goal_type: manual/savings/spending_limit, target_value, linked_category_id)
 milestones          — kamienie milowe (title, is_completed, goal_id CASCADE)
 bucket_items        — bucket lista (title, category, is_completed, completed_date)
+subscriptions       — Stripe billing (user_id, plan, status, stripe_customer_id, stripe_subscription_id, current_period_end)
 feedback            — anonimowy (message, category: bug/idea/opinion/broken, email, user_agent)
 ```
 
 ## Routing (polskie ścieżki)
 ```
+/start             — landing page (public, hero + features + pricing + footer)
 /setup             — rejestracja (tworzenie konta), backend 403 jeśli konto już istnieje
 /login             — logowanie, linki do rejestracji i odzyskiwania hasła
 /odzyskaj-haslo    — odzyskiwanie hasła (email + nowe hasło)
@@ -193,13 +210,38 @@ feedback            — anonimowy (message, category: bug/idea/opinion/broken, e
 ```
 
 ## API
-Wszystkie endpointy pod `/api/`. Wymagają JWT oprócz `/api/auth/setup`, `/api/auth/login`, `/api/auth/forgot-password`, `/api/auth/status`, `/api/health`, `/api/feedback`.
+Wszystkie endpointy pod `/api/`. Wymagają JWT oprócz `/api/auth/setup`, `/api/auth/login`, `/api/auth/forgot-password`, `/api/auth/status`, `/api/health`, `/api/feedback`, `/api/billing/plans`, `/api/billing/webhooks/stripe`.
+
+### Billing API
+- `GET /api/billing/plans` — public, pricing info (Free/Pro features)
+- `GET /api/billing/subscription` — current user's subscription status
+- `POST /api/billing/checkout` — create Stripe Checkout session (redirects to Stripe)
+- `POST /api/billing/portal` — create Stripe Customer Portal session
+- `POST /api/billing/webhooks/stripe` — Stripe webhook (checkout.session.completed, invoice.paid, customer.subscription.updated/deleted, invoice.payment_failed)
+
+### Email (Resend)
+- `send_welcome(to, name)` — po rejestracji
+- `send_upgrade_confirmation(to, name)` — po upgrade do Pro
+- `send_downgrade_notice(to, name)` — po anulowaniu/wygaśnięciu Pro
+- `send_support_message(from_email, message)` — forwarding do support@smartme.life
+- Graceful no-op gdy `RESEND_API_KEY` jest pusty (dev mode)
+
+### Feature limits (billing/limits.py)
+| Feature | Free | Pro |
+|---------|------|-----|
+| shopping_lists | 10 | Bez limitu |
+| expenses_per_month | 100 | Bez limitu |
+| calendar_events | 50 | Bez limitu |
+| goals | 5 | Bez limitu |
+| voice_commands_per_day | 20 | Bez limitu |
+| receipt_scans_per_month | 10 | Bez limitu |
 
 ### Kluczowa logika biznesowa
 - **Duplikaty kalendarza**: backend 409 jeśli ten sam `title` w danym dniu; frontend wyszarza quick-add buttony
 - **RRULE**: `expand_events()` rozwija wydarzenia cykliczne w zakresie dat (max 365 dni do przodu)
 - **Zakupy → Wydatki**: `POST /shopping/lists/{id}/to-expense` — smart category split proporcjonalnie do kategorii produktów
 - **Wydatki cykliczne**: `POST /expenses/recurring/generate {year, month}` — tworzy z szablonów, nigdy nie duplikuje
+- **Bulk delete**: `DELETE /expenses/month?year=X&month=Y` — kasuje wszystkie wydatki w miesiącu, wymaga potwierdzenia w UI
 - **Spending limit goals**: `linked_category_id` → backend oblicza `computed_expense_total` (suma wydatków w bieżącym miesiącu)
 - **Summary merging**: NULL + "Inne" łączone w jeden bucket w podsumowaniach
 
@@ -308,6 +350,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 | Quick Templates | `anelka_quick_templates` |
 | Shopping Templates | `anelka_shopping_templates` |
 | Item History | `anelka_item_history` |
+| Cookie Consent | `smartme_cookie_consent` |
 
 ### Gablotka (/odznaki) — layout
 1. "Twoja kolekcja" (summary)
@@ -423,6 +466,8 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - **Kompresja**: GZip na backendzie (FastAPI, min 500B) + nginx (gzip level 4, min 256B)
 - **Security headers**: nginx dodaje X-Content-Type-Options, X-Frame-Options, Referrer-Policy
 - **Code splitting (Vite)**: vendor-react, vendor-chakra, vendor-query, vendor-utils
+- **PostHog**: opt-in only, initialized after cookie consent (`CookieConsent.jsx`), env vars: `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` (default EU)
+- **Budget input**: `step="any"` (not `step="100"`), backend `BudgetSet.amount` has `le=10_000_000` upper bound
 
 ## Fazy implementacji
 - [x] Faza 0: Fundament (auth, layout, routing, Alembic)
@@ -453,8 +498,8 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 ```
 frontend/
   capacitor.config.ts       — Capacitor config (appId, plugins, server)
-  .env                      — Dev (VITE_API_URL unset → "/api")
-  .env.production           — Web prod (VITE_API_URL unset → "/api")
+  .env                      — Dev (VITE_API_URL unset → "/api", VITE_POSTHOG_KEY optional)
+  .env.production           — Web prod (VITE_API_URL unset → "/api", VITE_POSTHOG_KEY, VITE_POSTHOG_HOST)
   .env.capacitor            — Native builds (VITE_API_URL=https://smartme.life/api)
   android/                  — Android platform (Gradle, manifesty, ikony)
   ios/                      — iOS platform (Xcode project, SPM, Info.plist)
@@ -469,7 +514,7 @@ frontend/
 ### API w buildach natywnych
 - `client.js` czyta `import.meta.env.VITE_API_URL || "/api"`
 - Web (dev/prod): proxy nginx → `/api` → backend → działa relative
-- Native (Capacitor): brak nginx, wymaga absolutny URL → `.env.capacitor` ustawia `VITE_API_URL=https://smartme.life/api`
+- Native (Capacitor): brak nginx, wymaga absolutny URL → `.env.capacitor` ustawia `VITE_API_URL=https://app.smartme.life/api`
 - Scripty `cap:build:android` / `cap:build:ios` używają `--mode capacitor` automatycznie
 
 ### CORS dla Capacitor
@@ -581,7 +626,7 @@ distribution.cer                  — Surowy certyfikat Apple
 
 ### Polityka prywatności
 - Plik: `frontend/public/privacy-policy.html` (standalone HTML, po polsku)
-- URL produkcyjny: `https://smartme.life/privacy-policy.html`
+- URL produkcyjny: `https://smartme.life/privacy.html` (na landing) + `https://app.smartme.life/privacy-policy.html` (w apce)
 - Link w apce: Ustawienia → "Informacje prawne" → "Polityka prywatności"
 - Treść: zbierane dane, OpenAI (Whisper/GPT), usunięcie konta, RODO, kontakt
 
@@ -613,8 +658,8 @@ docker exec anelka-backend alembic upgrade head
 
 ### Infrastruktura
 - **VPS**: Hetzner CX23, Ubuntu, `89.167.123.192`
-- **Domena**: `smartme.life` (DNS A record → VPS IP)
-- **SSL**: Let's Encrypt (certbot), certyfikaty: `smartme.life` (ważny do 2026-06-10), `app.smartme.life` (legacy)
+- **Domena**: `smartme.life` (landing) + `app.smartme.life` (web app), oba DNS A record → VPS IP
+- **SSL**: Let's Encrypt (certbot), certyfikat SAN: `smartme.life` + `app.smartme.life`
 - **SSH**: `ssh root@89.167.123.192` (klucz ed25519 z maszyny Rafa)
 - **Pliki na serwerze**: `/root/anelka/`
 - **Docker Compose prod**: `docker-compose.prod.yml` (porty 80/443, frontend jako static build, certbot)
@@ -628,7 +673,8 @@ docker exec anelka-backend alembic upgrade head
 | Frontend Dockerfile | `Dockerfile` | `Dockerfile.prod` |
 | Nginx config | `nginx/nginx.conf` | `nginx/nginx.prod.conf` |
 | Porty | 81, 8001, 3001, 5433 | 80, 443 (SSL) |
-| CORS | localhost:81, localhost:3001 | https://smartme.life |
+| Landing | React `/start` route | Statyczny HTML `smartme.life` (landing/) |
+| CORS | localhost:81, localhost:3001 | https://app.smartme.life |
 | SSL | Brak | Let's Encrypt + HSTS |
 
 ### Procedura deploy (krok po kroku)

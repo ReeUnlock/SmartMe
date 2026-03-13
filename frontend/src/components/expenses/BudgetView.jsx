@@ -136,8 +136,9 @@ export default function BudgetView({ year, month }) {
               <Input
                 placeholder="np. 3000"
                 type="number"
-                step="100"
+                step="any"
                 min="1"
+                max="1000000"
                 value={budgetInput}
                 onChange={(e) => setBudgetInput(e.target.value)}
                 autoFocus

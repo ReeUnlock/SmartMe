@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Box, Flex, Text, VStack, Icon, Input } from "@chakra-ui/react";
-import { LuPlus, LuTrash2, LuWallet, LuUsers, LuTag, LuPencil, LuSearch, LuX, LuReceipt } from "react-icons/lu";
+import { LuPlus, LuTrash2, LuWallet, LuUsers, LuTag, LuPencil, LuSearch, LuX, LuReceipt, LuTriangleAlert } from "react-icons/lu";
 import SmartMeLoader from "../common/SmartMeLoader";
 import EmptyState from "../common/EmptyState";
-import { useExpenses, useDeleteExpense, useCreateExpense, useUpdateExpense, useExpenseCategories, useMembers } from "../../hooks/useExpenses";
+import { useExpenses, useDeleteExpense, useDeleteExpensesInMonth, useCreateExpense, useUpdateExpense, useExpenseCategories, useMembers } from "../../hooks/useExpenses";
 import useExpenseUndo from "../../hooks/useExpenseUndo";
 import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
@@ -136,6 +136,7 @@ export default function ExpensesList({ year, month }) {
   const { data: categories } = useExpenseCategories();
   const { data: members } = useMembers();
   const deleteExpense = useDeleteExpense();
+  const deleteAllExpenses = useDeleteExpensesInMonth();
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
   const pushUndo = useExpenseUndo((s) => s.push);
@@ -145,6 +146,7 @@ export default function ExpensesList({ year, month }) {
   const trackChallenge = useChallenges((s) => s.trackAction);
   const [showDialog, setShowDialog] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
   const [filterMember, setFilterMember] = useState(null);
@@ -282,6 +284,26 @@ export default function ExpensesList({ year, month }) {
             : `${totalCount} wydatków`}
         </Text>
         <Flex gap={2}>
+          {totalCount > 0 && (
+            <Flex
+              as="button"
+              align="center"
+              justify="center"
+              px={2.5}
+              py={2}
+              bg="red.50"
+              color="red.500"
+              borderRadius="xl"
+              cursor="pointer"
+              _hover={{ bg: "red.100" }}
+              _active={{ transform: "scale(0.97)" }}
+              transition="all 0.2s"
+              onClick={() => setShowDeleteAll(true)}
+              title="Usuń wszystkie wydatki w miesiącu"
+            >
+              <Icon as={LuTrash2} boxSize={4} />
+            </Flex>
+          )}
           <Flex
             align="center"
             justify="center"
@@ -542,6 +564,74 @@ export default function ExpensesList({ year, month }) {
         onSubmitExpenses={handleReceiptSubmit}
         isLoading={createExpense.isPending}
       />
+
+      {/* Delete all confirmation overlay */}
+      {showDeleteAll && (
+        <Box
+          position="fixed"
+          inset={0}
+          zIndex={50}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          bg="blackAlpha.500"
+          onClick={() => setShowDeleteAll(false)}
+        >
+          <Box
+            bg="white"
+            borderRadius="2xl"
+            p={6}
+            w="full"
+            maxW="sm"
+            mx={4}
+            shadow="lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Flex align="center" gap={2} mb={3}>
+              <Icon as={LuTriangleAlert} boxSize={5} color="red.500" />
+              <Text fontSize="lg" fontWeight="700" color="red.600">
+                {"Usunąć wszystkie wydatki?"}
+              </Text>
+            </Flex>
+            <Text fontSize="sm" color="gray.500" mb={4}>
+              {`Czy na pewno chcesz usunąć wszystkie wydatki (${totalCount}) z ${month}/${year}? Tej operacji nie można cofnąć.`}
+            </Text>
+            <Flex justify="flex-end" gap={3}>
+              <Text
+                as="button"
+                fontSize="sm"
+                color="gray.500"
+                cursor="pointer"
+                px={4}
+                py={2}
+                _hover={{ color: "gray.700" }}
+                onClick={() => setShowDeleteAll(false)}
+              >
+                {"Anuluj"}
+              </Text>
+              <Text
+                as="button"
+                fontSize="sm"
+                fontWeight="600"
+                bg="red.500"
+                color="white"
+                px={4}
+                py={2}
+                borderRadius="xl"
+                cursor="pointer"
+                _hover={{ bg: "red.600" }}
+                opacity={deleteAllExpenses.isPending ? 0.5 : 1}
+                onClick={async () => {
+                  await deleteAllExpenses.mutateAsync({ year, month });
+                  setShowDeleteAll(false);
+                }}
+              >
+                {deleteAllExpenses.isPending ? "Usuwanie..." : "Tak, usuń wszystkie"}
+              </Text>
+            </Flex>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

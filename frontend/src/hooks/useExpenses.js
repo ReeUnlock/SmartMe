@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getExpenses, createExpense, updateExpense, deleteExpense,
+  getExpenses, createExpense, updateExpense, deleteExpense, deleteExpensesInMonth,
   getExpenseCategories,
   getMembers, createMember, updateMember, deleteMember,
   getRecurring, createRecurring, updateRecurring, deleteRecurring, generateRecurring,
@@ -63,6 +63,19 @@ export function useDeleteExpense() {
       qc.invalidateQueries({ queryKey: [KEYS.expenses] });
       qc.invalidateQueries({ queryKey: [KEYS.summary] });
       qc.invalidateQueries({ queryKey: [KEYS.comparison] });
+    },
+  });
+}
+
+export function useDeleteExpensesInMonth() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ year, month }) => deleteExpensesInMonth(year, month),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEYS.expenses] });
+      qc.invalidateQueries({ queryKey: [KEYS.summary] });
+      qc.invalidateQueries({ queryKey: [KEYS.comparison] });
+      useSuccessToast.getState().show("Wydatki usunięte");
     },
   });
 }

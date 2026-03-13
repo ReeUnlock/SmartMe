@@ -27,6 +27,7 @@ const SettingsPage = lazy(() => import("./components/common/SettingsPage"));
 const AchievementsPageWrapper = lazy(() => import("./components/dashboard/AchievementsPageWrapper"));
 const ChallengesPageWrapper = lazy(() => import("./components/dashboard/ChallengesPageWrapper"));
 const AvatarSelectionPageWrapper = lazy(() => import("./components/affirmation/AvatarSelectionPageWrapper"));
+const LandingPage = lazy(() => import("./components/landing/LandingPage"));
 
 // Lazy load heavy global overlays (not needed on initial render)
 const SparkToast = lazy(() => import("./components/common/SparkToast"));
@@ -34,6 +35,7 @@ const AchievementToast = lazy(() => import("./components/common/AchievementToast
 const CelebrationOverlay = lazy(() => import("./components/celebration/CelebrationOverlay"));
 const AvatarReaction = lazy(() => import("./components/affirmation/AvatarReaction"));
 const SuccessToast = lazy(() => import("./components/common/SuccessToast"));
+const CookieConsent = lazy(() => import("./components/common/CookieConsent"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +66,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={null}>
       <Routes>
+        <Route path="/start" element={<LandingPage />} />
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/odzyskaj-haslo" element={<ForgotPasswordPage />} />
@@ -106,6 +109,9 @@ export default function App() {
               <SuccessToast />
             </Suspense>
             <ErrorToast />
+            <Suspense fallback={null}>
+              <CookieConsent />
+            </Suspense>
           </BrowserRouter>
         </QueryClientProvider>
       </ErrorBoundary>

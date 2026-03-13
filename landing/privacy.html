@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Polityka prywatności — SmartMe</title>
+  <meta name="description" content="Polityka prywatności aplikacji SmartMe." />
+  <meta property="og:title" content="Polityka prywatności — SmartMe" />
+  <meta property="og:url" content="https://smartme.life/privacy.html" />
+  <meta property="og:site_name" content="SmartMe" />
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --rose-400: #F783AC; --bg: #FBF8F9;
+      --text-primary: #3B4A63; --text-secondary: #5A6B82;
+    }
+    body { font-family: 'Inter', sans-serif; color: var(--text-primary); background: var(--bg); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    h1, h2 { font-family: 'Nunito', sans-serif; }
+    a { color: var(--rose-400); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 720px; margin: 0 auto; padding: 64px 24px; }
+    h1 { font-size: 32px; font-weight: 900; margin-bottom: 32px; }
+    .date { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
+    section { margin-bottom: 32px; }
+    h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    p { color: var(--text-secondary); line-height: 1.7; margin-bottom: 8px; }
+    .back { display: block; text-align: center; margin-top: 48px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Polityka prywatności</h1>
+    <p class="date">Ostatnia aktualizacja: 13 marca 2026</p>
+
+    <section>
+      <h2>1. Administrator danych</h2>
+      <p>Administratorem danych osobowych jest SmartMe (WOA - Wellness Over All Sp. z o.o.). Kontakt: privacy@smartme.life.</p>
+    </section>
+
+    <section>
+      <h2>2. Jakie dane zbieramy</h2>
+      <p>Zbieramy dane niezbędne do działania serwisu: adres email, hasło (zahaszowane), dane wprowadzone przez użytkownika (wydatki, wydarzenia, listy zakupów, cele) oraz anonimowe dane analityczne (PostHog, EU — tylko po zgodzie).</p>
+    </section>
+
+    <section>
+      <h2>3. Cel przetwarzania</h2>
+      <p>Dane przetwarzamy w celu: świadczenia usługi SmartMe, przetwarzania komend głosowych (OpenAI Whisper/GPT — dane nie są przechowywane przez OpenAI), analizy użycia (PostHog — tylko po zgodzie).</p>
+    </section>
+
+    <section>
+      <h2>4. Hosting i przechowywanie</h2>
+      <p>Wszystkie dane przechowywane są w centrach danych na terenie Unii Europejskiej. Baza danych: PostgreSQL (EU, Hetzner). Analityka: PostHog EU (eu.posthog.com).</p>
+    </section>
+
+    <section>
+      <h2>5. Twoje prawa (RODO)</h2>
+      <p>Masz prawo do: dostępu do danych, ich poprawienia, usunięcia, ograniczenia przetwarzania, przeniesienia danych oraz wniesienia sprzeciwu. Kontakt: privacy@smartme.life.</p>
+    </section>
+
+    <section>
+      <h2>6. Usuwanie danych</h2>
+      <p>Użytkownik może usunąć konto w dowolnym momencie w ustawieniach aplikacji. Po usunięciu wszystkie dane są trwale kasowane.</p>
+    </section>
+
+    <section>
+      <h2>7. Pliki cookies</h2>
+      <p>Używamy wyłącznie niezbędnych cookies (sesja JWT, autoryzacja) oraz opcjonalnych cookies analitycznych (PostHog) — te ostatnie tylko po wyrażeniu zgody. Szczegóły w naszej <a href="/cookies.html">Polityce cookies</a>.</p>
+    </section>
+
+    <section>
+      <h2>8. Podmioty trzecie</h2>
+      <p>Korzystamy z: OpenAI (transkrypcja głosowa, parsowanie intencji), PostHog EU (analityka), Sentry (monitoring błędów). Każdy z tych podmiotów przetwarza dane zgodnie z RODO.</p>
+    </section>
+
+    <section>
+      <h2>9. Bezpieczeństwo</h2>
+      <p>Stosujemy szyfrowanie HTTPS, rate limiting, security headers, GZip. Hasła przechowywane jako bcrypt hash. Nigdy nie logujemy danych osobowych.</p>
+    </section>
+
+    <section>
+      <h2>10. Zmiany w polityce</h2>
+      <p>O wszelkich zmianach w polityce prywatności informujemy z 14-dniowym wyprzedzeniem.</p>
+    </section>
+
+    <a href="/" class="back">← Powrót do strony głównej</a>
+  </div>
+</body>
+</html>

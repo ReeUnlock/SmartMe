@@ -140,7 +140,7 @@ class GenerateRecurringResponse(BaseModel):
 # ─── Monthly Budget ──────────────────────────────────────────
 
 class BudgetSet(BaseModel):
-    amount: float = Field(gt=0)
+    amount: float = Field(gt=0, le=10_000_000)
 
 
 class BudgetOut(BaseModel):

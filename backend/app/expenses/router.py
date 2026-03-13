@@ -304,6 +304,28 @@ def delete_expense(
     db.commit()
 
 
+# ─── Bulk delete expenses in month ──────────────────────────
+
+@router.delete("/month", status_code=status.HTTP_200_OK)
+def delete_expenses_in_month(
+    year: int = Query(..., ge=2000, le=2100),
+    month: int = Query(..., ge=1, le=12),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    count = (
+        db.query(Expense)
+        .filter(
+            Expense.user_id == current_user.id,
+            extract("year", Expense.date) == year,
+            extract("month", Expense.date) == month,
+        )
+        .delete(synchronize_session="fetch")
+    )
+    db.commit()
+    return {"deleted": count}
+
+
 # ─── Recurring Expenses ─────────────────────────────────────
 
 @router.get("/recurring/list", response_model=list[RecurringExpenseOut])
