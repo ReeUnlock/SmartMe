@@ -13,3 +13,4 @@ class ReceiptScanResult(BaseModel):
     total: Optional[float] = None
     items: list[ReceiptItem] = []
     raw_text: str
+    confidence: str = "none"  # "good", "partial", "weak", "none"

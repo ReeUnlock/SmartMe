@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Box, Flex, Text, VStack, Icon, Input, Heading } from "@chakra-ui/react";
-import { LuCamera, LuImage, LuReceipt, LuTrash2, LuPlus, LuCheck, LuChevronLeft } from "react-icons/lu";
+import { LuCamera, LuImage, LuReceipt, LuTrash2, LuPlus, LuCheck, LuChevronLeft, LuAlertTriangle } from "react-icons/lu";
 import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 import SmartMeLoader from "../common/SmartMeLoader";
 import DateInput from "../common/DateInput";
@@ -9,6 +9,13 @@ import { scanReceipt } from "../../api/receipts";
 import { compressImage } from "../../utils/imageCompressor";
 
 const STEPS = { PICK: "pick", SCANNING: "scanning", DRAFT: "draft" };
+
+const CONFIDENCE_INFO = {
+  good: null, // no banner needed
+  partial: "Część danych mogła zostać odczytana niedokładnie. Sprawdź kwotę i produkty.",
+  weak: "Odczytano niewiele danych z paragonu. Uzupełnij brakujące pola ręcznie.",
+  none: "Nie udało się rozpoznać danych paragonu. Wprowadź dane ręcznie.",
+};
 
 export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, isLoading: isSaving }) {
   const [step, setStep] = useState(STEPS.PICK);
@@ -24,6 +31,7 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
   const [paidById, setPaidById] = useState(null);
   const [rawText, setRawText] = useState("");
   const [showRawText, setShowRawText] = useState(false);
+  const [confidence, setConfidence] = useState("none");
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -43,6 +51,7 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
     setPaidById(null);
     setRawText("");
     setShowRawText(false);
+    setConfidence("none");
   };
 
   const handleClose = () => {
@@ -57,17 +66,44 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
     setStep(STEPS.SCANNING);
 
     try {
-      const compressed = await compressImage(file);
-      const result = await scanReceipt(compressed);
+      // Compress
+      let compressed;
+      try {
+        compressed = await compressImage(file);
+      } catch (compErr) {
+        console.error("[ReceiptScanner] Image compression failed:", compErr);
+        throw new Error("Nie udało się przetworzyć zdjęcia. Spróbuj inny plik.");
+      }
 
+      // Upload & OCR
+      let result;
+      try {
+        result = await scanReceipt(compressed);
+      } catch (apiErr) {
+        console.error("[ReceiptScanner] API scan failed:", apiErr);
+        throw apiErr; // re-throw — already has user-facing message from backend
+      }
+
+      console.info("[ReceiptScanner] OCR result:", {
+        confidence: result.confidence,
+        store: result.store_name,
+        date: result.date,
+        total: result.total,
+        items: result.items?.length ?? 0,
+        rawTextLength: result.raw_text?.length ?? 0,
+      });
+
+      // Populate draft — always go to DRAFT step even with partial results
       setStoreName(result.store_name || "");
       setDate(result.date || new Date().toISOString().split("T")[0]);
       setTotal(result.total != null ? String(result.total) : "");
       setItems(result.items || []);
       setRawText(result.raw_text || "");
+      setConfidence(result.confidence || "none");
       setStep(STEPS.DRAFT);
     } catch (err) {
-      setError(err.message);
+      console.error("[ReceiptScanner] Error:", err);
+      setError(err.message || "Wystąpił nieoczekiwany błąd.");
       setStep(STEPS.PICK);
     }
   };
@@ -245,6 +281,9 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
   }
 
   // Draft step
+  const confidenceMsg = CONFIDENCE_INFO[confidence];
+  const isMissingTotal = !total;
+
   return (
     <BottomSheetDialog open={open} onClose={handleClose} maxW="440px" onSubmit={handleSubmit}>
       <Box px={4} pt={4} pb={1}>
@@ -264,6 +303,19 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
           </Flex>
         </Flex>
 
+        {/* Confidence banner */}
+        {confidenceMsg && (
+          <Flex
+            bg={confidence === "none" || confidence === "weak" ? "orange.50" : "sky.50"}
+            borderRadius="xl" p={3} mb={3} align="flex-start" gap={2}
+          >
+            <Icon as={LuAlertTriangle} boxSize={4} color={confidence === "none" || confidence === "weak" ? "orange.400" : "sky.400"} mt="1px" flexShrink={0} />
+            <Text fontSize="xs" color={confidence === "none" || confidence === "weak" ? "orange.700" : "sky.700"}>
+              {confidenceMsg}
+            </Text>
+          </Flex>
+        )}
+
         {/* Store name */}
         <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>
           Sklep
@@ -279,7 +331,7 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
         />
 
         {/* Total */}
-        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>
+        <Text fontSize="2xs" fontWeight="600" color={isMissingTotal ? "orange.500" : "gray.500"} textTransform="uppercase" letterSpacing="0.5px" mb={1}>
           {"Kwota (zł) *"}
         </Text>
         <Input
@@ -290,11 +342,16 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
           min="0.01"
           value={total}
           onChange={(e) => setTotal(e.target.value)}
-          size="sm" mb={2.5} bg="gray.50" borderRadius="lg"
-          borderColor="peach.200"
+          size="sm" mb={isMissingTotal ? 1 : 2.5} bg={isMissingTotal ? "orange.50" : "gray.50"} borderRadius="lg"
+          borderColor={isMissingTotal ? "orange.200" : "peach.200"}
           _focus={{ bg: "white", borderColor: "peach.400", boxShadow: "0 0 0 1px var(--chakra-colors-peach-400)" }}
           _placeholder={{ color: "gray.400" }}
         />
+        {isMissingTotal && (
+          <Text fontSize="2xs" color="orange.500" mb={2}>
+            {"Nie udało się odczytać kwoty — wpisz ręcznie"}
+          </Text>
+        )}
 
         {/* Date */}
         <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>

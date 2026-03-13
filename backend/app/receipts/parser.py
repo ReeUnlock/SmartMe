@@ -1,8 +1,10 @@
 """Heuristic-based parser for Polish receipt OCR text."""
 
+import logging
 import re
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
 
 # Known Polish store names (case-insensitive matching)
 KNOWN_STORES = [
@@ -21,6 +23,8 @@ TOTAL_KEYWORDS = [
     r"[ŁL]([AĄ])CZNA", r"TOTAL\b", r"KWOTA\b",
     r"WARTO[ŚS][ĆC]\s*BRUTTO", r"SPRZEDA[ŻZ]\s*BRUTTO",
     r"WP[ŁL]ATA\b", r"NALE[ŻZ]NO[ŚS][ĆC]",
+    # Common OCR misreads of SUMA/RAZEM
+    r"SUNA\b", r"RAZEN\b", r"SUflA\b",
 ]
 
 DATE_PATTERNS = [
@@ -34,7 +38,7 @@ DATE_PATTERNS = [
 
 # Price pattern: digits with comma or dot as decimal separator
 PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*$")
-# Price pattern anywhere in line (for item matching)
+# Price pattern anywhere in line (for total/item matching)
 PRICE_ANYWHERE_RE = re.compile(r"(\d+)[,.](\d{2})")
 # Line that looks like an item: text followed by price
 ITEM_LINE_RE = re.compile(
@@ -55,7 +59,11 @@ SKIP_PATTERNS = [
 
 
 def parse_receipt(raw_text: str) -> dict:
-    """Parse OCR text into structured receipt data."""
+    """Parse OCR text into structured receipt data.
+
+    Always returns a result dict — never raises.
+    Includes a 'confidence' field: 'good', 'partial', 'weak', 'none'.
+    """
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
 
     store_name = _detect_store(lines)
@@ -63,35 +71,93 @@ def parse_receipt(raw_text: str) -> dict:
     total = _detect_total(lines)
     items = _detect_items(lines, total)
 
+    # Fallback: if no total found via keywords, try summing items
+    if total is None and items:
+        items_sum = round(sum(item["price"] for item in items), 2)
+        if items_sum > 0:
+            total = items_sum
+            logger.info(f"Receipt parser: total estimated from item sum: {items_sum}")
+
+    # Fallback: if still no total, find the largest price on any line
+    if total is None:
+        total = _fallback_largest_price(lines)
+        if total is not None:
+            logger.info(f"Receipt parser: total fallback to largest price: {total}")
+
+    # Compute confidence
+    confidence = _compute_confidence(store_name, date, total, items, raw_text)
+
+    logger.info(
+        f"Receipt parser: store={store_name}, date={date}, total={total}, "
+        f"items={len(items)}, confidence={confidence}, lines={len(lines)}"
+    )
+
     return {
         "store_name": store_name,
         "date": date,
         "total": total,
         "items": items,
         "raw_text": raw_text,
+        "confidence": confidence,
     }
+
+
+def _compute_confidence(
+    store_name: str | None,
+    date: str | None,
+    total: float | None,
+    items: list[dict],
+    raw_text: str,
+) -> str:
+    """Rate the overall parse quality."""
+    score = 0
+    if store_name:
+        score += 1
+    if date:
+        score += 1
+    if total is not None and total > 0:
+        score += 2  # total is the most important field
+    if len(items) >= 1:
+        score += 1
+
+    if len(raw_text.strip()) < 20:
+        return "none"
+
+    if score >= 4:
+        return "good"
+    if score >= 2:
+        return "partial"
+    if score >= 1:
+        return "weak"
+    return "none"
 
 
 def _detect_store(lines: list[str]) -> str | None:
     """Detect store name from receipt text."""
     full_text_upper = " ".join(lines[:10]).upper()
 
-    # Check known stores
+    # Check known stores (use the first canonical match)
+    seen = set()
     for store in KNOWN_STORES:
-        if store.upper() in full_text_upper:
+        key = store.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        if key in full_text_upper:
             return store
 
     # Fallback: first non-trivial line that looks like a name
     for line in lines[:5]:
         cleaned = line.strip()
-        # Skip short lines, numbers-only, dashes, etc.
         if len(cleaned) < 3:
             continue
         if re.match(r"^[\d\s\-=*#.]+$", cleaned):
             continue
         if re.match(r"^NIP\b", cleaned, re.IGNORECASE):
             continue
-        # Looks like a store name
+        # Skip lines that are mostly digits (phone numbers, NIP values)
+        if sum(c.isdigit() for c in cleaned) > len(cleaned) * 0.6:
+            continue
         return cleaned
 
     return None
@@ -106,7 +172,6 @@ def _detect_date(text: str) -> str | None:
             date_str = "".join(groups)
             try:
                 parsed = datetime.strptime(date_str, fmt)
-                # Sanity check: year between 2020 and 2030
                 if 2020 <= parsed.year <= 2030:
                     return parsed.strftime("%Y-%m-%d")
             except ValueError:
@@ -115,25 +180,58 @@ def _detect_date(text: str) -> str | None:
 
 
 def _detect_total(lines: list[str]) -> float | None:
-    """Detect total amount from receipt."""
+    """Detect total amount from receipt using keyword matching."""
     total_pattern = "|".join(TOTAL_KEYWORDS)
     best_total = None
 
-    for line in lines:
+    for i, line in enumerate(lines):
         upper = line.upper()
         if re.search(total_pattern, upper, re.IGNORECASE):
-            # Find price in this line
+            # Find price on the same line
             prices = PRICE_ANYWHERE_RE.findall(line)
             if prices:
-                # Take the last price on the total line
                 whole, decimal = prices[-1]
                 value = float(f"{whole}.{decimal}")
-                if value > 0:
-                    # Prefer the largest total found (handles subtotals)
-                    if best_total is None or value > best_total:
-                        best_total = value
+                if value > 0 and (best_total is None or value > best_total):
+                    best_total = value
+            else:
+                # Price might be on the next line (OCR line-break in total)
+                if i + 1 < len(lines):
+                    prices = PRICE_ANYWHERE_RE.findall(lines[i + 1])
+                    if prices:
+                        whole, decimal = prices[-1]
+                        value = float(f"{whole}.{decimal}")
+                        if value > 0 and (best_total is None or value > best_total):
+                            best_total = value
 
     return best_total
+
+
+def _fallback_largest_price(lines: list[str]) -> float | None:
+    """Last-resort fallback: find the largest price on any line.
+
+    Skips metadata lines, sub-zloty amounts, and absurdly large values.
+    """
+    skip_re = re.compile("|".join(SKIP_PATTERNS), re.IGNORECASE)
+    all_prices = []
+
+    for line in lines:
+        if skip_re.search(line):
+            continue
+        prices = PRICE_ANYWHERE_RE.findall(line)
+        for whole, decimal in prices:
+            value = float(f"{whole}.{decimal}")
+            if value >= 1.0:
+                all_prices.append(value)
+
+    if not all_prices:
+        return None
+
+    largest = max(all_prices)
+    if largest > 50000:
+        return None
+
+    return largest
 
 
 def _detect_items(lines: list[str], total: float | None) -> list[dict]:
@@ -143,7 +241,6 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
     total_re = re.compile("|".join(TOTAL_KEYWORDS), re.IGNORECASE)
 
     for line in lines:
-        # Skip non-item lines
         if skip_re.search(line):
             continue
         if total_re.search(line.upper()):
@@ -158,15 +255,12 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
             decimal = match.group(3)
             price = float(f"{whole}.{decimal}")
 
-            # Skip if price equals total (it's the total line, not an item)
             if total and abs(price - total) < 0.01:
                 continue
 
-            # Clean up item name
             name = QTY_PREFIX_RE.sub("", name).strip()
             name = re.sub(r"\s+", " ", name)
 
-            # Skip if name is too short or looks like metadata
             if len(name) < 2:
                 continue
             if re.match(r"^[A-Z]{1,3}\d*$", name):
