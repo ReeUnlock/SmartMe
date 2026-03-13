@@ -47,6 +47,10 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SmartMe potrzebuje dostępu do mikrofonu, aby obsługiwać komendy głosowe.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>SmartMe potrzebuje dostępu do aparatu, aby skanować paragony.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SmartMe potrzebuje dostępu do zdjęć, aby wczytać paragon z galerii.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
