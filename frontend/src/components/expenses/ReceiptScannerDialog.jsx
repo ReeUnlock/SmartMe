@@ -97,7 +97,18 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
       setStoreName(result.store_name || "");
       setDate(result.date || new Date().toISOString().split("T")[0]);
       setTotal(result.total != null ? String(result.total) : "");
-      setItems(result.items || []);
+
+      // Build items list — add "Pozostałe" if scanned items don't cover full total
+      const ocrItems = result.items || [];
+      const ocrTotal = result.total;
+      if (ocrTotal != null && ocrTotal > 0 && ocrItems.length > 0) {
+        const itemsSum = ocrItems.reduce((s, i) => s + (i.price || 0), 0);
+        const diff = Math.round((ocrTotal - itemsSum) * 100) / 100;
+        if (diff >= 0.01) {
+          ocrItems.push({ name: "Pozostałe", price: diff });
+        }
+      }
+      setItems(ocrItems);
       setRawText(result.raw_text || "");
       setConfidence(result.confidence || "none");
 
