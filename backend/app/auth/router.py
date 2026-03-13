@@ -6,11 +6,11 @@ from app.auth.models import User
 from app.config import settings
 from app.auth.schemas import (
     SetupRequest, LoginRequest, ResetRequest, PasswordChangeRequest,
-    TokenResponse, UserOut,
+    ForgotPasswordRequest, TokenResponse, UserOut,
 )
 from app.auth.security import hash_password, verify_password, create_access_token
 from app.auth.dependencies import get_current_user
-from app.auth.rate_limit import login_limiter, setup_limiter, password_change_limiter
+from app.auth.rate_limit import login_limiter, setup_limiter, password_change_limiter, forgot_password_limiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -127,6 +127,25 @@ def reset_account(
     db.query(User).filter(User.id == uid).delete()
     db.commit()
     return {"message": "Konto usunięte. Możesz utworzyć nowe."}
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    data: ForgotPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Reset password using email verification (single-user app)."""
+    forgot_password_limiter.check(request)
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono konta z tym adresem email.",
+        )
+    user.hashed_password = hash_password(data.new_password)
+    db.commit()
+    return {"message": "Hasło zostało zmienione. Możesz się zalogować."}
 
 
 @router.get("/status")

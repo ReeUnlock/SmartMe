@@ -42,3 +42,10 @@ export function resetAccount(password) {
     body: JSON.stringify({ password }),
   });
 }
+
+export function forgotPassword(email, newPassword) {
+  return apiFetch("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email, new_password: newPassword }),
+  });
+}

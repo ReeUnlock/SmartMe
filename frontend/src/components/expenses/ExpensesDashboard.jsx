@@ -1,7 +1,14 @@
+import { useState } from "react";
 import { Box, Flex, Text, VStack, Spinner, Icon } from "@chakra-ui/react";
-import { LuTrendingUp, LuTrendingDown, LuWallet, LuRepeat, LuUsers } from "react-icons/lu";
-import { useSummary, useComparison } from "../../hooks/useExpenses";
+import { LuTrendingUp, LuTrendingDown, LuWallet, LuRepeat, LuUsers, LuReceipt } from "react-icons/lu";
+import { useSummary, useComparison, useCreateExpense } from "../../hooks/useExpenses";
+import useExpenseUndo from "../../hooks/useExpenseUndo";
+import useRewards from "../../hooks/useRewards";
+import useAchievements from "../../hooks/useAchievements";
+import useChallenges from "../../hooks/useChallenges";
+import { playSound } from "../../utils/soundManager";
 import QuickAdd from "./QuickAdd";
+import ReceiptScannerDialog from "./ReceiptScannerDialog";
 
 function PieChart({ data }) {
   if (!data.length) return null;
@@ -141,6 +148,28 @@ function StatCard({ icon, label, value, color = "peach.500" }) {
 export default function ExpensesDashboard({ year, month }) {
   const { data: summary, isLoading } = useSummary(year, month);
   const { data: comparison } = useComparison(year, month);
+  const [showScanner, setShowScanner] = useState(false);
+
+  const createExpense = useCreateExpense();
+  const pushUndo = useExpenseUndo((s) => s.push);
+  const grantReward = useRewards((s) => s.reward);
+  const addBonusSparks = useRewards((s) => s.addBonusSparks);
+  const trackProgress = useAchievements((s) => s.trackProgress);
+  const trackChallenge = useChallenges((s) => s.trackAction);
+
+  const handleReceiptSubmit = async (data) => {
+    try {
+      const created = await createExpense.mutateAsync(data);
+      pushUndo({ type: "create", expense: created });
+      playSound("expenseAdded");
+      grantReward("expense_added");
+      trackProgress("expenses_logged", 1, addBonusSparks);
+      trackChallenge("expense", addBonusSparks);
+      setShowScanner(false);
+    } catch {
+      // mutation error handled by TanStack Query
+    }
+  };
 
   if (isLoading) {
     return <Flex justify="center" py={12}><Spinner color="peach.500" size="lg" /></Flex>;
@@ -155,6 +184,42 @@ export default function ExpensesDashboard({ year, month }) {
     <VStack gap={4} align="stretch">
       {/* Quick add */}
       <QuickAdd year={year} month={month} />
+
+      {/* Scan receipt button */}
+      <Flex
+        as="button"
+        onClick={() => setShowScanner(true)}
+        bg="white"
+        borderRadius="2xl"
+        p={3.5}
+        shadow="0 1px 8px 0 rgba(0,0,0,0.04)"
+        borderWidth="1px"
+        borderColor="peach.100"
+        align="center"
+        gap={3}
+        cursor="pointer"
+        transition="all 0.15s"
+        _hover={{ borderColor: "peach.300", shadow: "0 2px 12px 0 rgba(249,145,94,0.15)" }}
+        _active={{ transform: "scale(0.98)" }}
+      >
+        <Flex
+          w="40px" h="40px" borderRadius="xl"
+          bg="peach.50" align="center" justify="center"
+        >
+          <Icon as={LuReceipt} boxSize={5} color="peach.500" />
+        </Flex>
+        <Box textAlign="left">
+          <Text fontWeight="600" fontSize="sm" color="textPrimary">{"Skanuj paragon"}</Text>
+          <Text fontSize="xs" color="textTertiary">{"Zrób zdjęcie paragonu i dodaj wydatek"}</Text>
+        </Box>
+      </Flex>
+
+      <ReceiptScannerDialog
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        onSubmitExpenses={handleReceiptSubmit}
+        isLoading={createExpense.isPending}
+      />
 
       {/* Stat cards */}
       <Flex gap={3}>

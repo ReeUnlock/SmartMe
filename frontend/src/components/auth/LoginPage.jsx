@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Button,
@@ -143,6 +143,24 @@ export default function LoginPage() {
           >
             Zaloguj
           </Button>
+
+          <VStack gap="1" w="full">
+            <Text fontSize="sm" color="gray.400">
+              <RouterLink to="/odzyskaj-haslo">
+                <Text as="span" color="rose.400" _hover={{ textDecoration: "underline" }}>
+                  {"Nie pamiętam hasła"}
+                </Text>
+              </RouterLink>
+            </Text>
+            <Text fontSize="sm" color="gray.400">
+              {"Nie masz konta? "}
+              <RouterLink to="/setup">
+                <Text as="span" color="rose.400" fontWeight="600" _hover={{ textDecoration: "underline" }}>
+                  {"Zarejestruj się"}
+                </Text>
+              </RouterLink>
+            </Text>
+          </VStack>
         </VStack>
       </Box>
     </Flex>

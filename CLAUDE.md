@@ -33,6 +33,7 @@ backend/app/
   plans/            — cele (manual/savings/spending_limit), milestones, bucket lista
   feedback/         — anonimowy feedback (bug/idea/opinion/broken)
   voice/            — transkrypcja (Whisper) + parsowanie intencji (GPT) + executors + calendar_validator + prompts.py
+  receipts/         — OCR paragonów (Tesseract pol), heurystyczny parser (sklep, data, suma, produkty)
   common/           — TimestampMixin, pagination
   notifications/    — (puste — przyszłe push notifications, pywebpush zainstalowany)
   ai/               — (puste — przyszłe AI features)
@@ -44,7 +45,7 @@ backend/alembic/    — migracje DB (16 plików, env.py importuje wszystkie mode
 frontend/src/
   App.jsx           — Router + ChakraProvider + QueryClientProvider + ErrorBoundary + Global Overlays (lazy)
   theme.js          — pastelowa paleta: rose, peach, sage, sky, lavender + semantic tokens
-  api/              — client.js (apiFetch + apiUpload z JWT, VITE_API_URL env), pliki per moduł (auth, calendar, shopping, expenses, plans, voice)
+  api/              — client.js (apiFetch + apiUpload z JWT, VITE_API_URL env), pliki per moduł (auth, calendar, shopping, expenses, plans, voice, receipts)
   config/
     motionConfig.js   — centralna konfiguracja animacji: EASING, DURATION, Z-index, celebration presets, micro-feedback, module themes
   styles/
@@ -55,6 +56,7 @@ frontend/src/
     achievementEngine.js — 18 achievements (3 tiers), 7 level milestones, checkAchievements
     challengeEngine.js — seeded random challenges, DAILY_POOL(7), WEEKLY_POOL(10), progress tracking
     shoppingUtils.js  — parseItemInput ("2kg ziemniaki"), inferCategoryId (400+ weighted keywords)
+    imageCompressor.js — client-side image resize+JPEG compression before upload (max 1920px, 0.85 quality)
     reactionConfig.js — per-avatar personality pools, 7 event types, bubble/label themes
   hooks/
     useAuth.js          — zustand, single-user JWT auth, token expiry check (60s buffer)
@@ -105,6 +107,7 @@ frontend/src/
       AddExpenseDialog.jsx   — formularz wydatku
       ExpenseUndoBar.jsx     — toast undo (scoped to Expenses screen)
       QuickAdd.jsx           — szybkie dodawanie wydatków
+      ReceiptScannerDialog.jsx — skanowanie paragonów (OCR): zdjęcie → upload → draft → zapisz wydatek
     plans/          — Plany (kolor: rose/róż)
       PlansPage.jsx          — tab bar: Cele / Bucket Lista
       GoalsView.jsx          — lista celów z search + filtry (kategoria, status)
@@ -414,7 +417,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - [x] Faza 2: Zakupy (shopping lists + categories + items)
 - [x] Faza 3: Kalendarz (events + recurrence + undo/redo + quick-add + duplikaty)
 - [x] Faza 4: Wydatki (expenses + categories + summary + recurring + budget)
-- [ ] Faza 5: OCR paragonów (Tesseract)
+- [x] Faza 5: OCR paragonów (Tesseract, heurystyczny parser, klient-side kompresja, ReceiptScannerDialog)
 - [x] Faza 6: Plany (goals, milestones, bucket list)
 - [ ] Faza 7: Push Notifications (VAPID, service worker)
 - [ ] Faza 8: AI (OpenAI, sugestie, chat)
@@ -465,7 +468,7 @@ Backend (`config.py`) zawiera dodatkowe origins dla natywnych WebView:
 ### Uprawnienia natywne
 - **Android**: `INTERNET`, `RECORD_AUDIO` (AndroidManifest.xml)
 - **iOS**: `NSMicrophoneUsageDescription` (Info.plist, po polsku)
-- **iOS orientation**: portrait-only
+- **iOS orientation**: iPhone portrait-only, iPad all orientations (Apple multitasking requirement)
 
 ### Komendy Capacitor
 ```bash
@@ -506,22 +509,51 @@ npm run cap:open:ios        # Xcode
 2. **android-build** (needs frontend-build): Java 17 + Android SDK → cap sync android → Gradle assembleDebug → upload APK
 
 ### ios.yml (macos-latest)
+- Triggers: push to main, PR to main, workflow_dispatch (manual)
 1. **ios-build** (always runs): npm ci → vite build → cap sync ios → resolve SPM → `xcodebuild build` (CODE_SIGNING_ALLOWED=NO, simulator)
-2. **ios-signed-build** (gated by `vars.IOS_SIGNING_ENABLED == 'true'`): certificate + profile install → archive → export IPA
+2. **ios-signed-build** (gated by `vars.IOS_SIGNING_ENABLED == 'true'`, push/dispatch only): certificate + profile install → archive → export IPA → upload to TestFlight
+- **TestFlight**: automatyczny upload po każdym pushu na main (gdy IOS_SIGNING_ENABLED=true)
+- **Build number**: auto-increment z `github.run_number`
 
-### Wymagane secrets (dla signed iOS build)
+### Wymagane secrets (dla signed iOS build + TestFlight)
 | Secret | Opis |
 |--------|------|
-| `IOS_CERTIFICATE_P12_BASE64` | Base64 .p12 certificate |
+| `IOS_CERTIFICATE_P12_BASE64` | Base64 .p12 certificate (Apple Distribution) |
 | `IOS_CERTIFICATE_PASSWORD` | Hasło P12 |
-| `IOS_PROVISION_PROFILE_BASE64` | Base64 provisioning profile |
+| `IOS_PROVISION_PROFILE_BASE64` | Base64 provisioning profile (App Store) |
 | `IOS_KEYCHAIN_PASSWORD` | Dowolny string (temp keychain) |
-| `IOS_TEAM_ID` | Apple Team ID (10 znaków) |
+| `IOS_TEAM_ID` | Apple Team ID: `VFCT675MVA` |
+| `APPSTORE_API_KEY_ID` | App Store Connect API key ID: `HB94WBMS6W` |
+| `APPSTORE_API_ISSUER_ID` | App Store Connect issuer ID |
+| `APPSTORE_API_KEY_BASE64` | Base64 .p8 API key |
 
 ### Repo variable
 | Variable | Opis |
 |----------|------|
-| `IOS_SIGNING_ENABLED` | `true` aby włączyć signed build |
+| `IOS_SIGNING_ENABLED` | `true` — włączone, signed build + TestFlight upload |
+
+### Apple Developer
+- **Team**: WOA - Wellness Over All Sp. z o.o.
+- **Team ID**: `VFCT675MVA`
+- **Bundle ID**: `com.rafaldebski.smartme`
+- **Provisioning Profile**: "SmartMe AppStore" (App Store distribution)
+- **Certificate**: Apple Distribution (w repo: `smartme_dist_new.p12`, hasło: `smartme2026`)
+- **App Store Connect API key**: `AuthKey_HB94WBMS6W.p8`
+
+### Ważne pliki podpisywania (w katalogu anelka, NIE commitować!)
+```
+smartme_dist_new.p12              — Distribution certificate (.p12, hasło: smartme2026)
+SmartMe_AppStore.mobileprovision  — App Store provisioning profile
+AuthKey_HB94WBMS6W.p8            — App Store Connect API key
+smartme_ios.key                   — Klucz prywatny certyfikatu
+smartme_ios.csr                   — Certificate Signing Request
+distribution.cer                  — Surowy certyfikat Apple
+```
+
+### Wymagania App Store (walidacja przy upload)
+- **Ikona**: bez kanału alpha (przezroczystości) — AppIcon-512@2x.png musi być RGB
+- **iPad orientacje**: Info.plist `UISupportedInterfaceOrientations~ipad` musi zawierać wszystkie 4 orientacje
+- **iOS SDK**: od 28.04.2026 wymagany iOS 26 SDK (Xcode 26)
 
 ## PWA / Manifest
 
@@ -568,7 +600,7 @@ docker exec anelka-backend alembic upgrade head
 ### Infrastruktura
 - **VPS**: Hetzner CX23, Ubuntu, `89.167.123.192`
 - **Domena**: `smartme.life` (DNS A record → VPS IP)
-- **SSL**: Let's Encrypt (certbot), certyfikat ważny do 2026-06-08
+- **SSL**: Let's Encrypt (certbot), certyfikaty: `smartme.life` (ważny do 2026-06-10), `app.smartme.life` (legacy)
 - **SSH**: `ssh root@89.167.123.192` (klucz ed25519 z maszyny Rafa)
 - **Pliki na serwerze**: `/root/anelka/`
 - **Docker Compose prod**: `docker-compose.prod.yml` (porty 80/443, frontend jako static build, certbot)

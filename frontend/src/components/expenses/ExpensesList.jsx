@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Box, Flex, Text, VStack, Icon, Input } from "@chakra-ui/react";
-import { LuPlus, LuTrash2, LuWallet, LuUsers, LuTag, LuPencil, LuSearch, LuX } from "react-icons/lu";
+import { LuPlus, LuTrash2, LuWallet, LuUsers, LuTag, LuPencil, LuSearch, LuX, LuReceipt } from "react-icons/lu";
 import SmartMeLoader from "../common/SmartMeLoader";
 import EmptyState from "../common/EmptyState";
 import { useExpenses, useDeleteExpense, useCreateExpense, useUpdateExpense, useExpenseCategories, useMembers } from "../../hooks/useExpenses";
@@ -9,6 +9,7 @@ import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useChallenges from "../../hooks/useChallenges";
 import AddExpenseDialog from "./AddExpenseDialog";
+import ReceiptScannerDialog from "./ReceiptScannerDialog";
 import { playSound } from "../../utils/soundManager";
 
 function ExpenseRow({ expense, onDelete, onEdit, confirmingId }) {
@@ -143,6 +144,7 @@ export default function ExpensesList({ year, month }) {
   const trackProgress = useAchievements((s) => s.trackProgress);
   const trackChallenge = useChallenges((s) => s.trackAction);
   const [showDialog, setShowDialog] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
   const [filterMember, setFilterMember] = useState(null);
@@ -209,6 +211,20 @@ export default function ExpensesList({ year, month }) {
     setEditingExpense(null);
   };
 
+  const handleReceiptSubmit = async (data) => {
+    try {
+      const created = await createExpense.mutateAsync(data);
+      pushUndo({ type: "create", expense: created });
+      playSound("expenseAdded");
+      grantReward("expense_added");
+      trackProgress("expenses_logged", 1, addBonusSparks);
+      trackChallenge("expense", addBonusSparks);
+      setShowScanner(false);
+    } catch {
+      // mutation error handled by TanStack Query
+    }
+  };
+
   // Compute default date for new expense dialog
   const now = new Date();
   const isCurrentMonth = year === now.getFullYear() && month === (now.getMonth() + 1);
@@ -258,31 +274,50 @@ export default function ExpensesList({ year, month }) {
 
   return (
     <Box>
-      {/* Header: Add button + count */}
+      {/* Header: Add button + scan + count */}
       <Flex justify="space-between" align="center" mb={3}>
         <Text fontSize="xs" color="gray.400" fontWeight="500">
           {hasActiveFilters
             ? `${filteredCount} z ${totalCount} wydatków`
             : `${totalCount} wydatków`}
         </Text>
-        <Flex
-          align="center"
-          gap={2}
-          px={3}
-          py={2}
-          bg="peach.400"
-          color="white"
-          borderRadius="xl"
-          cursor="pointer"
-          fontWeight="600"
-          fontSize="sm"
-          _hover={{ bg: "peach.500" }}
-          _active={{ transform: "scale(0.97)" }}
-          transition="all 0.2s"
-          onClick={() => { setEditingExpense(null); setShowDialog(true); }}
-        >
-          <Icon as={LuPlus} boxSize={4} />
-          <Text>{"Nowy wydatek"}</Text>
+        <Flex gap={2}>
+          <Flex
+            align="center"
+            justify="center"
+            px={2.5}
+            py={2}
+            bg="peach.50"
+            color="peach.500"
+            borderRadius="xl"
+            cursor="pointer"
+            _hover={{ bg: "peach.100" }}
+            _active={{ transform: "scale(0.97)" }}
+            transition="all 0.2s"
+            onClick={() => setShowScanner(true)}
+            title="Skanuj paragon"
+          >
+            <Icon as={LuReceipt} boxSize={4} />
+          </Flex>
+          <Flex
+            align="center"
+            gap={2}
+            px={3}
+            py={2}
+            bg="peach.400"
+            color="white"
+            borderRadius="xl"
+            cursor="pointer"
+            fontWeight="600"
+            fontSize="sm"
+            _hover={{ bg: "peach.500" }}
+            _active={{ transform: "scale(0.97)" }}
+            transition="all 0.2s"
+            onClick={() => { setEditingExpense(null); setShowDialog(true); }}
+          >
+            <Icon as={LuPlus} boxSize={4} />
+            <Text>{"Nowy wydatek"}</Text>
+          </Flex>
         </Flex>
       </Flex>
 
@@ -499,6 +534,13 @@ export default function ExpensesList({ year, month }) {
         isLoading={editingExpense ? updateExpense.isPending : createExpense.isPending}
         defaultDate={dialogDefaultDate}
         expense={editingExpense}
+      />
+
+      <ReceiptScannerDialog
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        onSubmitExpenses={handleReceiptSubmit}
+        isLoading={createExpense.isPending}
       />
     </Box>
   );
