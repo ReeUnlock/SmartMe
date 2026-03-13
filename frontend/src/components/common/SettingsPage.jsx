@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Box,
   Heading,
@@ -10,6 +11,7 @@ import {
   HStack,
   Flex,
   Icon,
+  Badge,
 } from "@chakra-ui/react";
 import {
   LuUser,
@@ -20,9 +22,11 @@ import {
   LuMessageCircle,
   LuVolume2,
   LuShieldCheck,
+  LuCrown,
 } from "react-icons/lu";
 import { useAuth } from "../../hooks/useAuth";
 import { changePassword, resetAccount } from "../../api/auth";
+import { getSubscription, createCheckoutSession, createPortalSession } from "../../api/billing";
 import useRewards from "../../hooks/useRewards";
 import useSoundSettings from "../../hooks/useSoundSettings";
 import { playSound } from "../../utils/soundManager";
@@ -377,16 +381,125 @@ function SoundSettingsSection() {
   );
 }
 
+/* ── Subscription section ────────────────────────── */
+
+function SubscriptionSection() {
+  const [loading, setLoading] = useState(false);
+
+  const { data: sub } = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: getSubscription,
+    staleTime: 30_000,
+  });
+
+  const plan = sub?.plan || "free";
+  const isPro = plan === "pro";
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    try {
+      const { url } = await createCheckoutSession();
+      window.location.href = url;
+    } catch {
+      setLoading(false);
+    }
+  };
+
+  const handleManage = async () => {
+    setLoading(true);
+    try {
+      const { url } = await createPortalSession();
+      window.location.href = url;
+    } catch {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SettingsCard>
+      <SectionTitle icon={LuCrown} color="peach.400">
+        {"Subskrypcja"}
+      </SectionTitle>
+
+      <Flex align="center" justify="space-between" mb="3">
+        <HStack gap="2">
+          <Text fontWeight="600" color="gray.700" fontSize="md">
+            {"Plan "}
+            {isPro ? "Pro" : "Free"}
+          </Text>
+          {isPro && (
+            <Badge
+              bg="peach.50"
+              color="peach.500"
+              borderRadius="full"
+              px={2}
+              py={0.5}
+              fontSize="2xs"
+              fontWeight="bold"
+            >
+              {"Aktywny"}
+            </Badge>
+          )}
+        </HStack>
+      </Flex>
+
+      {isPro ? (
+        <VStack align="stretch" gap="2">
+          {sub?.current_period_end && (
+            <Text fontSize="xs" color="gray.400">
+              {"Następna płatność: "}
+              {new Date(sub.current_period_end).toLocaleDateString("pl-PL")}
+            </Text>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            borderColor="peach.200"
+            color="peach.500"
+            _hover={{ bg: "peach.50" }}
+            borderRadius="xl"
+            onClick={handleManage}
+            loading={loading}
+          >
+            {"Zarządzaj subskrypcją"}
+          </Button>
+        </VStack>
+      ) : (
+        <VStack align="stretch" gap="2">
+          <Text fontSize="xs" color="gray.400" lineHeight="tall">
+            {"Odblokuj wszystkie limity — listy zakupów, wydatki, cele i więcej bez ograniczeń."}
+          </Text>
+          <Button
+            size="sm"
+            bgGradient="to-r"
+            gradientFrom="rose.400"
+            gradientTo="peach.400"
+            color="white"
+            _hover={{ opacity: 0.9 }}
+            borderRadius="xl"
+            onClick={handleUpgrade}
+            loading={loading}
+          >
+            {"Ulepsz do Pro — 29 zł/mies."}
+          </Button>
+        </VStack>
+      )}
+    </SettingsCard>
+  );
+}
+
 /* ── Main page ───────────────────────────────────── */
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const level = useRewards((s) => s.level);
   const avatarKey = getSelectedAvatar(level);
   const avatarConfig = getAvatarConfig(avatarKey);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const upgraded = searchParams.get("upgraded") === "true";
 
   return (
     <Box maxW="520px" mx="auto">
@@ -401,6 +514,26 @@ export default function SettingsPage() {
       </Heading>
 
       <VStack gap="4" align="stretch">
+        {/* ── Upgrade success banner ── */}
+        {upgraded && (
+          <Box
+            bg="green.50"
+            borderRadius="2xl"
+            px={5}
+            py={4}
+            borderWidth="1px"
+            borderColor="green.100"
+            className="sm-card-enter"
+          >
+            <Text fontSize="sm" color="green.600" fontWeight="600">
+              {"Gratulacje! Twój plan Pro jest aktywny."}
+            </Text>
+          </Box>
+        )}
+
+        {/* ── Section: Subskrypcja ── */}
+        <SubscriptionSection />
+
         {/* ── Section A: Konto ── */}
         <SettingsCard>
           <SectionTitle icon={LuUser} color="rose.400">{"Konto"}</SectionTitle>

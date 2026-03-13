@@ -32,6 +32,10 @@ def setup(data: SetupRequest, request: Request, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    from app.common.email import send_welcome
+    send_welcome(user.email, user.username)
+
     return TokenResponse(access_token=create_access_token(user.id))
 
 
@@ -122,6 +126,8 @@ def reset_account(
     db.query(ShoppingList).filter(ShoppingList.user_id == uid).delete()
     db.query(ShoppingCategory).filter(ShoppingCategory.user_id == uid).delete()
     db.query(Event).filter(Event.user_id == uid).delete()
+    from app.billing.models import Subscription
+    db.query(Subscription).filter(Subscription.user_id == uid).delete()
     from app.feedback.models import Feedback
     db.query(Feedback).delete()  # feedback has no user_id, clear all
     db.query(User).filter(User.id == uid).delete()

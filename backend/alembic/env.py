@@ -19,6 +19,7 @@ from app.expenses.models import (  # noqa: F401
 )
 from app.plans.models import Goal, Milestone, BucketItem  # noqa: F401
 from app.feedback.models import Feedback  # noqa: F401
+from app.billing.models import Subscription  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

@@ -38,6 +38,7 @@ class UserOut(BaseModel):
     email: str
     is_active: bool
     onboarding_completed: bool
+    plan: str = "free"
     created_at: datetime
 
     model_config = {"from_attributes": True}
