@@ -100,6 +100,15 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
       setItems(result.items || []);
       setRawText(result.raw_text || "");
       setConfidence(result.confidence || "none");
+
+      // Auto-select suggested category if available
+      if (result.suggested_category && categories?.length) {
+        const match = categories.find(
+          (c) => c.name.toLowerCase() === result.suggested_category.toLowerCase()
+        );
+        if (match) setCategoryId(match.id);
+      }
+
       setStep(STEPS.DRAFT);
     } catch (err) {
       console.error("[ReceiptScanner] Error:", err);

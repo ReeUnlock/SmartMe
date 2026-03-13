@@ -84,12 +84,16 @@ def parse_receipt(raw_text: str) -> dict:
         if total is not None:
             logger.info(f"Receipt parser: total fallback to largest price: {total}")
 
+    # Suggest expense category based on store name and items
+    suggested_category = _suggest_category(store_name, items)
+
     # Compute confidence
     confidence = _compute_confidence(store_name, date, total, items, raw_text)
 
     logger.info(
         f"Receipt parser: store={store_name}, date={date}, total={total}, "
-        f"items={len(items)}, confidence={confidence}, lines={len(lines)}"
+        f"items={len(items)}, confidence={confidence}, "
+        f"suggested_category={suggested_category}, lines={len(lines)}"
     )
 
     return {
@@ -99,6 +103,7 @@ def parse_receipt(raw_text: str) -> dict:
         "items": items,
         "raw_text": raw_text,
         "confidence": confidence,
+        "suggested_category": suggested_category,
     }
 
 
@@ -270,3 +275,63 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
                 items.append({"name": name, "price": price})
 
     return items
+
+
+# ─── Category suggestion ─────────────────────────────────────────────
+# Maps store names → default expense category names (from expense_categories)
+# Categories: Jedzenie, Transport, Rozrywka, Zdrowie, Dom, Ubrania, Rachunki, Edukacja, Inne
+
+STORE_CATEGORY_MAP = {
+    # Grocery / food → Jedzenie
+    "Biedronka": "Jedzenie", "Lidl": "Jedzenie", "Kaufland": "Jedzenie",
+    "Auchan": "Jedzenie", "Carrefour": "Jedzenie", "Tesco": "Jedzenie",
+    "Netto": "Jedzenie", "Dino": "Jedzenie", "Stokrotka": "Jedzenie",
+    "Lewiatan": "Jedzenie", "Polo Market": "Jedzenie", "Polomarket": "Jedzenie",
+    "Intermarche": "Jedzenie", "Delikatesy Centrum": "Jedzenie",
+    "Freshmarket": "Jedzenie", "Mila": "Jedzenie",
+    "Żabka": "Jedzenie", "Zabka": "Jedzenie",
+    "Aldi": "Jedzenie", "Makro": "Jedzenie", "Selgros": "Jedzenie",
+    "Spar": "Jedzenie", "ABC": "Jedzenie", "Groszek": "Jedzenie",
+    "Duży Ben": "Jedzenie", "Topaz": "Jedzenie",
+    # Health / beauty → Zdrowie
+    "Rossmann": "Zdrowie", "Hebe": "Zdrowie",
+    # Fuel / transport → Transport
+    "Orlen": "Transport", "BP": "Transport", "Shell": "Transport",
+    "Circle K": "Transport",
+    # Home / DIY → Dom
+    "Castorama": "Dom", "Leroy Merlin": "Dom", "IKEA": "Dom",
+    "Jysk": "Dom", "Action": "Dom",
+    # Electronics → Dom (closest fit)
+    "Media Expert": "Dom", "Media Markt": "Dom", "RTV Euro AGD": "Dom",
+    # Clothing → Ubrania
+    "Reserved": "Ubrania", "H&M": "Ubrania", "Zara": "Ubrania",
+    "CCC": "Ubrania", "Pepco": "Ubrania",
+    # Entertainment / books → Rozrywka
+    "Empik": "Rozrywka",
+}
+
+
+def _suggest_category(
+    store_name: str | None,
+    items: list[dict],
+) -> str | None:
+    """Suggest an expense category based on store name.
+
+    Returns the category name (matching default expense_categories)
+    or None if no confident match.
+    """
+    if not store_name:
+        return None
+
+    # Direct store match (case-insensitive)
+    for known_store, category in STORE_CATEGORY_MAP.items():
+        if known_store.upper() == store_name.upper():
+            return category
+
+    # Partial match (store name contains known store)
+    store_upper = store_name.upper()
+    for known_store, category in STORE_CATEGORY_MAP.items():
+        if known_store.upper() in store_upper:
+            return category
+
+    return None

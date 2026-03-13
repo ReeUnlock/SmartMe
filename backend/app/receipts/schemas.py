@@ -14,3 +14,4 @@ class ReceiptScanResult(BaseModel):
     items: list[ReceiptItem] = []
     raw_text: str
     confidence: str = "none"  # "good", "partial", "weak", "none"
+    suggested_category: Optional[str] = None  # expense category name suggestion
