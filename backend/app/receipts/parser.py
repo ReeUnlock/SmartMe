@@ -46,14 +46,10 @@ PRICE_ANYWHERE_RE = re.compile(r"(\d+)[,.](\d{2})")
 ITEM_LINE_RE = re.compile(
     r"^(.+?)\s+(\d+)[,.](\d{2})\s*[A-Za-z]?\s*$"
 )
-# Pattern 2: Biedronka/Lidl format "Name C 2 x6,49 12,98C" — qty × unit price → total + VAT letter
-# The LAST price on the line is the line total
+# Pattern 2: Biedronka/Lidl format "Name C 2 x6,49 12,98C" — qty × unit price → COMPUTE total
+# Captures qty and unit price separately for multiplication (OCR often garbles the line total)
 ITEM_MULTI_PRICE_RE = re.compile(
-    r"^(.+?)\s+[A-Z]?\s*\d+\s*[xX×\*]\s*\d+[,.]\d{2}\s+(\d+)[,.](\d{2})\s*[A-Za-z]?\s*$"
-)
-# Pattern 3: "Name C 1 x11,99 11,99C" — single item with qty prefix and VAT letter
-ITEM_QTY_PRICE_RE = re.compile(
-    r"^(.+?)\s+\d+\s*[xX×\*]\s*(\d+)[,.](\d{2})\s+\2[,.]\3\s*[A-Za-z]?\s*$"
+    r"^(.+?)\s+[A-Z]?\s*(\d+)\s*[xX×\*]\s*(\d+)[,.](\d{2})"
 )
 # Pattern 4: price anywhere on line with VAT letter suffix — "Name 29,97C"
 ITEM_VAT_SUFFIX_RE = re.compile(
@@ -280,12 +276,8 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
     # Standalone negative price line: "-4,00"
     neg_price_re = re.compile(r"^-\s*(\d+)[,.](\d{2})\s*$")
 
-    # Max reasonable single item price (OCR artifacts like 17991,99 are caught)
-    MAX_ITEM_PRICE = 5000.0
-
-    # All item patterns — try in order, first match wins
-    item_patterns = [
-        ITEM_MULTI_PRICE_RE,  # "Name C 2 x6,49 12,98C" → last price is line total
+    # Simple item patterns (no qty×price computation needed)
+    simple_patterns = [
         ITEM_LINE_RE,         # "Name 12,99" or "Name 12,99A"
         ITEM_VAT_SUFFIX_RE,   # "Name 29,97C"
     ]
@@ -321,17 +313,30 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
         if len(line) < 4:
             continue
 
-        # Try each pattern
+        # Try qty × unit_price pattern FIRST (Biedronka/Lidl)
+        # COMPUTE price from qty × unit — don't trust OCR'd line total
         name = None
         price = None
-        for pattern in item_patterns:
-            match = pattern.match(line)
-            if match:
-                name = match.group(1).strip()
-                whole = match.group(2)
-                decimal = match.group(3)
-                price = float(f"{whole}.{decimal}")
-                break
+        multi_match = ITEM_MULTI_PRICE_RE.match(line)
+        if multi_match:
+            name = multi_match.group(1).strip()
+            qty = int(multi_match.group(2))
+            unit_whole = multi_match.group(3)
+            unit_decimal = multi_match.group(4)
+            unit_price = float(f"{unit_whole}.{unit_decimal}")
+            price = round(qty * unit_price, 2)
+            logger.debug(f"Receipt parser: qty×price: {qty} × {unit_price} = {price} for '{name}'")
+
+        # Try simple patterns
+        if price is None:
+            for pattern in simple_patterns:
+                match = pattern.match(line)
+                if match:
+                    name = match.group(1).strip()
+                    whole = match.group(2)
+                    decimal = match.group(3)
+                    price = float(f"{whole}.{decimal}")
+                    break
 
         # Fallback: if no pattern matched but line has prices, take the LAST price
         if price is None:
@@ -363,10 +368,8 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
         if re.match(r"^[A-Z]{1,3}\d*$", name):
             continue
 
-        if price > 0 and price <= MAX_ITEM_PRICE:
+        if price > 0:
             items.append({"name": name, "price": price})
-        elif price > MAX_ITEM_PRICE:
-            logger.warning(f"Receipt parser: skipping item '{name}' with absurd price {price}")
 
     return items
 

@@ -4,8 +4,10 @@ import io
 import logging
 import shutil
 
+import cv2
+import numpy as np
 import pytesseract
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image, ImageOps
 
 logger = logging.getLogger(__name__)
 
@@ -111,14 +113,39 @@ def process_image(file_bytes: bytes) -> str:
     # Preprocessing for better OCR
     image = image.convert("L")  # grayscale
     image = ImageOps.autocontrast(image, cutoff=1)
-    image = image.filter(ImageFilter.SHARPEN)
+
+    # Convert to numpy for OpenCV processing
+    img_np = np.array(image)
+
+    # Upscale small images (Tesseract needs ~300 DPI; phone receipts often too small)
+    h_px, w_px = img_np.shape[:2]
+    if max(h_px, w_px) < 1500:
+        scale = 2
+        img_np = cv2.resize(img_np, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        logger.info(f"OCR upscaled: {w_px}x{h_px} → {img_np.shape[1]}x{img_np.shape[0]}")
+
+    # Denoise — removes speckles that confuse Tesseract
+    img_np = cv2.fastNlMeansDenoising(img_np, h=12)
+
+    # Adaptive thresholding — handles uneven lighting on receipt paper
+    # Much better than global threshold for creased/shadowed receipts
+    img_np = cv2.adaptiveThreshold(
+        img_np, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        blockSize=31,
+        C=10,
+    )
+
+    # Convert back to PIL
+    image = Image.fromarray(img_np)
 
     # Run Tesseract with Polish language
     try:
         text = pytesseract.image_to_string(
             image,
             lang="pol",
-            config="--psm 6",  # assume uniform block of text
+            config="--psm 4",  # single column of variable sizes (better for receipts)
         )
     except pytesseract.TesseractNotFoundError:
         raise TesseractNotFoundError(
