@@ -59,21 +59,25 @@ ITEM_VAT_SUFFIX_RE = re.compile(
 QTY_PREFIX_RE = re.compile(r"^\d+[,.]?\d*\s*[xX×\*]\s*")
 # Skip lines that are clearly not items
 SKIP_PATTERNS = [
-    r"^NIP\b", r"^PARAGON\b", r"^FISKALNY\b", r"^KASA\b",
-    r"^KASJER\b", r"^SPRZ", r"^DATA\b", r"^\d{2}[:\-]\d{2}",
+    r"^NIP\b", r"^PARAGON\b", r"^FISKALNY\b", r"^KASA\b", r"#Kasa\b",
+    r"^KASJER\b", r"Kasjer\b", r"^SPRZ", r"^DATA\b", r"^\d{2}[:\-]\d{2}",
     r"PTU\b", r"VAT\b", r"^RABAT\b", r"^OPUST\b",  # PTU/VAT anywhere in line
-    r"^RESZTA\b", r"GOT[ÓO]WKA\b", r"^KARTA\b", r"^VISA\b",
-    r"^MASTERCARD\b", r"^GOTÓWKA\b", r"ZMIANA\b",
+    r"^RESZTA\b", r"GOT[ÓOÔÖ]WK[AĄ]", r"^KARTA\b", r"^VISA\b",
+    r"^MASTERCARD\b", r"ZMIANA\b",
     r"^WYDRUK\b", r"DZIE[ŃN]KUJE", r"ZAPRASZAMY",
     r"^-+$", r"^=+$", r"^\*+$", r"^#{2,}",
-    # Discount/summary lines
-    r"OPUST", r"OPUSTY\s*[ŁL]", r"^Sp[:\s]", r"^Promocj",
+    # Discount/summary lines (OPUSTY ŁĄCZNIE = total discount summary, not per-item)
+    r"OPUSTY\s*[ŁL]", r"^[SŚ]p[:\s]", r"^Promocj",
     r"ROZLICZENIE", r"Nr\s+transakcji", r"^Numer\b",
-    r"UDZIELONO", r"^MOJE\s", r"OSZCZ[ĘE]DNO",
+    r"UDZIELONO", r"Udz\w*\s+[łlŁL]", r"^Udz\b", r"^MOJE\s", r"OSZCZ[ĘE]DNO",
     r"^NIEFISKALNY", r"nr:\s*\d", r"sys\.\s*\d",
     r"^\d{10,}",  # long number sequences (barcodes, NIP values)
     r"[A-Z]\d{1,2}[=xX]\s*\d",  # VAT summary lines like "A23x=2,42" or "Sp: A=12,92"
     r"SUMA\s*PTU",  # "SUMA PTU=6,06"
+    r"^RESZTA\s+GOT", r"PLN\s*$",  # "RESZTA GOTÓWKA", trailing "PLN"
+    r"RABAT[ÓO]W", r"[łlŁL][aą]cznie\s+rabat",  # "łącznie rabatów"
+    r"cznie\s+rabat",  # OCR garble: "tzcznie rabatów" etc.
+    r"^[A-Z][=:]\s*\d",  # "A=12,92", "C=60,91" (VAT subtotals)
 ]
 
 
@@ -156,11 +160,19 @@ def _compute_confidence(
     return "none"
 
 
+def _normalize_pl(text: str) -> str:
+    """Strip Polish diacritics for fuzzy matching."""
+    table = str.maketrans("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ", "acelnoszzACELNOSZZ")
+    return text.translate(table)
+
+
 def _detect_store(lines: list[str]) -> str | None:
     """Detect store name from receipt text."""
     full_text_upper = " ".join(lines[:10]).upper()
+    full_text_norm = _normalize_pl(full_text_upper)
 
     # Check known stores (use the first canonical match)
+    # Try exact match first, then normalized (diacritic-stripped) match
     seen = set()
     for store in KNOWN_STORES:
         key = store.upper()
@@ -168,6 +180,9 @@ def _detect_store(lines: list[str]) -> str | None:
             continue
         seen.add(key)
         if key in full_text_upper:
+            return store
+        # Fuzzy: strip diacritics (OCR often adds/removes them)
+        if _normalize_pl(key) in full_text_norm:
             return store
 
     # Fallback: first non-trivial line that looks like a name
@@ -204,31 +219,64 @@ def _detect_date(text: str) -> str | None:
 
 
 def _detect_total(lines: list[str]) -> float | None:
-    """Detect total amount from receipt using keyword matching."""
-    total_pattern = "|".join(TOTAL_KEYWORDS)
-    best_total = None
+    """Detect total amount from receipt using keyword matching.
 
-    for i, line in enumerate(lines):
-        upper = line.upper()
-        if re.search(total_pattern, upper, re.IGNORECASE):
-            # Find price on the same line
-            prices = PRICE_ANYWHERE_RE.findall(line)
-            if prices:
-                whole, decimal = prices[-1]
-                value = float(f"{whole}.{decimal}")
-                if value > 0 and (best_total is None or value > best_total):
-                    best_total = value
-            else:
-                # Price might be on the next line (OCR line-break in total)
-                if i + 1 < len(lines):
+    Uses priority tiers: SUMA/RAZEM/DO ZAPŁATY are high-priority,
+    WPŁATA/GOTÓWKA/NALEŻNOŚĆ are low-priority (payment, not total).
+    High-priority match always wins over low-priority.
+    """
+    # High-priority: actual total keywords
+    high_priority = [
+        r"SUMA\b", r"RAZEM\b", r"DO\s*ZAP[ŁL]ATY",
+        r"[ŁL]([AĄ])CZNA", r"TOTAL\b", r"KWOTA\b",
+        r"WARTO[ŚS][ĆC]\s*BRUTTO", r"SPRZEDA[ŻZ]\s*BRUTTO",
+        r"NALE[ŻZ]NO[ŚS][ĆC]",
+        # OCR misreads
+        r"SUNA\b", r"RAZEN\b", r"SUflA\b", r"SUHA\b", r"SU[MN]A\b",
+        r"SUfl[AĄ]\b", r"SUNIA\b",
+    ]
+    # Low-priority: payment-related (use only as fallback)
+    low_priority = [
+        r"WP[ŁL]ATA\b",
+    ]
+    # Lines to EXCLUDE from total detection (payment lines, not totals)
+    exclude_patterns = [
+        r"GOT[ÓOÔÖ]WK[AĄ]", r"RESZTA", r"KARTA\b", r"VISA\b",
+        r"MASTERCARD\b", r"SUMA\s*PTU",
+    ]
+    exclude_re = re.compile("|".join(exclude_patterns), re.IGNORECASE)
+
+    def _find_total_in_lines(patterns):
+        best = None
+        pattern = "|".join(patterns)
+        for i, line in enumerate(lines):
+            upper = line.upper()
+            # Skip payment lines
+            if exclude_re.search(upper):
+                continue
+            if re.search(pattern, upper, re.IGNORECASE):
+                prices = PRICE_ANYWHERE_RE.findall(line)
+                if prices:
+                    whole, decimal = prices[-1]
+                    value = float(f"{whole}.{decimal}")
+                    if 0 < value < 50000 and (best is None or value > best):
+                        best = value
+                elif i + 1 < len(lines):
                     prices = PRICE_ANYWHERE_RE.findall(lines[i + 1])
                     if prices:
                         whole, decimal = prices[-1]
                         value = float(f"{whole}.{decimal}")
-                        if value > 0 and (best_total is None or value > best_total):
-                            best_total = value
+                        if 0 < value < 50000 and (best is None or value > best):
+                            best = value
+        return best
 
-    return best_total
+    # Try high-priority first
+    total = _find_total_in_lines(high_priority)
+    if total is not None:
+        return total
+
+    # Fall back to low-priority
+    return _find_total_in_lines(low_priority)
 
 
 def _fallback_largest_price(lines: list[str]) -> float | None:
@@ -289,13 +337,22 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
             continue
 
         # Detect discount lines BEFORE skip_re (which now skips OPUST)
-        disc_match = discount_re.search(line)
-        if disc_match:
-            whole, decimal = disc_match.group(1), disc_match.group(2)
-            disc_value = float(f"{whole}.{decimal}")
-            if 0 < disc_value < 1000:  # sanity
-                items.append({"name": "Rabat", "price": -disc_value})
-            continue
+        # But skip summary lines — "OPUSTY ŁĄCZNIE", "Udzielono łącznie rabatów"
+        upper_line = line.upper()
+        is_summary_discount = bool(
+            re.search(r"OPUSTY\s*[ŁL]", upper_line, re.IGNORECASE)
+            or re.search(r"[łlŁL][aą]cznie\s+rabat", line, re.IGNORECASE)
+            or re.search(r"cznie\s+rabat", line, re.IGNORECASE)
+            or re.search(r"UDZIELONO", upper_line)
+        )
+        if not is_summary_discount:
+            disc_match = discount_re.search(line)
+            if disc_match:
+                whole, decimal = disc_match.group(1), disc_match.group(2)
+                disc_value = float(f"{whole}.{decimal}")
+                if 0 < disc_value < 1000:  # sanity
+                    items.append({"name": "Rabat", "price": -disc_value})
+                continue
 
         # Standalone negative price: "-4,00"
         neg_match = neg_price_re.match(line)
