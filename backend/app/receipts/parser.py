@@ -41,10 +41,24 @@ PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*$")
 # Price pattern anywhere in line (for total/item matching)
 PRICE_ANYWHERE_RE = re.compile(r"(\d+)[,.](\d{2})")
 # Line that looks like an item: text followed by price
+# Pattern 1: simple "Name 12,99" or "Name 12,99A" (basic receipt line)
 ITEM_LINE_RE = re.compile(
     r"^(.+?)\s+(\d+)[,.](\d{2})\s*[A-Za-z]?\s*$"
 )
-# Quantity prefix: "2 x", "2x", "2 szt"
+# Pattern 2: Biedronka/Lidl format "Name C 2 x6,49 12,98C" — qty × unit price → total + VAT letter
+# The LAST price on the line is the line total
+ITEM_MULTI_PRICE_RE = re.compile(
+    r"^(.+?)\s+[A-Z]?\s*\d+\s*[xX×\*]\s*\d+[,.]\d{2}\s+(\d+)[,.](\d{2})\s*[A-Za-z]?\s*$"
+)
+# Pattern 3: "Name C 1 x11,99 11,99C" — single item with qty prefix and VAT letter
+ITEM_QTY_PRICE_RE = re.compile(
+    r"^(.+?)\s+\d+\s*[xX×\*]\s*(\d+)[,.](\d{2})\s+\2[,.]\3\s*[A-Za-z]?\s*$"
+)
+# Pattern 4: price anywhere on line with VAT letter suffix — "Name 29,97C"
+ITEM_VAT_SUFFIX_RE = re.compile(
+    r"^(.+?)\s+(\d+)[,.](\d{2})[A-Za-z]\s*$"
+)
+# Quantity prefix: "2 x", "2x", "2 szt", "2,5 x"
 QTY_PREFIX_RE = re.compile(r"^\d+[,.]?\d*\s*[xX×\*]\s*")
 # Skip lines that are clearly not items
 SKIP_PATTERNS = [
@@ -55,6 +69,13 @@ SKIP_PATTERNS = [
     r"^MASTERCARD\b", r"^GOTÓWKA\b", r"ZMIANA\b",
     r"^WYDRUK\b", r"DZIE[ŃN]KUJE", r"ZAPRASZAMY",
     r"^-+$", r"^=+$", r"^\*+$", r"^#{2,}",
+    # Discount/summary lines
+    r"^OPUST", r"OPUSTY\s*[ŁL]", r"^Sp[:\s]", r"^Promocj",
+    r"ROZLICZENIE", r"^Nr\s+transakcji", r"^Numer\b",
+    r"UDZIELONO", r"^MOJE\s", r"OSZCZ[ĘE]DNO",
+    r"^NIEFISKALNY", r"nr:\s*\d", r"sys\.\s*\d",
+    r"^\d{10,}",  # long number sequences (barcodes, NIP values)
+    r"^[A-Z]{2,3}\d{1,2}[=xX]",  # VAT summary lines like "A23x=2,42"
 ]
 
 
@@ -240,12 +261,38 @@ def _fallback_largest_price(lines: list[str]) -> float | None:
 
 
 def _detect_items(lines: list[str], total: float | None) -> list[dict]:
-    """Detect individual items from receipt lines."""
+    """Detect individual items from receipt lines.
+
+    Tries multiple regex patterns to handle different Polish receipt formats:
+    - Simple: "Product Name 12,99"
+    - Biedronka/Lidl: "Product C 3 x9,99 29,97C"
+    - With VAT suffix: "Product 29,97C"
+    - Discounts: "OPUST -4,00"
+    """
     items = []
     skip_re = re.compile("|".join(SKIP_PATTERNS), re.IGNORECASE)
     total_re = re.compile("|".join(TOTAL_KEYWORDS), re.IGNORECASE)
 
+    # Discount line: "OPUST -4,00" or just "-4,00" after an item
+    discount_re = re.compile(r"^(?:OPUST|RABAT|ZNIZKA|ZNIŻKA)?\s*-\s*(\d+)[,.](\d{2})", re.IGNORECASE)
+
+    # All item patterns — try in order, first match wins
+    item_patterns = [
+        ITEM_MULTI_PRICE_RE,  # "Name C 2 x6,49 12,98C" → last price is line total
+        ITEM_LINE_RE,         # "Name 12,99" or "Name 12,99A"
+        ITEM_VAT_SUFFIX_RE,   # "Name 29,97C"
+    ]
+
     for line in lines:
+        # Detect discount lines BEFORE skip_re (which now skips OPUST)
+        disc_match = discount_re.match(line.strip())
+        if disc_match:
+            whole, decimal = disc_match.group(1), disc_match.group(2)
+            disc_value = float(f"{whole}.{decimal}")
+            if 0 < disc_value < 1000:  # sanity
+                items.append({"name": "Rabat", "price": -disc_value})
+            continue
+
         if skip_re.search(line):
             continue
         if total_re.search(line.upper()):
@@ -253,26 +300,50 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
         if len(line) < 4:
             continue
 
-        match = ITEM_LINE_RE.match(line)
-        if match:
-            name = match.group(1).strip()
-            whole = match.group(2)
-            decimal = match.group(3)
-            price = float(f"{whole}.{decimal}")
+        # Try each pattern
+        name = None
+        price = None
+        for pattern in item_patterns:
+            match = pattern.match(line)
+            if match:
+                name = match.group(1).strip()
+                whole = match.group(2)
+                decimal = match.group(3)
+                price = float(f"{whole}.{decimal}")
+                break
 
-            if total and abs(price - total) < 0.01:
-                continue
+        # Fallback: if no pattern matched but line has prices, take the LAST price
+        if price is None:
+            all_prices = PRICE_ANYWHERE_RE.findall(line)
+            if all_prices and len(line) > 6:
+                # Extract name as everything before the first price
+                first_price_match = PRICE_ANYWHERE_RE.search(line)
+                if first_price_match and first_price_match.start() > 2:
+                    name = line[:first_price_match.start()].strip()
+                    whole, decimal = all_prices[-1]  # last price = line total
+                    price = float(f"{whole}.{decimal}")
 
-            name = QTY_PREFIX_RE.sub("", name).strip()
-            name = re.sub(r"\s+", " ", name)
+        if name is None or price is None:
+            continue
 
-            if len(name) < 2:
-                continue
-            if re.match(r"^[A-Z]{1,3}\d*$", name):
-                continue
+        # Skip if price equals total (it's the total line, not an item)
+        if total and abs(price - total) < 0.01:
+            continue
 
-            if price > 0:
-                items.append({"name": name, "price": price})
+        # Clean up item name
+        name = QTY_PREFIX_RE.sub("", name).strip()
+        # Remove VAT letter prefix/suffix and trailing single letters
+        name = re.sub(r"\s+[A-Z]\s*$", "", name)
+        name = re.sub(r"^[A-Z]\s+", "", name)
+        name = re.sub(r"\s+", " ", name)
+
+        if len(name) < 2:
+            continue
+        if re.match(r"^[A-Z]{1,3}\d*$", name):
+            continue
+
+        if price > 0:
+            items.append({"name": name, "price": price})
 
     return items
 

@@ -386,25 +386,33 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
               {"Produkty"}
             </Text>
             <VStack gap={1.5} align="stretch">
-              {items.map((item, idx) => (
+              {items.map((item, idx) => {
+                const isDiscount = item.price < 0;
+                return (
                 <Flex key={idx} gap={2} align="center">
                   <Input
                     value={item.name}
                     onChange={(e) => handleUpdateItem(idx, "name", e.target.value)}
                     placeholder="Nazwa"
-                    size="sm" flex={1} bg="gray.50" borderRadius="lg"
-                    borderColor="gray.200" fontSize="xs"
+                    size="sm" flex={1} borderRadius="lg"
+                    fontSize="xs"
+                    bg={isDiscount ? "green.50" : "gray.50"}
+                    borderColor={isDiscount ? "green.200" : "gray.200"}
+                    color={isDiscount ? "green.600" : undefined}
                     _focus={{ bg: "white", borderColor: "peach.400" }}
                   />
                   <Input
-                    value={item.price || ""}
+                    value={item.price != null ? item.price : ""}
                     onChange={(e) => handleUpdateItem(idx, "price", e.target.value)}
                     placeholder={"zł"}
                     type="number"
                     inputMode="decimal"
                     step="0.01"
-                    size="sm" w="80px" bg="gray.50" borderRadius="lg"
-                    borderColor="gray.200" fontSize="xs" textAlign="right"
+                    size="sm" w="80px" borderRadius="lg"
+                    fontSize="xs" textAlign="right"
+                    bg={isDiscount ? "green.50" : "gray.50"}
+                    borderColor={isDiscount ? "green.200" : "gray.200"}
+                    color={isDiscount ? "green.600" : undefined}
                     _focus={{ bg: "white", borderColor: "peach.400" }}
                   />
                   <Flex
@@ -418,7 +426,8 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
                     <Icon as={LuTrash2} boxSize={3.5} />
                   </Flex>
                 </Flex>
-              ))}
+                );
+              })}
             </VStack>
           </Box>
         )}
