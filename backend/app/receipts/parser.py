@@ -24,7 +24,8 @@ TOTAL_KEYWORDS = [
     r"WARTO[ŚS][ĆC]\s*BRUTTO", r"SPRZEDA[ŻZ]\s*BRUTTO",
     r"WP[ŁL]ATA\b", r"NALE[ŻZ]NO[ŚS][ĆC]",
     # Common OCR misreads of SUMA/RAZEM
-    r"SUNA\b", r"RAZEN\b", r"SUflA\b",
+    r"SUNA\b", r"RAZEN\b", r"SUflA\b", r"SUHA\b", r"SU[MN]A\b",
+    r"SUfl[AĄ]\b", r"SUNIA\b",
 ]
 
 DATE_PATTERNS = [
@@ -64,18 +65,19 @@ QTY_PREFIX_RE = re.compile(r"^\d+[,.]?\d*\s*[xX×\*]\s*")
 SKIP_PATTERNS = [
     r"^NIP\b", r"^PARAGON\b", r"^FISKALNY\b", r"^KASA\b",
     r"^KASJER\b", r"^SPRZ", r"^DATA\b", r"^\d{2}[:\-]\d{2}",
-    r"^PTU\b", r"^VAT\b", r"^RABAT\b", r"^OPUST\b",
-    r"^RESZTA\b", r"^GOT[ÓO]WKA\b", r"^KARTA\b", r"^VISA\b",
+    r"PTU\b", r"VAT\b", r"^RABAT\b", r"^OPUST\b",  # PTU/VAT anywhere in line
+    r"^RESZTA\b", r"GOT[ÓO]WKA\b", r"^KARTA\b", r"^VISA\b",
     r"^MASTERCARD\b", r"^GOTÓWKA\b", r"ZMIANA\b",
     r"^WYDRUK\b", r"DZIE[ŃN]KUJE", r"ZAPRASZAMY",
     r"^-+$", r"^=+$", r"^\*+$", r"^#{2,}",
     # Discount/summary lines
-    r"^OPUST", r"OPUSTY\s*[ŁL]", r"^Sp[:\s]", r"^Promocj",
-    r"ROZLICZENIE", r"^Nr\s+transakcji", r"^Numer\b",
+    r"OPUST", r"OPUSTY\s*[ŁL]", r"^Sp[:\s]", r"^Promocj",
+    r"ROZLICZENIE", r"Nr\s+transakcji", r"^Numer\b",
     r"UDZIELONO", r"^MOJE\s", r"OSZCZ[ĘE]DNO",
     r"^NIEFISKALNY", r"nr:\s*\d", r"sys\.\s*\d",
     r"^\d{10,}",  # long number sequences (barcodes, NIP values)
-    r"^[A-Z]{2,3}\d{1,2}[=xX]",  # VAT summary lines like "A23x=2,42"
+    r"[A-Z]\d{1,2}[=xX]\s*\d",  # VAT summary lines like "A23x=2,42" or "Sp: A=12,92"
+    r"SUMA\s*PTU",  # "SUMA PTU=6,06"
 ]
 
 
@@ -273,8 +275,13 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
     skip_re = re.compile("|".join(SKIP_PATTERNS), re.IGNORECASE)
     total_re = re.compile("|".join(TOTAL_KEYWORDS), re.IGNORECASE)
 
-    # Discount line: "OPUST -4,00" or just "-4,00" after an item
-    discount_re = re.compile(r"^(?:OPUST|RABAT|ZNIZKA|ZNIŻKA)?\s*-\s*(\d+)[,.](\d{2})", re.IGNORECASE)
+    # Discount line: "OPUST -4,00", "AD OPUST - 4,00", etc.
+    discount_re = re.compile(r"(?:OPUST|RABAT|ZNIZKA|ZNIŻKA)\w*\s*-?\s*(\d+)[,.](\d{2})", re.IGNORECASE)
+    # Standalone negative price line: "-4,00"
+    neg_price_re = re.compile(r"^-\s*(\d+)[,.](\d{2})\s*$")
+
+    # Max reasonable single item price (OCR artifacts like 17991,99 are caught)
+    MAX_ITEM_PRICE = 5000.0
 
     # All item patterns — try in order, first match wins
     item_patterns = [
@@ -283,13 +290,27 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
         ITEM_VAT_SUFFIX_RE,   # "Name 29,97C"
     ]
 
-    for line in lines:
+    for raw_line in lines:
+        # Strip leading OCR noise (|, !, ;, *, etc.)
+        line = re.sub(r"^[|!;:*#\-\s]+", "", raw_line).strip()
+        if not line:
+            continue
+
         # Detect discount lines BEFORE skip_re (which now skips OPUST)
-        disc_match = discount_re.match(line.strip())
+        disc_match = discount_re.search(line)
         if disc_match:
             whole, decimal = disc_match.group(1), disc_match.group(2)
             disc_value = float(f"{whole}.{decimal}")
             if 0 < disc_value < 1000:  # sanity
+                items.append({"name": "Rabat", "price": -disc_value})
+            continue
+
+        # Standalone negative price: "-4,00"
+        neg_match = neg_price_re.match(line)
+        if neg_match:
+            whole, decimal = neg_match.group(1), neg_match.group(2)
+            disc_value = float(f"{whole}.{decimal}")
+            if 0 < disc_value < 1000:
                 items.append({"name": "Rabat", "price": -disc_value})
             continue
 
@@ -342,8 +363,10 @@ def _detect_items(lines: list[str], total: float | None) -> list[dict]:
         if re.match(r"^[A-Z]{1,3}\d*$", name):
             continue
 
-        if price > 0:
+        if price > 0 and price <= MAX_ITEM_PRICE:
             items.append({"name": name, "price": price})
+        elif price > MAX_ITEM_PRICE:
+            logger.warning(f"Receipt parser: skipping item '{name}' with absurd price {price}")
 
     return items
 
