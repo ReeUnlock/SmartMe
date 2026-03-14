@@ -55,6 +55,7 @@ export const Z = {
   dialogContent: 401,
   affirmationOverlay: 450,
   toast: 500,
+  tour: 550,
   celebrationGlow: 599,
   celebrationParticle: 600,
 };

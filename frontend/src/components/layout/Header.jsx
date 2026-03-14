@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Flex, Heading, Icon, Box } from "@chakra-ui/react";
-import { LuSettings } from "react-icons/lu";
+import { LuSettings, LuInfo } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
+import useIntroTour from "../../hooks/useIntroTour";
 
 export default function Header() {
   const navigate = useNavigate();
+  const { openTour } = useIntroTour();
   const [logoLoaded, setLogoLoaded] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
@@ -56,25 +58,48 @@ export default function Header() {
           </Heading>
         )}
       </Box>
-      <Flex
-        align="center"
-        justify="center"
-        w="44px"
-        h="44px"
-        borderRadius="xl"
-        cursor="pointer"
-        transition="all 0.2s"
-        bg="rose.50"
-        _hover={{ bg: "rose.100" }}
-        _active={{ transform: "scale(0.93)" }}
-        onClick={() => navigate("/ustawienia")}
-      >
-        <Icon
-          as={LuSettings}
-          boxSize="18px"
-          color="rose.400"
-          transition="color 0.2s"
-        />
+      <Flex align="center" gap="2">
+        <Flex
+          align="center"
+          justify="center"
+          w="44px"
+          h="44px"
+          borderRadius="xl"
+          cursor="pointer"
+          transition="all 0.2s"
+          bg="rose.50"
+          _hover={{ bg: "rose.100" }}
+          _active={{ transform: "scale(0.93)" }}
+          aria-label={"Poka\u017C wprowadzenie"}
+          onClick={openTour}
+        >
+          <Icon
+            as={LuInfo}
+            boxSize="18px"
+            color="rose.400"
+            transition="color 0.2s"
+          />
+        </Flex>
+        <Flex
+          align="center"
+          justify="center"
+          w="44px"
+          h="44px"
+          borderRadius="xl"
+          cursor="pointer"
+          transition="all 0.2s"
+          bg="rose.50"
+          _hover={{ bg: "rose.100" }}
+          _active={{ transform: "scale(0.93)" }}
+          onClick={() => navigate("/ustawienia")}
+        >
+          <Icon
+            as={LuSettings}
+            boxSize="18px"
+            color="rose.400"
+            transition="color 0.2s"
+          />
+        </Flex>
       </Flex>
     </Flex>
   );

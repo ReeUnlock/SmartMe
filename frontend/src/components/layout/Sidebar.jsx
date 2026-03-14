@@ -27,6 +27,7 @@ export default function Sidebar() {
 
   return (
     <Box
+      id="sidebar-nav"
       display={{ base: "none", md: "flex" }}
       flexDirection="column"
       w="230px"

@@ -9,8 +9,11 @@ import RewardBar from "../dashboard/RewardBar";
 import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useAvatarReaction from "../../hooks/useAvatarReaction";
+import useIntroTour from "../../hooks/useIntroTour";
 import { getNewlyUnlockedAvatars } from "../affirmation/avatarConfig";
 import { getUserStorage, setUserStorage } from "../../utils/storage";
+import SpotlightTour from "../intro/SpotlightTour";
+import tourSteps from "../intro/tourSteps";
 
 // Lazy-load below-fold and heavy components
 const AffirmationAvatar = lazy(() => import("../affirmation/AffirmationAvatar"));
@@ -191,10 +194,23 @@ export default function DashboardPage() {
   const initialCheck = useAchievements((s) => s.initialCheck);
   const updateMaxStreak = useAchievements((s) => s.updateMaxStreak);
   const checkLevelRewards = useAchievements((s) => s.checkLevelRewards);
+  const hasSeenTour = useIntroTour((s) => s.hasSeenTour);
+  const isTourOpen = useIntroTour((s) => s.isTourOpen);
+  const openTour = useIntroTour((s) => s.openTour);
+  const markAsSeen = useIntroTour((s) => s.markAsSeen);
 
   // Run initial checks on mount
   useEffect(() => {
     initialCheck(addBonusSparks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-show intro tour on first visit (1200ms delay for dashboard to render)
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const timer = setTimeout(openTour, 1200);
+      return () => clearTimeout(timer);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -279,6 +295,9 @@ export default function DashboardPage() {
           </Suspense>
         </Box>
       </FadeIn>
+
+      {/* Intro spotlight tour */}
+      <SpotlightTour steps={tourSteps} isOpen={isTourOpen} onFinish={markAsSeen} />
     </Box>
   );
 }

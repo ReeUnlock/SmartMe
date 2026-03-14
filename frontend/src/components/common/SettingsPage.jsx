@@ -23,8 +23,10 @@ import {
   LuVolume2,
   LuShieldCheck,
   LuCrown,
+  LuInfo,
 } from "react-icons/lu";
 import { useAuth } from "../../hooks/useAuth";
+import useIntroTour from "../../hooks/useIntroTour";
 import { changePassword, resetAccount } from "../../api/auth";
 import { getSubscription, createCheckoutSession, createPortalSession } from "../../api/billing";
 import useRewards from "../../hooks/useRewards";
@@ -497,6 +499,7 @@ export default function SettingsPage() {
   const level = useRewards((s) => s.level);
   const avatarKey = getSelectedAvatar(level);
   const avatarConfig = getAvatarConfig(avatarKey);
+  const openTour = useIntroTour((s) => s.openTour);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const upgraded = searchParams.get("upgraded") === "true";
@@ -531,8 +534,8 @@ export default function SettingsPage() {
           </Box>
         )}
 
-        {/* ── Section: Subskrypcja ── */}
-        <SubscriptionSection />
+        {/* ── Section: Subskrypcja (hidden until billing is ready) ── */}
+        {false && <SubscriptionSection />}
 
         {/* ── Section A: Konto ── */}
         <SettingsCard>
@@ -628,7 +631,31 @@ export default function SettingsPage() {
           )}
         </SettingsCard>
 
-        {/* ── Section D: Prawne ── */}
+        {/* ── Section D: Pomoc ── */}
+        <SettingsCard>
+          <SectionTitle icon={LuInfo} color="sky.400">
+            {"Pomoc"}
+          </SectionTitle>
+          <HStack
+            justify="space-between"
+            cursor="pointer"
+            onClick={() => {
+              navigate("/");
+              setTimeout(() => openTour(), 400);
+            }}
+            _hover={{ bg: "sky.50" }}
+            borderRadius="xl"
+            mx={-2}
+            px={2}
+            py="1.5"
+            transition="background 0.15s"
+          >
+            <Text fontSize="sm" color="gray.600">{"Pokaż wprowadzenie"}</Text>
+            <Icon as={LuChevronRight} boxSize="14px" color="gray.400" />
+          </HStack>
+        </SettingsCard>
+
+        {/* ── Section E: Prawne ── */}
         <SettingsCard>
           <SectionTitle icon={LuShieldCheck} color="sage.400">
             {"Informacje prawne"}

@@ -18,6 +18,7 @@ export default function RewardBar() {
 
   return (
     <Box
+      id="reward-bar"
       bg="white"
       borderRadius="2xl"
       px={4}

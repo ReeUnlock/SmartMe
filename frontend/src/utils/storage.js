@@ -55,6 +55,7 @@ const MIGRATABLE_KEYS = [
   "anelka_shopping_templates",
   "anelka_item_history",
   "smartme_tile_order",
+  "smartme_intro_tour",
 ];
 
 export function migrateStorageForUser(userId) {

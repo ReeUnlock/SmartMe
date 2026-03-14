@@ -25,6 +25,7 @@ export default memo(function BottomNav() {
   const kbdOpen = useKeyboardOpen();
   return (
     <Box
+      id="bottom-nav"
       position="fixed"
       bottom="0"
       left="0"

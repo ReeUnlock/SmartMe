@@ -4,6 +4,7 @@ import { LuArrowLeft, LuAward, LuFlame, LuStar, LuChevronDown } from "react-icon
 import useAchievements from "../../hooks/useAchievements";
 import useRewards from "../../hooks/useRewards";
 import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, LEVEL_MILESTONES } from "../../utils/achievementEngine";
+import RewardBar from "../dashboard/RewardBar";
 
 // --- Trophy Room Showcase ---
 
@@ -429,6 +430,8 @@ export default function AchievementsPage({ onBack }) {
           </Text>
         </Box>
       </Flex>
+
+      <RewardBar />
 
       {/* Summary header */}
       <SummaryHeader
