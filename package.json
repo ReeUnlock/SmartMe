@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "test:auth:backend": "cd backend && python -m pytest tests/auth/ -v --tb=short",
+    "test:auth:e2e": "npx playwright test e2e/auth/",
+    "test:auth:all": "npm run test:auth:backend && npm run test:auth:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}
