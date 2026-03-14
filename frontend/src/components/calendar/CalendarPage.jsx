@@ -146,7 +146,7 @@ export default function CalendarPage() {
   }, []);
 
   return (
-    <Box maxW="600px" mx="auto" pb={{ base: "120px", md: "80px" }}>
+    <Box maxW="600px" mx="auto" pb={{ base: "160px", md: "100px" }}>
       {/* Loading indicator */}
       {isLoading && (
         <Flex justify="center" py="2">
