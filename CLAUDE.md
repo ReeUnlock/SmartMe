@@ -89,6 +89,7 @@ frontend/src/
     useCelebration.js   — zustand, celebrate(type, options), priority + throttling
     useAvatarReaction.js — zustand, react(type), probability + cooldown, session cap (20)
     useVoiceCommand.js  — zustand, MediaRecorder, startRecording/stopRecording/confirmAction
+    useIntroTour.js     — zustand+localStorage, hasSeenTour/isTourOpen/openTour/closeTour/markAsSeen
     useQuickTemplates.js — zustand+localStorage, szablony kalendarza (max 12)
     useShoppingTemplates.js — zustand+localStorage, szablony zakupów (max 20)
     useItemHistory.js   — zustand+localStorage, historia produktów (max 100, LRU)
@@ -96,7 +97,7 @@ frontend/src/
     useKeyboardOpen.js  — React hook, iOS visualViewport detection
     useMicroFeedback.js — React hook, imperative CSS class trigger (zero re-renders)
   components/
-    layout/         — AppShell (gradient bg + animated blobs), BottomNav (mobile, 5 items), Sidebar (desktop), Header
+    layout/         — AppShell (gradient bg + animated blobs), BottomNav (mobile, 5 items, id="bottom-nav"), Sidebar (desktop, id="sidebar-nav"), Header (logo + info/settings icons)
     auth/           — RegisterPage, LoginPage, ForgotPasswordPage, EmailVerificationPage, NewPasswordPage, SetupPage (redirect→/rejestracja), OnboardingPage (3 steps), ProtectedRoute
     calendar/       — Kalendarz (kolor: sky/błękit)
       CalendarPage.jsx    — główna strona, sekcje: przegląd dnia + przegląd miesiąca
@@ -133,7 +134,10 @@ frontend/src/
       GoalFormDialog.jsx     — formularz celu
       BucketListView.jsx     — lista marzeń
       BucketItemFormDialog.jsx — formularz bucket item
-    voice/          — VoiceFab (floating mic, idle/recording/processing), VoiceConfirmationDialog
+    voice/          — VoiceFab (floating mic 72px, rose-peach gradient, fullscreen processing overlay), VoiceConfirmationDialog
+    intro/          — Spotlight Tour system
+      SpotlightTour.jsx  — portal overlay: SVG mask spotlight, welcome card, step cards, swipe nav
+      tourSteps.js       — 4 steps: welcome + voice-fab + navigation + reward-bar
     common/
       EmptyState.jsx         — reusable: icon + title + description + CTA (sm-empty-enter animation)
       SmartMeLoader.jsx      — branded three-dot loader (sm-loader-dot, color/size/label props)
@@ -149,7 +153,7 @@ frontend/src/
       DateInput.jsx          — date-only picker
       SmartMeLogo.jsx        — logo (image fallback)
       FeedbackDialog.jsx     — formularz opinii
-      SettingsPage.jsx       — profil, hasło, reset, dźwięki, feedback, avatar link, polityka prywatności
+      SettingsPage.jsx       — profil, hasło, reset, dźwięki, feedback, avatar link, pomoc (intro tour), polityka prywatności (subskrypcja ukryta)
     affirmation/    — Avatar system
       AffirmationAvatar.jsx    — state machine (idle/happy/think/reading), afirmacje, particles
       AvatarSelectionPage.jsx  — galeria kart avatarów (locked/active)
@@ -163,16 +167,16 @@ frontend/src/
     landing/        — LandingPage (hero, features, pricing, footer — public /start)
     celebration/    — CelebrationOverlay (imperative RAF particle + glow engine, safety timeout 5s)
     dashboard/
-      DashboardPage.jsx          — ReorderableTiles (drag-reorder, localStorage order)
+      DashboardPage.jsx          — ReorderableTiles (drag-reorder, localStorage order), auto-opens intro tour on first visit
       DashboardGreeting.jsx      — random greeting + date + level badge
-      RewardBar.jsx              — level circle, sparks, streak, XP bar
+      RewardBar.jsx              — level circle, sparks, streak, XP bar (id="reward-bar")
       TodayWidget.jsx            — today summary
       GoalsWidget.jsx            — goals preview
       BudgetWidget.jsx           — budget preview
       ShoppingWidget.jsx         — shopping preview
       ChallengesWidget.jsx       — challenges preview (lazy)
       AttentionWidget.jsx        — alerts/reminders (lazy)
-      AchievementsPage.jsx       — gablotka: kolekcja, postęp, kategorie, level rewards
+      AchievementsPage.jsx       — gablotka: RewardBar + kolekcja, postęp, kategorie, level rewards
       ChallengesPage.jsx         — dzienne (lavender) + tygodniowe (rose/peach) wyzwania
 ```
 
@@ -390,7 +394,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 ### Centralna konfiguracja: `config/motionConfig.js`
 - `EASING` — out (signature), standard, bounce, linear
 - `DURATION` — micro(150ms), fast(200), toast(350), tab(420), page(620), activate(900)
-- `Z` — z-index map: background(0) → content(1) → stickyControls(10) → bottomNav(200) → undoBar(250) → voiceFab(300) → dialog(400-401) → affirmation(450) → toast(500) → celebration(599-600)
+- `Z` — z-index map: background(0) → content(1) → stickyControls(10) → bottomNav(200) → undoBar(250) → voiceFab(300) → dialog(400-401) → affirmation(450) → voiceProcessing(499) → toast(500) → tour(550) → celebration(599-600)
 - `CELEBRATION_TYPES/PALETTES/PRIORITY/COOLDOWNS` — per-type config
 - `MICRO` — button press, item add, complete, pop, shake
 - `MODULE_THEME` — per-module accent + glow colors
@@ -412,6 +416,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 | `sm-breathe` | scale pulse | 4s ∞ | dekoracja |
 | `sm-blob-drift-1/2` | drift | 25-30s ∞ | background blobs (AppShell) |
 | `sm-loader-dot` | breathing | 1.4s | SmartMeLoader |
+| `sm-dot-bounce` | vertical bounce | 0.9s | voice processing overlay |
 
 - Easing: `cubic-bezier(0.22, 1, 0.36, 1)` — szybki start, miękkie lądowanie
 - GPU-only: opacity, transform, filter
@@ -436,6 +441,25 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - Chat history: max 10 par (kontekst GPT)
 - Temporal interpretation: single_date, explicit_dates, date_range, weekday_recurring, interval_recurring, duration_span
 - Obsługuje: calendar, shopping, expenses, plans (CRUD + list + toggle)
+
+## Intro Spotlight Tour
+- 4 kroki: welcome (centered card, logo, body, CTA) → voice-fab → navigation → reward-bar
+- Spotlight: SVG mask cutout + white ring around target element
+- Auto-opens on first dashboard visit (1200ms delay), per-user localStorage
+- Re-open: Header info icon (mobile) + Settings "Pomoc" section
+- Swipe navigation (50px threshold) + keyboard Escape to close
+- Welcome step: no spotlight, centered card with `whiteSpace: pre-line` body
+- Step counter excludes welcome step (1/3, 2/3, 3/3)
+- Target IDs: `voice-fab`, `bottom-nav`/`sidebar-nav` (responsive), `reward-bar`
+- Z-index: `Z.tour` (550) — above toasts, below celebration
+- Hook: `useIntroTour` (zustand + localStorage `smartme_intro_tour`)
+
+## VoiceFab — redesign
+- 72px button (was 48px), rose-peach gradient (`linear-gradient(135deg, #FF8FAB, #F9915E)`)
+- Recording: red.500, pulse animation, duration badge
+- Processing: fullscreen portal overlay (z-index 499), blurred backdrop, centered white card with gradient mic icon, bouncing dots (`sm-dot-bounce`), Polish status text
+- FAB hidden during processing state (`{!isProcessing && ...}`)
+- `id="voice-fab"` for spotlight tour targeting
 
 ## System opinii (Feedback)
 - Endpoint: `POST /api/feedback` (rate limit: 5/min, bez auth)
@@ -510,6 +534,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - [x] Faza S: Store Readiness (Capacitor, manifest, icons, CI/CD, privacy policy, account deletion)
 - [x] Faza B: Billing (Stripe checkout, portal, webhooks, subscription model, feature limits, Resend emails)
 - [x] Faza L: Landing Page (smartme.life — 10 sekcji: hero z modelką 3D i floating cards, problem, features, interaktywne demo screenshots, life OS, social proof, download CTA, FAQ, footer; grafiki: 3 modelki, 3 screenshoty, logo)
+- [x] Faza T: Intro Tour (spotlight tour 4 kroków, VoiceFab redesign, processing overlay)
 
 ## Audyt produkcyjny i sprinty
 - **Data audytu**: 2026-03-14
