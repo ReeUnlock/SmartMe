@@ -3,6 +3,8 @@ import NoxMoon from "./avatars/NoxMoon";
 import BloomFlower from "./avatars/BloomFlower";
 import AuraOrb from "./avatars/AuraOrb";
 import { getUserStorage, setUserStorage } from "../../utils/storage";
+import { patchRewards } from "../../api/rewards";
+import { debounce } from "../../utils/debounce";
 
 const AVATAR_CONFIG = [
   {
@@ -94,12 +96,14 @@ export function getSelectedAvatar(level) {
 }
 
 /**
- * Save avatar selection to localStorage.
+ * Save avatar selection to localStorage + server.
  */
 export function saveSelectedAvatar(key) {
   try {
     setUserStorage(AVATAR_STORAGE_KEY, key);
   } catch {}
+  // Immediate sync (no debounce) — avatar selection is intentional
+  patchRewards({ avatar_key: key }).catch(() => {});
 }
 
 /**
@@ -113,6 +117,10 @@ export function getSeenAvatarUnlocks() {
   return [];
 }
 
+const syncSeenUnlocksToServer = debounce((seen) => {
+  patchRewards({ seen_avatar_unlocks: seen }).catch(() => {});
+}, 800);
+
 /**
  * Mark an avatar unlock as seen.
  */
@@ -120,7 +128,9 @@ export function markAvatarUnlockSeen(key) {
   try {
     const seen = getSeenAvatarUnlocks();
     if (!seen.includes(key)) {
-      setUserStorage(AVATAR_UNLOCK_STORAGE_KEY, JSON.stringify([...seen, key]));
+      const updated = [...seen, key];
+      setUserStorage(AVATAR_UNLOCK_STORAGE_KEY, JSON.stringify(updated));
+      syncSeenUnlocksToServer(updated);
     }
   } catch {}
 }

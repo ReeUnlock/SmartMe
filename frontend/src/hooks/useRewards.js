@@ -4,6 +4,8 @@ import { playSound } from "../utils/soundManager";
 import useCelebration from "./useCelebration";
 import useAvatarReaction from "./useAvatarReaction";
 import { getUserStorage, setUserStorage } from "../utils/storage";
+import { patchRewards } from "../api/rewards";
+import { debounce } from "../utils/debounce";
 
 const STORAGE_KEY = "smartme_rewards";
 
@@ -34,6 +36,16 @@ function saveState(state) {
   } catch {}
 }
 
+const syncToServer = debounce((state) => {
+  patchRewards({
+    sparks: state.sparks,
+    level: state.level,
+    streak: state.streakDays ?? state.streak ?? 0,
+    xp: state.xp,
+    streak_last_date: state.lastActiveDate || null,
+  }).catch(() => {});
+}, 800);
+
 const useRewards = create((set, get) => ({
   ...loadState(),
 
@@ -43,7 +55,7 @@ const useRewards = create((set, get) => ({
   reward(action) {
     const current = get();
     // Extract only persistent reward state (exclude store methods and toasts)
-    const { reward: _, syncDaily: _s, dismissToast: _d, addBonusSparks: _a, _toasts, ...stateOnly } = current;
+    const { reward: _, syncDaily: _s, dismissToast: _d, addBonusSparks: _a, hydrate: _h, _toasts, ...stateOnly } = current;
     const { newState, result } = grantReward(stateOnly, action);
 
     const toasts = [];
@@ -76,6 +88,7 @@ const useRewards = create((set, get) => ({
 
     saveState(newState);
     set({ ...newState, _toasts: [...current._toasts, ...toasts] });
+    syncToServer(newState);
     return result;
   },
 
@@ -86,7 +99,7 @@ const useRewards = create((set, get) => ({
   // Add bonus sparks (used by achievement system)
   addBonusSparks(amount) {
     const current = get();
-    const { reward: _, syncDaily: _s, dismissToast: _d, addBonusSparks: _a, _toasts, ...stateOnly } = current;
+    const { reward: _, syncDaily: _s, dismissToast: _d, addBonusSparks: _a, hydrate: _h, _toasts, ...stateOnly } = current;
     const newSparks = (stateOnly.sparks || 0) + amount;
     const levelInfo = calculateLevel(newSparks);
     const updated = {
@@ -98,17 +111,34 @@ const useRewards = create((set, get) => ({
     };
     saveState(updated);
     set(updated);
+    syncToServer(updated);
   },
 
   // Apply daily reset on app load without triggering toasts
   syncDaily() {
     const current = get();
-    const { reward: _, syncDaily: _s, dismissToast: _d, addBonusSparks: _a, _toasts, ...stateOnly } = current;
+    const { reward: _, syncDaily: _s, dismissToast: _d, addBonusSparks: _a, hydrate: _h, _toasts, ...stateOnly } = current;
     const synced = ensureDailyReset(stateOnly);
     if (synced !== stateOnly) {
       saveState(synced);
       set(synced);
+      syncToServer(synced);
     }
+  },
+
+  // Hydrate store from server data
+  hydrate(data) {
+    const levelInfo = calculateLevel(data.sparks || 0);
+    const hydrated = {
+      sparks: data.sparks,
+      level: levelInfo.level,
+      xp: levelInfo.xp,
+      xpToNextLevel: levelInfo.xpToNextLevel,
+      streakDays: data.streak,
+      lastActiveDate: data.streak_last_date,
+    };
+    saveState(hydrated);
+    set(hydrated);
   },
 }));
 

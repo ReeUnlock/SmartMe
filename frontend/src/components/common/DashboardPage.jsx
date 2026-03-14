@@ -10,6 +10,7 @@ import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useAvatarReaction from "../../hooks/useAvatarReaction";
 import useIntroTour from "../../hooks/useIntroTour";
+import useRewardsSync from "../../hooks/useRewardsSync";
 import { getNewlyUnlockedAvatars } from "../affirmation/avatarConfig";
 import { getUserStorage, setUserStorage } from "../../utils/storage";
 import SpotlightTour from "../intro/SpotlightTour";
@@ -198,6 +199,9 @@ export default function DashboardPage() {
   const isTourOpen = useIntroTour((s) => s.isTourOpen);
   const openTour = useIntroTour((s) => s.openTour);
   const markAsSeen = useIntroTour((s) => s.markAsSeen);
+
+  // Sync rewards from server (migration + hydration)
+  useRewardsSync();
 
   // Run initial checks on mount
   useEffect(() => {

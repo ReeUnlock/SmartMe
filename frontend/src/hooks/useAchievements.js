@@ -9,6 +9,8 @@ import {
 import { playSound } from "../utils/soundManager";
 import useCelebration from "./useCelebration";
 import { getUserStorage, setUserStorage } from "../utils/storage";
+import { patchRewards } from "../api/rewards";
+import { debounce } from "../utils/debounce";
 
 const STORAGE_KEY = "smartme_achievements";
 
@@ -46,6 +48,19 @@ function saveState(state) {
     setUserStorage(STORAGE_KEY, JSON.stringify(state));
   } catch {}
 }
+
+function getAchievementsPayload(state) {
+  return {
+    unlocked: state.unlocked,
+    progress: state.progress,
+    unlockedFeatures: state.unlockedFeatures,
+    lastCheckedLevel: state.lastCheckedLevel,
+  };
+}
+
+const syncAchievementsToServer = debounce((state) => {
+  patchRewards({ achievements: getAchievementsPayload(state) }).catch(() => {});
+}, 800);
 
 const useAchievements = create((set, get) => ({
   ...loadState(),
@@ -100,7 +115,9 @@ const useAchievements = create((set, get) => ({
       progress: newProgress,
       unlocked: newUnlockedList,
     };
-    saveState({ ...current, ...newState, _achievementToasts: undefined });
+    const merged = { ...current, ...newState, _achievementToasts: undefined };
+    saveState(merged);
+    syncAchievementsToServer(merged);
     set({
       ...newState,
       _achievementToasts: [...current._achievementToasts, ...toasts],
@@ -138,7 +155,9 @@ const useAchievements = create((set, get) => ({
       progress: newProgress,
       unlocked: newUnlockedList,
     };
-    saveState({ ...current, ...newState, _achievementToasts: undefined });
+    const merged2 = { ...current, ...newState, _achievementToasts: undefined };
+    saveState(merged2);
+    syncAchievementsToServer(merged2);
     set({
       ...newState,
       _achievementToasts: [...current._achievementToasts, ...toasts],
@@ -154,8 +173,9 @@ const useAchievements = create((set, get) => ({
 
     const newFeatures = checkLevelMilestones(level, current.unlockedFeatures);
     if (newFeatures.length === 0) {
-      const updated = { ...current, lastCheckedLevel: level };
-      saveState({ ...updated, _achievementToasts: undefined });
+      const updated = { ...current, lastCheckedLevel: level, _achievementToasts: undefined };
+      saveState(updated);
+      syncAchievementsToServer(updated);
       set({ lastCheckedLevel: level });
       return;
     }
@@ -181,7 +201,9 @@ const useAchievements = create((set, get) => ({
       unlockedFeatures: updatedFeatures,
       lastCheckedLevel: level,
     };
-    saveState({ ...current, ...newState, _achievementToasts: undefined });
+    const merged3 = { ...current, ...newState, _achievementToasts: undefined };
+    saveState(merged3);
+    syncAchievementsToServer(merged3);
     set({
       ...newState,
       _achievementToasts: [...current._achievementToasts, ...toasts],
@@ -217,7 +239,9 @@ const useAchievements = create((set, get) => ({
     });
 
     const newState = { unlocked: newUnlockedList };
-    saveState({ ...current, ...newState, _achievementToasts: undefined });
+    const merged4 = { ...current, ...newState, _achievementToasts: undefined };
+    saveState(merged4);
+    syncAchievementsToServer(merged4);
     set({
       ...newState,
       _achievementToasts: [...current._achievementToasts, ...toasts],
@@ -228,6 +252,19 @@ const useAchievements = create((set, get) => ({
     set((s) => ({
       _achievementToasts: s._achievementToasts.filter((t) => t.id !== id),
     }));
+  },
+
+  // Hydrate store from server data
+  hydrate(data) {
+    if (!data || typeof data !== "object") return;
+    const hydrated = {
+      unlocked: data.unlocked ?? [],
+      progress: { ...createInitialState().progress, ...(data.progress || {}) },
+      unlockedFeatures: { ...createInitialState().unlockedFeatures, ...(data.unlockedFeatures || {}) },
+      lastCheckedLevel: data.lastCheckedLevel ?? 1,
+    };
+    saveState(hydrated);
+    set(hydrated);
   },
 }));
 

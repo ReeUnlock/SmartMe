@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { getUserStorage, setUserStorage } from "../utils/storage";
 import useCelebration from "./useCelebration";
+import { patchRewards } from "../api/rewards";
+import { debounce } from "../utils/debounce";
 import {
   todayKey,
   weekKey,
@@ -59,6 +61,10 @@ function saveState(state) {
   } catch {}
 }
 
+const syncChallengesToServer = debounce((state) => {
+  patchRewards({ challenges_state: state }).catch(() => {});
+}, 800);
+
 const useChallenges = create((set, get) => ({
   ...loadState(),
 
@@ -91,6 +97,7 @@ const useChallenges = create((set, get) => ({
     if (changed) {
       const newState = { daily, weekly, weekActiveDays };
       saveState(newState);
+      syncChallengesToServer(newState);
       set(newState);
     }
   },
@@ -209,6 +216,7 @@ const useChallenges = create((set, get) => ({
 
     const newState = { daily: newDaily, weekly: newWeekly, weekActiveDays };
     saveState(newState);
+    syncChallengesToServer(newState);
     set({
       ...newState,
       _challengeToasts: [...current._challengeToasts, ...toasts],
@@ -236,8 +244,9 @@ const useChallenges = create((set, get) => ({
     }
 
     const updated = { ...challenges, items: updatedItems };
-    const newState = { ...current, [key]: updated };
-    saveState(newState);
+    const newState = { ...current, [key]: updated, _challengeToasts: current._challengeToasts };
+    saveState({ daily: newState.daily, weekly: newState.weekly, weekActiveDays: newState.weekActiveDays });
+    syncChallengesToServer({ daily: newState.daily, weekly: newState.weekly, weekActiveDays: newState.weekActiveDays });
     set(newState);
   },
 
@@ -258,7 +267,8 @@ const useChallenges = create((set, get) => ({
 
     const updated = { ...challenges, allCompletedClaimed: true };
     const newState = { ...current, [key]: updated };
-    saveState(newState);
+    saveState({ daily: newState.daily, weekly: newState.weekly, weekActiveDays: newState.weekActiveDays });
+    syncChallengesToServer({ daily: newState.daily, weekly: newState.weekly, weekActiveDays: newState.weekActiveDays });
     set({
       ...newState,
       _challengeToasts: [
@@ -279,6 +289,29 @@ const useChallenges = create((set, get) => ({
     set((s) => ({
       _challengeToasts: s._challengeToasts.filter((t) => t.id !== id),
     }));
+  },
+
+  // Hydrate store from server data
+  hydrate(data) {
+    if (!data || typeof data !== "object") return;
+    const today = todayKey();
+    const week = weekKey();
+
+    let daily = data.daily;
+    if (!daily || daily.date !== today) {
+      daily = generateDailyChallenges(today);
+    }
+
+    let weekly = data.weekly;
+    let weekActiveDays = data.weekActiveDays || [];
+    if (!weekly || weekly.weekKey !== week) {
+      weekly = generateWeeklyChallenges(week);
+      weekActiveDays = [];
+    }
+
+    const hydrated = { daily, weekly, weekActiveDays };
+    saveState(hydrated);
+    set(hydrated);
   },
 }));
 
