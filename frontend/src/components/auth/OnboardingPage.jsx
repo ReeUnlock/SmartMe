@@ -53,6 +53,11 @@ function WelcomeStep({ username, onNext }) {
   );
 }
 
+const AVATAR_ACCENTS = {
+  sol: { bg: "rgba(253,208,177,0.12)", border: "peach.200", borderActive: "peach.400" },
+  nox: { bg: "rgba(195,177,225,0.12)", border: "lavender.200", borderActive: "lavender.400" },
+};
+
 function AvatarStep({ onNext }) {
   const [selected, setSelected] = useState(getSelectedAvatar(1));
 
@@ -62,7 +67,7 @@ function AvatarStep({ onNext }) {
   };
 
   return (
-    <VStack gap="6" textAlign="center">
+    <VStack gap="5" textAlign="center">
       <VStack gap="2">
         <Heading
           size="md"
@@ -77,9 +82,10 @@ function AvatarStep({ onNext }) {
         </Text>
       </VStack>
 
-      <HStack gap="4" justify="center" flexWrap="wrap">
+      <HStack gap="3" justify="center" w="full">
         {UNLOCKED_AVATARS.map((avatar) => {
           const isSelected = selected === avatar.key;
+          const accent = AVATAR_ACCENTS[avatar.key] || AVATAR_ACCENTS.sol;
           const AvatarComponent = avatar.component;
           return (
             <Box
@@ -88,23 +94,44 @@ function AvatarStep({ onNext }) {
               cursor="pointer"
               borderRadius="2xl"
               borderWidth="2px"
-              borderColor={isSelected ? "rose.300" : "gray.100"}
-              bg={isSelected ? "rose.50" : "white"}
-              p="4"
-              transition="all 0.2s"
+              borderColor={isSelected ? accent.borderActive : "gray.100"}
+              bg={isSelected ? accent.bg : "white"}
+              p="3"
+              pt="4"
+              transition="all 0.25s cubic-bezier(0.22, 1, 0.36, 1)"
               shadow={isSelected ? "0 2px 12px 0 rgba(231, 73, 128, 0.15)" : "0 1px 4px 0 rgba(0,0,0,0.04)"}
-              _hover={{ borderColor: "rose.200", shadow: "0 2px 8px 0 rgba(231, 73, 128, 0.1)" }}
+              _hover={{ borderColor: accent.border, shadow: "0 2px 8px 0 rgba(231, 73, 128, 0.1)" }}
               textAlign="center"
-              minW="120px"
+              flex="1"
+              maxW="160px"
+              overflow="hidden"
             >
-              <Box mx="auto" w="64px" h="64px" mb="2">
-                <AvatarComponent phase="idle" />
-              </Box>
-              <Text fontSize="sm" fontWeight="600" color="gray.700">
-                {avatar.name}
-              </Text>
-              <Text fontSize="xs" color="gray.400">
-                {avatar.icon}
+              <Flex
+                justify="center"
+                align="center"
+                mx="auto"
+                w="80px"
+                h="80px"
+                mb="2"
+                overflow="hidden"
+                borderRadius="full"
+              >
+                <Box
+                  transform="scale(0.38)"
+                  transformOrigin="center"
+                  pointerEvents="none"
+                >
+                  <AvatarComponent phase="idle" showTapParticles={false} onTap={() => {}} />
+                </Box>
+              </Flex>
+              <Flex align="center" justify="center" gap="1.5" mb="0.5">
+                <Text fontSize="md" lineHeight="1">{avatar.icon}</Text>
+                <Text fontSize="sm" fontWeight="700" color="gray.700">
+                  {avatar.name}
+                </Text>
+              </Flex>
+              <Text fontSize="xs" color="gray.400" lineHeight="1.4">
+                {avatar.description}
               </Text>
             </Box>
           );

@@ -60,7 +60,7 @@ landing/            — statyczny landing page (smartme.life), serwowany przez n
 frontend/src/
   App.jsx           — Router + ChakraProvider + QueryClientProvider + ErrorBoundary + Global Overlays (lazy) + CookieConsent
   theme.js          — pastelowa paleta: rose, peach, sage, sky, lavender + semantic tokens
-  api/              — client.js (apiFetch + apiUpload z JWT, VITE_API_URL env), pliki per moduł (auth, calendar, shopping, expenses, plans, voice, receipts, billing)
+  api/              — client.js (apiFetch + apiUpload z JWT, VITE_API_URL env, 401+403→redirect login), pliki per moduł (auth, calendar, shopping, expenses, plans, voice, receipts, billing)
   config/
     motionConfig.js   — centralna konfiguracja animacji: EASING, DURATION, Z-index, celebration presets, micro-feedback, module themes
   styles/
@@ -464,7 +464,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - **Język UI**: polski (wszystkie teksty, komunikaty, placeholdery)
 - **Język kodu**: angielski (nazwy zmiennych, funkcji, klas, plików)
 - **Polskie znaki w JSX**: ZAWSZE opakowuj w wyrażenia JS `{"tekst z polskimi znakami"}`, NIE wstawiaj `\uXXXX` w surowym tekście JSX — będzie wyświetlony dosłownie
-- **Auth**: multi-user, rejestracja z weryfikacją email, token-based password reset (24h ważność)
+- **Auth**: multi-user, rejestracja z weryfikacją email, token-based password reset (24h ważność). HTTPBearer zwraca 403 gdy brak tokenu — `client.js` traktuje 401+403 jako unauthorized (redirect → /login)
 - **localStorage**: per-user scoping via `utils/storage.js` (klucze z prefixem `user_{id}_`), migracja danych przy pierwszym logowaniu
 - **Domownicy**: tylko imiona/etykiety (nie osobne konta), 2 osoby domyślnie ("Ja", "Partner")
 - **Migracje**: Alembic (nie `Base.metadata.create_all`), auto-uruchamiane przy starcie kontenera
@@ -700,7 +700,7 @@ docker exec anelka-backend alembic upgrade head
 ## Landing Page (smartme.life)
 
 ### Struktura
-Statyczny HTML (`landing/index.html`) serwowany przez nginx. Brak React/Next.js — czysty HTML/CSS/JS.
+Statyczny HTML (`landing/index.html`) serwowany przez nginx. Brak React/Next.js — czysty HTML/CSS/JS. `html` + `body` mają `overflow-x: hidden` (blokada poziomego scrollu na mobile).
 
 ### Sekcje (10)
 1. **Navbar** — fixed, blur on scroll, logo PNG (80px desktop, 48px mobile), przycisk "Sprawdź jak działa" → app.smartme.life/login

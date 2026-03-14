@@ -44,7 +44,7 @@ export async function apiFetch(path, options = {}) {
     throw new Error("Sprawdź połączenie z internetem i spróbuj ponownie.");
   }
 
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403) {
     handleUnauthorized(path);
     throw new Error("Nieautoryzowany");
   }
@@ -77,7 +77,7 @@ export async function apiUpload(path, formData) {
     throw new Error("Sprawdź połączenie z internetem i spróbuj ponownie.");
   }
 
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403) {
     handleUnauthorized(path);
     throw new Error("Nieautoryzowany");
   }
