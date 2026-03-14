@@ -1,11 +1,12 @@
 import { create } from "zustand";
+import { getUserStorage, setUserStorage } from "../utils/storage";
 
 const STORAGE_KEY = "anelka_item_history";
 const MAX_ITEMS = 100;
 
 function loadHistory() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getUserStorage(STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -14,7 +15,7 @@ function loadHistory() {
 
 function saveHistory(history) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    setUserStorage(STORAGE_KEY, JSON.stringify(history));
   } catch {
     // ignore quota errors
   }

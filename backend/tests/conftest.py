@@ -64,13 +64,19 @@ def reset_db():
 def reset_rate_limiters():
     """Clear rate limiter state between tests to prevent cross-test 429s."""
     from app.auth.rate_limit import (
-        login_limiter, setup_limiter,
+        login_limiter, setup_limiter, register_limiter,
         password_change_limiter, forgot_password_limiter,
+        resend_verification_limiter, verify_email_limiter,
+        reset_password_limiter,
     )
     login_limiter._attempts.clear()
     setup_limiter._attempts.clear()
+    register_limiter._attempts.clear()
     password_change_limiter._attempts.clear()
     forgot_password_limiter._attempts.clear()
+    resend_verification_limiter._attempts.clear()
+    verify_email_limiter._attempts.clear()
+    reset_password_limiter._attempts.clear()
 
 
 @pytest.fixture
@@ -116,9 +122,26 @@ def auth_header(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
+def verify_user_email(db_session, email="test@example.com"):
+    """Directly verify a user's email in the DB (test shortcut)."""
+    from datetime import datetime, timezone
+    from app.auth.models import User
+    user = db_session.query(User).filter(User.email == email).first()
+    if user:
+        user.is_email_verified = True
+        user.email_verified_at = datetime.now(timezone.utc)
+        db_session.commit()
+
+
 def full_setup_and_login(client: TestClient, username="testuser", email="test@example.com", password="Test1234!") -> str:
-    """Create user + login, return JWT token."""
+    """Create user + verify email + login, return JWT token."""
     create_user(client, username, email, password)
+    # Verify email directly in DB (tests don't have email delivery)
+    db = TestSessionLocal()
+    try:
+        verify_user_email(db, email)
+    finally:
+        db.close()
     resp = login_user(client, username, password)
     return resp.json()["access_token"]
 

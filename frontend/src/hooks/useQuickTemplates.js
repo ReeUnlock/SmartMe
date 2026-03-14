@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getUserStorage, setUserStorage } from "../utils/storage";
 
 const STORAGE_KEY = "anelka_quick_templates";
 const MAX_TEMPLATES = 12;
@@ -16,7 +17,7 @@ const DEFAULT_TEMPLATES = [
 
 function loadTemplates() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getUserStorage(STORAGE_KEY);
     if (!raw) {
       // First launch — seed with defaults
       saveTemplates(DEFAULT_TEMPLATES);
@@ -53,7 +54,7 @@ function loadTemplates() {
 
 function saveTemplates(templates) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+    setUserStorage(STORAGE_KEY, JSON.stringify(templates));
   } catch {
     // ignore quota errors
   }

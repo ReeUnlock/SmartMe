@@ -25,6 +25,7 @@ class Settings:
     # Email (Resend)
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "SmartMe <noreply@smartme.life>")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:81")
     CORS_ORIGINS: list[str] = [
         origin.strip()
         for origin in os.getenv(

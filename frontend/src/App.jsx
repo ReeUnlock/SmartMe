@@ -16,7 +16,10 @@ import { useErrorToast } from "./components/common/ErrorToast";
 // Route-based lazy loading
 const SetupPage = lazy(() => import("./components/auth/SetupPage"));
 const LoginPage = lazy(() => import("./components/auth/LoginPage"));
+const RegisterPage = lazy(() => import("./components/auth/RegisterPage"));
 const ForgotPasswordPage = lazy(() => import("./components/auth/ForgotPasswordPage"));
+const EmailVerificationPage = lazy(() => import("./components/auth/EmailVerificationPage"));
+const NewPasswordPage = lazy(() => import("./components/auth/NewPasswordPage"));
 const OnboardingPage = lazy(() => import("./components/auth/OnboardingPage"));
 const DashboardPage = lazy(() => import("./components/common/DashboardPage"));
 const CalendarPage = lazy(() => import("./components/calendar/CalendarPage"));
@@ -68,8 +71,11 @@ function AppRoutes() {
       <Routes>
         <Route path="/start" element={<LandingPage />} />
         <Route path="/setup" element={<SetupPage />} />
+        <Route path="/rejestracja" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/odzyskaj-haslo" element={<ForgotPasswordPage />} />
+        <Route path="/weryfikacja-email" element={<EmailVerificationPage />} />
+        <Route path="/nowe-haslo" element={<NewPasswordPage />} />
         <Route path="/witaj" element={<OnboardingPage />} />
         <Route
           element={

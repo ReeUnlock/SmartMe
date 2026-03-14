@@ -222,7 +222,7 @@ function ResetSection() {
       localStorage.removeItem("token");
       useAuth.getState().setToken(null);
       sessionStorage.setItem("anelka_from_reset", "1");
-      window.location.href = "/setup";
+      window.location.href = "/rejestracja";
     } catch (err) {
       setResetError(err.message);
     } finally {

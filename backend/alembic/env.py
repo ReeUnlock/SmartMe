@@ -11,7 +11,7 @@ from app.config import settings
 from app.database import Base
 
 # Import all models so Alembic can detect them
-from app.auth.models import User  # noqa: F401
+from app.auth.models import User, AuthToken  # noqa: F401
 from app.calendar.models import Event  # noqa: F401
 from app.shopping.models import ShoppingList, ShoppingItem, ShoppingCategory  # noqa: F401
 from app.expenses.models import (  # noqa: F401

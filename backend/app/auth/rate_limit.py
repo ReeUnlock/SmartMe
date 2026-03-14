@@ -30,5 +30,9 @@ class RateLimiter:
 
 login_limiter = RateLimiter(max_attempts=5, window_seconds=60)
 setup_limiter = RateLimiter(max_attempts=3, window_seconds=60)
+register_limiter = RateLimiter(max_attempts=3, window_seconds=60)
 password_change_limiter = RateLimiter(max_attempts=5, window_seconds=60)
 forgot_password_limiter = RateLimiter(max_attempts=3, window_seconds=60)
+resend_verification_limiter = RateLimiter(max_attempts=3, window_seconds=60)
+verify_email_limiter = RateLimiter(max_attempts=5, window_seconds=60)
+reset_password_limiter = RateLimiter(max_attempts=5, window_seconds=60)

@@ -1,8 +1,8 @@
 /**
- * E2E auth test helpers for SmartMe (single-user app).
+ * E2E auth test helpers for SmartMe (multi-user app with email verification).
  *
- * IMPORTANT: This is a single-user app. Only ONE account can exist at a time.
- * Tests must setup → use → delete sequentially.
+ * Uses /api/auth/test-verify-email (dev-only endpoint) to verify emails
+ * since E2E tests cannot receive real emails.
  */
 import { Page, expect } from "@playwright/test";
 
@@ -18,18 +18,45 @@ export function testCredentials(label = "e2e") {
   };
 }
 
-/** Create user via API (bypasses UI for speed) */
-export async function apiSetup(
+/** Register user via API (returns 201, user is unverified) */
+export async function apiRegister(
+  page: Page,
+  creds: { username: string; email: string; password: string }
+): Promise<void> {
+  const resp = await page.request.post(`${API}/auth/register`, { data: creds });
+  expect(resp.status()).toBe(201);
+}
+
+/** Verify user's email via dev-only test endpoint */
+export async function apiVerifyEmail(
+  page: Page,
+  email: string
+): Promise<void> {
+  const resp = await page.request.post(`${API}/auth/test-verify-email`, {
+    data: { email },
+  });
+  expect(resp.status()).toBe(200);
+}
+
+/**
+ * Register + verify email + login via API. Returns JWT token.
+ * Full setup helper for tests that need an authenticated user.
+ */
+export async function apiSetupAndLogin(
   page: Page,
   creds: { username: string; email: string; password: string }
 ): Promise<string> {
-  const resp = await page.request.post(`${API}/auth/setup`, { data: creds });
-  expect(resp.status()).toBe(200);
-  const body = await resp.json();
-  return body.access_token;
+  await apiRegister(page, creds);
+  await apiVerifyEmail(page, creds.email);
+  return await apiLogin(page, creds.username, creds.password);
 }
 
-/** Login via API, return token */
+/** Reset backend rate limiters (dev-only, prevents cross-test 429s) */
+export async function apiResetRateLimits(page: Page): Promise<void> {
+  await page.request.post(`${API}/auth/test-reset-rate-limits`);
+}
+
+/** Login via API, return token (user must already be verified) */
 export async function apiLogin(
   page: Page,
   username: string,
@@ -55,15 +82,6 @@ export async function apiDeleteAccount(
   });
   // Accept 200 (success) or 401 (already deleted / invalid token)
   expect([200, 401]).toContain(resp.status());
-}
-
-/** Ensure clean state: delete any existing user if possible */
-export async function ensureCleanState(page: Page): Promise<void> {
-  const resp = await page.request.get(`${API}/auth/status`);
-  const body = await resp.json();
-  if (!body.setup_completed) return; // already clean
-  // Cannot delete without auth — if there's an existing user we can't remove
-  // Tests should handle this gracefully
 }
 
 /** Set token in localStorage and navigate to dashboard */

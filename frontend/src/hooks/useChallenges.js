@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getUserStorage, setUserStorage } from "../utils/storage";
 import useCelebration from "./useCelebration";
 import {
   todayKey,
@@ -26,7 +27,7 @@ function createInitialState() {
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getUserStorage(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       const today = todayKey();
@@ -54,7 +55,7 @@ function loadState() {
 
 function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    setUserStorage(STORAGE_KEY, JSON.stringify(state));
   } catch {}
 }
 

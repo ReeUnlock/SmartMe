@@ -10,6 +10,7 @@ import useRewards from "../../hooks/useRewards";
 import useAchievements from "../../hooks/useAchievements";
 import useAvatarReaction from "../../hooks/useAvatarReaction";
 import { getNewlyUnlockedAvatars } from "../affirmation/avatarConfig";
+import { getUserStorage, setUserStorage } from "../../utils/storage";
 
 // Lazy-load below-fold and heavy components
 const AffirmationAvatar = lazy(() => import("../affirmation/AffirmationAvatar"));
@@ -27,7 +28,7 @@ const STORAGE_KEY = "smartme_tile_order";
 
 function loadOrder() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = getUserStorage(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (
@@ -63,7 +64,7 @@ function ReorderableTiles() {
   const touchStartPos = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+    setUserStorage(STORAGE_KEY, JSON.stringify(order));
   }, [order]);
 
   const startDrag = useCallback((idx) => {

@@ -2,6 +2,7 @@ import SolSun from "./avatars/SolSun";
 import NoxMoon from "./avatars/NoxMoon";
 import BloomFlower from "./avatars/BloomFlower";
 import AuraOrb from "./avatars/AuraOrb";
+import { getUserStorage, setUserStorage } from "../../utils/storage";
 
 const AVATAR_CONFIG = [
   {
@@ -71,12 +72,12 @@ export function getAvatarComponents() {
 export function getSelectedAvatar(level) {
   let saved = null;
   try {
-    saved = localStorage.getItem(AVATAR_STORAGE_KEY);
+    saved = getUserStorage(AVATAR_STORAGE_KEY);
   } catch {}
 
   // Migrate: if user had "luna" selected, switch to "sol"
   if (saved === "luna") {
-    try { localStorage.setItem(AVATAR_STORAGE_KEY, "sol"); } catch {}
+    try { setUserStorage(AVATAR_STORAGE_KEY, "sol"); } catch {}
     return "sol";
   }
 
@@ -97,7 +98,7 @@ export function getSelectedAvatar(level) {
  */
 export function saveSelectedAvatar(key) {
   try {
-    localStorage.setItem(AVATAR_STORAGE_KEY, key);
+    setUserStorage(AVATAR_STORAGE_KEY, key);
   } catch {}
 }
 
@@ -106,7 +107,7 @@ export function saveSelectedAvatar(key) {
  */
 export function getSeenAvatarUnlocks() {
   try {
-    const raw = localStorage.getItem(AVATAR_UNLOCK_STORAGE_KEY);
+    const raw = getUserStorage(AVATAR_UNLOCK_STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
   return [];
@@ -119,7 +120,7 @@ export function markAvatarUnlockSeen(key) {
   try {
     const seen = getSeenAvatarUnlocks();
     if (!seen.includes(key)) {
-      localStorage.setItem(AVATAR_UNLOCK_STORAGE_KEY, JSON.stringify([...seen, key]));
+      setUserStorage(AVATAR_UNLOCK_STORAGE_KEY, JSON.stringify([...seen, key]));
     }
   } catch {}
 }

@@ -14,6 +14,7 @@ class Subscription(Base, TimestampMixin):
     status = Column(String(20), nullable=False, default="active")  # active | past_due | canceled
     stripe_customer_id = Column(String(255), nullable=True)
     stripe_subscription_id = Column(String(255), nullable=True)
+    current_period_start = Column(DateTime, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
 
     user = relationship("User", backref="subscription", uselist=False)

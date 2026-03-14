@@ -8,6 +8,7 @@ import {
 } from "../utils/achievementEngine";
 import { playSound } from "../utils/soundManager";
 import useCelebration from "./useCelebration";
+import { getUserStorage, setUserStorage } from "../utils/storage";
 
 const STORAGE_KEY = "smartme_achievements";
 
@@ -31,7 +32,7 @@ function createInitialState() {
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getUserStorage(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       return { ...createInitialState(), ...parsed };
@@ -42,7 +43,7 @@ function loadState() {
 
 function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    setUserStorage(STORAGE_KEY, JSON.stringify(state));
   } catch {}
 }
 

@@ -9,7 +9,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { login, checkAuthStatus } from "../../api/auth";
+import { login, resendVerification } from "../../api/auth";
 import { useAuth } from "../../hooks/useAuth";
 import SmartMeLogo from "../common/SmartMeLogo";
 
@@ -17,32 +17,24 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setToken, loadUser, token, user, isLoading } = useAuth();
 
   useEffect(() => {
     if (isLoading) return;
-
     if (token && user) {
       navigate(user.onboarding_completed ? "/" : "/witaj", { replace: true });
-      return;
-    }
-
-    if (!token) {
-      checkAuthStatus()
-        .then((data) => {
-          if (!data.setup_completed) {
-            navigate("/setup", { replace: true });
-          }
-        })
-        .catch(() => {});
     }
   }, [navigate, token, user, isLoading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setEmailNotVerified(false);
+    setResendSent(false);
     setLoading(true);
     try {
       const data = await login({ username, password });
@@ -51,13 +43,33 @@ export default function LoginPage() {
       const u = useAuth.getState().user;
       navigate(u?.onboarding_completed ? "/" : "/witaj", { replace: true });
     } catch (err) {
-      setError(
-        err.message === "Nieautoryzowany"
-          ? "Nieprawidłowa nazwa użytkownika lub hasło"
-          : err.message
-      );
+      if (err.message?.includes("Potwierdź adres email")) {
+        setEmailNotVerified(true);
+        setError(err.message);
+      } else {
+        setError(
+          err.message === "Nieautoryzowany"
+            ? "Nieprawidłowa nazwa użytkownika lub hasło"
+            : err.message
+        );
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    // username field might be an email
+    const emailToResend = username.includes("@") ? username : "";
+    if (!emailToResend) {
+      setError("Podaj adres email w polu logowania, aby wysłać ponownie link weryfikacyjny.");
+      return;
+    }
+    try {
+      await resendVerification(emailToResend);
+      setResendSent(true);
+    } catch {
+      setResendSent(true);
     }
   };
 
@@ -125,9 +137,27 @@ export default function LoginPage() {
           </VStack>
 
           {error && (
-            <Text color="red.500" fontSize="sm">
-              {error}
-            </Text>
+            <VStack gap="2" w="full">
+              <Text color="red.500" fontSize="sm">
+                {error}
+              </Text>
+              {emailNotVerified && !resendSent && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  color="rose.400"
+                  _hover={{ bg: "rose.50" }}
+                  onClick={handleResend}
+                >
+                  {"Wyślij ponownie link weryfikacyjny"}
+                </Button>
+              )}
+              {resendSent && (
+                <Text color="green.500" fontSize="sm">
+                  {"Link weryfikacyjny został wysłany. Sprawdź skrzynkę."}
+                </Text>
+              )}
+            </VStack>
           )}
 
           <Button
@@ -154,7 +184,7 @@ export default function LoginPage() {
             </Text>
             <Text fontSize="sm" color="gray.400">
               {"Nie masz konta? "}
-              <RouterLink to="/setup">
+              <RouterLink to="/rejestracja">
                 <Text as="span" color="rose.400" fontWeight="600" _hover={{ textDecoration: "underline" }}>
                   {"Zarejestruj się"}
                 </Text>

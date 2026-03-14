@@ -3,12 +3,13 @@ import { grantReward, createInitialState, ensureDailyReset, calculateLevel } fro
 import { playSound } from "../utils/soundManager";
 import useCelebration from "./useCelebration";
 import useAvatarReaction from "./useAvatarReaction";
+import { getUserStorage, setUserStorage } from "../utils/storage";
 
 const STORAGE_KEY = "smartme_rewards";
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getUserStorage(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       // Re-sync level info from total sparks (safe if thresholds change)
@@ -29,7 +30,7 @@ function loadState() {
 
 function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    setUserStorage(STORAGE_KEY, JSON.stringify(state));
   } catch {}
 }
 

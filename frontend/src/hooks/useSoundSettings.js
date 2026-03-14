@@ -1,10 +1,11 @@
 import { create } from "zustand";
+import { getUserStorage, setUserStorage } from "../utils/storage";
 
 const STORAGE_KEY = "smartme_sound_settings";
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getUserStorage(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
   return { enabled: true, volume: 0.5 };
@@ -12,7 +13,7 @@ function loadState() {
 
 function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    setUserStorage(STORAGE_KEY, JSON.stringify({
       enabled: state.enabled,
       volume: state.volume,
     }));

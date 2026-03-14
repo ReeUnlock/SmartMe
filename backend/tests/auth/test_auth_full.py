@@ -1,17 +1,20 @@
 """
 Comprehensive auth test suite for Anelka (SmartMe).
 
-Adapted to single-user architecture:
-- Only ONE user can exist at a time (/setup returns 403 if user exists)
-- No logout endpoint (JWT is stateless, client-side only)
-- No password reset tokens (/forgot-password directly sets new password)
+Multi-user architecture with email verification:
+- /setup (deprecated alias) and /register both create unverified accounts
+- Email must be verified before login (403 if not)
+- /forgot-password sends reset email (always 200)
+- /reset-password requires token + new_password
 - Account deletion via POST /reset (requires auth + password confirmation)
 
 Blocks:
-  A — Full lifecycle (setup → login → me → change-password → forgot-password → reset)
+  A — Full lifecycle (register → verify → login → me → change-password → delete)
   B — Form validation (bad inputs)
   C — Rate limiting & security
   D — Password edge cases
+  E — Account deletion cascade
+  F — Public endpoints
 """
 
 import uuid
@@ -19,6 +22,7 @@ import pytest
 from tests.conftest import (
     create_user, login_user, auth_header,
     full_setup_and_login, delete_account,
+    verify_user_email, TestSessionLocal,
 )
 
 
@@ -28,7 +32,7 @@ from tests.conftest import (
 
 
 class TestAuthLifecycle:
-    """Full user lifecycle: setup → login → me → passwords → delete.
+    """Full user lifecycle: register → verify → login → me → passwords → delete.
     Run 3 cycles with unique credentials to verify cleanup works."""
 
     @pytest.mark.parametrize("cycle", range(3))
@@ -38,20 +42,28 @@ class TestAuthLifecycle:
         email = f"user_{cycle}_{uid}@test.example.com"
         password = f"Pass_{cycle}_{uid}!"
         new_password = f"NewPass_{cycle}_{uid}!"
-        reset_password = f"Reset_{cycle}_{uid}!"
 
-        # 1. Setup (register)
+        # 1. Register (via /setup, deprecated)
         resp = create_user(client, username, email, password)
-        assert resp.status_code == 200, resp.text
-        token = resp.json()["access_token"]
-        assert token
+        assert resp.status_code == 201, resp.text
 
-        # 2. Login
+        # 2. Login before verification → 403
+        resp = login_user(client, username, password)
+        assert resp.status_code == 403
+
+        # 3. Verify email directly in DB
+        db = TestSessionLocal()
+        try:
+            verify_user_email(db, email)
+        finally:
+            db.close()
+
+        # 4. Login after verification
         resp = login_user(client, username, password)
         assert resp.status_code == 200
         token = resp.json()["access_token"]
 
-        # 3. Verify session — GET /me
+        # 5. Verify session — GET /me
         resp = client.get("/api/auth/me", headers=auth_header(token))
         assert resp.status_code == 200
         user_data = resp.json()
@@ -60,41 +72,29 @@ class TestAuthLifecycle:
         assert user_data["is_active"] is True
         assert user_data["plan"] == "free"
 
-        # 4. No logout endpoint — verify token still works (stateless JWT)
+        # 6. No logout endpoint — verify token still works (stateless JWT)
         resp = client.get("/api/auth/me", headers=auth_header(token))
         assert resp.status_code == 200
 
-        # 5. Access with invalid token → 401 or 403
+        # 7. Access with invalid token → 401 or 403
         resp = client.get("/api/auth/me", headers=auth_header("invalid.token.here"))
         assert resp.status_code in (401, 403)
 
-        # 6. Forgot password — directly set new password (no token flow)
-        resp = client.post("/api/auth/forgot-password", json={
-            "email": email,
-            "new_password": reset_password,
-        })
-        assert resp.status_code == 200
-
-        # 7. Login with reset password
-        resp = login_user(client, username, reset_password)
-        assert resp.status_code == 200
-        token = resp.json()["access_token"]
-
-        # 8. Old password should no longer work
-        resp = login_user(client, username, password)
-        assert resp.status_code == 401
-
-        # 9. Change password (authenticated)
+        # 8. Change password (authenticated)
         resp = client.post("/api/auth/change-password", json={
-            "current_password": reset_password,
+            "current_password": password,
             "new_password": new_password,
         }, headers=auth_header(token))
         assert resp.status_code == 200
 
-        # 10. Login with new password after change
+        # 9. Login with new password after change
         resp = login_user(client, username, new_password)
         assert resp.status_code == 200
         token = resp.json()["access_token"]
+
+        # 10. Old password should no longer work
+        resp = login_user(client, username, password)
+        assert resp.status_code == 401
 
         # 11. Delete account
         resp = client.post("/api/auth/reset", json={
@@ -106,27 +106,41 @@ class TestAuthLifecycle:
         resp = login_user(client, username, new_password)
         assert resp.status_code == 401
 
-        # 13. Setup should work again (no user exists)
-        resp = client.get("/api/auth/status")
-        assert resp.json()["setup_completed"] is False
-
-    def test_setup_creates_user_and_returns_token(self, client):
+    def test_setup_creates_unverified_user(self, client):
         resp = create_user(client)
-        assert resp.status_code == 200
+        assert resp.status_code == 201
         data = resp.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
+        assert "message" in data
+        assert "deprecated" in data
+        assert data["deprecated"] is True
 
-    def test_setup_blocked_when_user_exists(self, client):
-        """Single-user: second setup must return 403."""
+    def test_setup_duplicate_email_blocked(self, client):
+        """Second setup with same email → 409."""
         create_user(client)
-        resp = create_user(client, username="other", email="other@example.com")
+        resp = create_user(client, username="other", email="test@example.com")
+        assert resp.status_code == 409
+
+    def test_setup_duplicate_username_blocked(self, client):
+        """Second setup with same username → 409."""
+        create_user(client)
+        resp = create_user(client, username="testuser", email="other@example.com")
+        assert resp.status_code == 409
+
+    def test_login_requires_email_verification(self, client):
+        """Login without email verification → 403."""
+        create_user(client)
+        resp = login_user(client)
         assert resp.status_code == 403
 
     def test_login_by_email(self, client):
-        """Login works with email as username field."""
+        """Login works with email as username field (after verification)."""
         email = "email_login@example.com"
         create_user(client, email=email)
+        db = TestSessionLocal()
+        try:
+            verify_user_email(db, email)
+        finally:
+            db.close()
         resp = client.post("/api/auth/login", json={
             "username": email,
             "password": "Test1234!",
@@ -159,14 +173,6 @@ class TestAuthLifecycle:
         resp = client.post("/api/auth/complete-onboarding", headers=auth_header(token))
         assert resp.status_code == 200
         assert resp.json()["onboarding_completed"] is True
-
-    def test_auth_status_before_and_after_setup(self, client):
-        resp = client.get("/api/auth/status")
-        assert resp.json()["setup_completed"] is False
-
-        create_user(client)
-        resp = client.get("/api/auth/status")
-        assert resp.json()["setup_completed"] is True
 
     def test_delete_account_wrong_password(self, client):
         token = full_setup_and_login(client)
@@ -241,14 +247,24 @@ class TestAuthValidation:
         assert resp.status_code == 422
 
     def test_register_duplicate_email(self, client):
-        """Second setup with same data → 403 (single-user)."""
+        """Second registration with same email → 409."""
         create_user(client)
         resp = client.post("/api/auth/setup", json={
             "username": "other",
+            "email": "test@example.com",
+            "password": "Test1234!",
+        })
+        assert resp.status_code == 409
+
+    def test_register_duplicate_username(self, client):
+        """Second registration with same username → 409."""
+        create_user(client)
+        resp = client.post("/api/auth/setup", json={
+            "username": "testuser",
             "email": "other@example.com",
             "password": "Test1234!",
         })
-        assert resp.status_code == 403
+        assert resp.status_code == 409
 
     def test_register_missing_fields(self, client):
         resp = client.post("/api/auth/setup", json={})
@@ -277,11 +293,15 @@ class TestAuthValidation:
 
     def test_login_wrong_password(self, client):
         create_user(client)
+        db = TestSessionLocal()
+        try:
+            verify_user_email(db)
+        finally:
+            db.close()
         resp = login_user(client, password="wrong_password")
         assert resp.status_code == 401
 
     def test_login_nonexistent_user(self, client):
-        create_user(client)
         resp = login_user(client, username="nobody")
         assert resp.status_code == 401
 
@@ -294,25 +314,15 @@ class TestAuthValidation:
         assert resp.status_code == 422
 
     def test_forgot_password_unknown_email(self, client):
-        """App reveals that email doesn't exist (404) — documented behavior for single-user app."""
-        create_user(client)
+        """Forgot password always returns 200 (no email enumeration)."""
         resp = client.post("/api/auth/forgot-password", json={
             "email": "unknown@example.com",
-            "new_password": "NewPass123!",
         })
-        assert resp.status_code == 404
+        assert resp.status_code == 200
 
     def test_forgot_password_invalid_email(self, client):
         resp = client.post("/api/auth/forgot-password", json={
             "email": "not-an-email",
-            "new_password": "NewPass123!",
-        })
-        assert resp.status_code == 422
-
-    def test_forgot_password_short_password(self, client):
-        resp = client.post("/api/auth/forgot-password", json={
-            "email": "test@example.com",
-            "new_password": "12345",
         })
         assert resp.status_code == 422
 
@@ -360,6 +370,11 @@ class TestRateLimiting:
     def test_login_brute_force_lockout(self, client):
         """Login rate limit: 5 attempts per 60s → 6th should be 429."""
         create_user(client)
+        db = TestSessionLocal()
+        try:
+            verify_user_email(db)
+        finally:
+            db.close()
         for i in range(5):
             resp = login_user(client, password="wrong_password")
             assert resp.status_code == 401, f"Attempt {i+1} should be 401"
@@ -372,12 +387,12 @@ class TestRateLimiting:
         """Setup rate limit: 3 attempts per 60s → 4th should be 429."""
         # First succeeds (creates user)
         resp = create_user(client)
-        assert resp.status_code == 200
+        assert resp.status_code == 201
 
-        # Next 2 fail with 403 (user exists)
+        # Next 2 fail with 409 (duplicate email)
         for _ in range(2):
-            resp = create_user(client, username="other", email="other@example.com")
-            assert resp.status_code == 403
+            resp = create_user(client, username="other", email="test@example.com")
+            assert resp.status_code == 409
 
         # 4th attempt should be rate limited
         resp = create_user(client, username="yet_another", email="yet@example.com")
@@ -385,15 +400,12 @@ class TestRateLimiting:
 
     def test_forgot_password_rate_limit(self, client):
         """Forgot password rate limit: 3 attempts per 60s → 4th should be 429."""
-        create_user(client, email="rate@example.com")
         for _ in range(3):
             client.post("/api/auth/forgot-password", json={
                 "email": "rate@example.com",
-                "new_password": "NewPass123!",
             })
         resp = client.post("/api/auth/forgot-password", json={
             "email": "rate@example.com",
-            "new_password": "NewPass123!",
         })
         assert resp.status_code == 429
 
@@ -470,6 +482,11 @@ class TestTokenSecurity:
     def test_concurrent_tokens_both_valid(self, client):
         """Two logins for same user → both tokens should work (stateless JWT)."""
         create_user(client)
+        db = TestSessionLocal()
+        try:
+            verify_user_email(db)
+        finally:
+            db.close()
         resp1 = login_user(client)
         resp2 = login_user(client)
         token1 = resp1.json()["access_token"]
@@ -492,7 +509,7 @@ class TestTokenSecurity:
         resp = create_user(client)
         assert "password" not in resp.text.lower() or "hashed_password" not in resp.text
 
-        token = resp.json()["access_token"]
+        token = full_setup_and_login(client, username="checker", email="checker@example.com")
         resp = client.get("/api/auth/me", headers=auth_header(token))
         body = resp.json()
         assert "hashed_password" not in body
@@ -533,13 +550,10 @@ class TestPasswordEdgeCases:
             "password": "      ",  # 6 spaces — meets min_length
         })
         # Currently schema allows it (no strip_whitespace). Test actual behavior.
-        # If 200, it works — that's the current design.
-        assert resp.status_code in (200, 422)
+        assert resp.status_code in (201, 422)
 
     def test_password_sql_injection_attempt(self, client):
         """SQL injection in password field → should be safe (no 500)."""
-        password = "' OR '1'='1"
-        # Too short for setup (min 6), but let's use a longer one
         password_long = "' OR '1'='1'; DROP TABLE users;--"
         resp = client.post("/api/auth/setup", json={
             "username": "testuser",
@@ -547,7 +561,7 @@ class TestPasswordEdgeCases:
             "password": password_long,
         })
         # Should either work (password is hashed, not interpolated) or 422
-        assert resp.status_code in (200, 422)
+        assert resp.status_code in (201, 422)
         assert resp.status_code != 500  # no server error
 
     def test_password_xss_attempt(self, client):
@@ -558,7 +572,7 @@ class TestPasswordEdgeCases:
             "email": "test@example.com",
             "password": password,
         })
-        assert resp.status_code in (200, 422)
+        assert resp.status_code in (201, 422)
         assert resp.status_code != 500
 
     def test_password_with_null_bytes(self, client):
@@ -595,18 +609,13 @@ class TestPasswordEdgeCases:
         assert user_after["plan"] == user_before["plan"]
         assert user_after["onboarding_completed"] == user_before["onboarding_completed"]
 
-    def test_forgot_password_preserves_username(self, client):
-        """Resetting password via forgot-password should not change username."""
-        create_user(client, username="keeper", email="keep@example.com")
-        client.post("/api/auth/forgot-password", json={
+    def test_forgot_password_returns_200(self, client):
+        """Forgot password always returns 200 (prevents email enumeration)."""
+        create_user(client, email="keep@example.com")
+        resp = client.post("/api/auth/forgot-password", json={
             "email": "keep@example.com",
-            "new_password": "ResetPass123!",
         })
-        resp = login_user(client, username="keeper", password="ResetPass123!")
         assert resp.status_code == 200
-        token = resp.json()["access_token"]
-        me = client.get("/api/auth/me", headers=auth_header(token)).json()
-        assert me["username"] == "keeper"
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -617,13 +626,14 @@ class TestPasswordEdgeCases:
 class TestAccountDeletion:
 
     def test_delete_account_cleans_up(self, client):
-        """After deletion, setup_completed should be False."""
+        """After deletion, user no longer exists."""
         password = "Test1234!"
         token = full_setup_and_login(client, password=password)
         delete_account(client, token, password)
 
-        resp = client.get("/api/auth/status")
-        assert resp.json()["setup_completed"] is False
+        # Should not be able to login
+        resp = login_user(client, password=password)
+        assert resp.status_code == 401
 
     def test_can_re_register_after_deletion(self, client):
         """After deleting account, a new account can be created."""
@@ -631,8 +641,17 @@ class TestAccountDeletion:
         token = full_setup_and_login(client, password=password)
         delete_account(client, token, password)
 
-        # Re-register
+        # Re-register with different credentials
         resp = create_user(client, username="newuser", email="new@example.com", password="New1234!")
+        assert resp.status_code == 201
+
+        # Verify and login
+        db = TestSessionLocal()
+        try:
+            verify_user_email(db, "new@example.com")
+        finally:
+            db.close()
+        resp = login_user(client, username="newuser", password="New1234!")
         assert resp.status_code == 200
         token = resp.json()["access_token"]
         me = client.get("/api/auth/me", headers=auth_header(token)).json()
@@ -651,7 +670,7 @@ class TestAccountDeletion:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# BLOK F — Health check & status (public endpoints)
+# BLOK F — Health check & public endpoints
 # ═══════════════════════════════════════════════════════════════════
 
 
@@ -662,8 +681,16 @@ class TestPublicEndpoints:
         # SQLite in tests, may or may not pass the SELECT 1
         assert resp.status_code in (200, 503)
 
-    def test_auth_status_public(self, client):
-        """Status endpoint requires no auth."""
+    def test_auth_status_requires_auth(self, client):
+        """Status endpoint requires authentication."""
         resp = client.get("/api/auth/status")
+        assert resp.status_code in (401, 403)
+
+    def test_auth_status_with_auth(self, client):
+        """Status endpoint returns user info when authenticated."""
+        token = full_setup_and_login(client)
+        resp = client.get("/api/auth/status", headers=auth_header(token))
         assert resp.status_code == 200
-        assert "setup_completed" in resp.json()
+        data = resp.json()
+        assert "is_authenticated" in data
+        assert "username" in data

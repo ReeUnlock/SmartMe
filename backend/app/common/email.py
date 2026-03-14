@@ -63,6 +63,52 @@ def _wrap_html(content: str) -> str:
 </html>"""
 
 
+def send_verification_email(to: str, username: str, token: str) -> bool:
+    """Send email verification link after registration."""
+    verify_url = f"{settings.FRONTEND_URL}/weryfikacja-email?token={token}"
+    html = _wrap_html(f"""
+        <h2 style="font-family:'Nunito',sans-serif;font-size:22px;margin:0 0 16px;">Potwierdź swój adres email</h2>
+        <p style="line-height:1.7;color:#5A6B82;">
+            Cześć {username}! Dziękujemy za rejestrację w SmartMe.
+            Kliknij poniższy przycisk, aby potwierdzić swój adres email i aktywować konto.
+        </p>
+        <div style="text-align:center;margin:28px 0;">
+            <a href="{verify_url}" style="display:inline-block;padding:14px 36px;
+               background:linear-gradient(135deg,#F783AC,#F9915E);color:#fff;
+               border-radius:9999px;font-weight:700;text-decoration:none;font-size:16px;">
+                Potwierdź email
+            </a>
+        </div>
+        <p style="line-height:1.7;color:#8294AA;font-size:13px;">
+            Link jest ważny przez 24 godziny. Jeśli to nie Ty — zignoruj ten email.
+        </p>
+    """)
+    return _send(to, "Potwierdź swój adres email — SmartMe", html)
+
+
+def send_password_reset_email(to: str, username: str, token: str) -> bool:
+    """Send password reset link."""
+    reset_url = f"{settings.FRONTEND_URL}/nowe-haslo?token={token}"
+    html = _wrap_html(f"""
+        <h2 style="font-family:'Nunito',sans-serif;font-size:22px;margin:0 0 16px;">Reset hasła</h2>
+        <p style="line-height:1.7;color:#5A6B82;">
+            Cześć {username}! Otrzymaliśmy prośbę o zmianę hasła do Twojego konta SmartMe.
+            Kliknij poniższy przycisk, aby ustawić nowe hasło.
+        </p>
+        <div style="text-align:center;margin:28px 0;">
+            <a href="{reset_url}" style="display:inline-block;padding:14px 36px;
+               background:linear-gradient(135deg,#F783AC,#F9915E);color:#fff;
+               border-radius:9999px;font-weight:700;text-decoration:none;font-size:16px;">
+                Ustaw nowe hasło
+            </a>
+        </div>
+        <p style="line-height:1.7;color:#8294AA;font-size:13px;">
+            Link jest ważny przez 24 godziny. Jeśli to nie Ty — zignoruj ten email, Twoje hasło pozostanie bez zmian.
+        </p>
+    """)
+    return _send(to, "Reset hasła — SmartMe", html)
+
+
 def send_welcome(to: str, name: str) -> bool:
     """Send welcome email after registration."""
     html = _wrap_html(f"""

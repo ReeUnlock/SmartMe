@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getMe } from "../api/auth";
 import { setSentryUser } from "../sentry";
+import { migrateStorageForUser } from "../utils/storage";
 
 function isTokenExpired(token) {
   try {
@@ -47,6 +48,7 @@ export const useAuth = create((set, get) => ({
         ),
       ]);
       setSentryUser(user);
+      migrateStorageForUser(user.id);
       set({ user, isLoading: false });
     } catch {
       clearAuthStorage();

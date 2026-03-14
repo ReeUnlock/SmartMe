@@ -1,11 +1,12 @@
 import { create } from "zustand";
+import { getUserStorage, setUserStorage } from "../utils/storage";
 
 const STORAGE_KEY = "anelka_shopping_templates";
 const MAX_TEMPLATES = 20;
 
 function loadTemplates() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = getUserStorage(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -14,7 +15,7 @@ function loadTemplates() {
 
 function saveTemplates(templates) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+    setUserStorage(STORAGE_KEY, JSON.stringify(templates));
   } catch {
     // ignore quota errors
   }
