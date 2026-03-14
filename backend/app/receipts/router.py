@@ -1,7 +1,9 @@
 import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
 
+from app.database import get_db
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
 from app.receipts.schemas import ReceiptScanResult
@@ -48,6 +50,7 @@ def _sniff_image_type(file_bytes: bytes) -> str | None:
 async def scan_receipt(
     image: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Upload a receipt image, run OCR, and return parsed data."""
     # Validate content type (allow generic types, verify with magic bytes later)
@@ -140,5 +143,9 @@ async def scan_receipt(
         f"items={len(result.get('items', []))}, "
         f"confidence={result.get('confidence', 'unknown')}"
     )
+
+    # Increment receipt scans counter
+    current_user.receipt_scans_total = (current_user.receipt_scans_total or 0) + 1
+    db.commit()
 
     return ReceiptScanResult(**result)

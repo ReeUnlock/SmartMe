@@ -180,6 +180,10 @@ async def process_voice(
                     "Walidacja dat nie powiodła się — sprawdź daty ręcznie przed potwierdzeniem."
                 )
 
+    # Increment voice calls counter
+    current_user.voice_calls_total = (current_user.voice_calls_total or 0) + 1
+    db.commit()
+
     return VoiceProcessResponse(transcript=transcript, actions=actions)
 
 

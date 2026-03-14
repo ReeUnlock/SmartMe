@@ -17,6 +17,11 @@ class User(Base, TimestampMixin):
     plan = Column(String(20), nullable=False, default="free", server_default="free")
     is_email_verified = Column(Boolean, nullable=False, default=False, server_default="false")
     email_verified_at = Column(DateTime(timezone=True), nullable=True)
+    # Admin tracking columns
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+    voice_calls_total = Column(Integer, nullable=False, default=0, server_default="0")
+    receipt_scans_total = Column(Integer, nullable=False, default=0, server_default="0")
+    login_count = Column(Integer, nullable=False, default=0, server_default="0")
 
     auth_tokens = relationship("AuthToken", back_populates="user", cascade="all, delete-orphan")
 

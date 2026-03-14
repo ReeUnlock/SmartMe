@@ -148,6 +148,8 @@ def login(data: LoginRequest, request: Request, db: Session = Depends(get_db)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Potwierdź adres email przed zalogowaniem. Sprawdź skrzynkę pocztową.",
         )
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
     return TokenResponse(access_token=create_access_token(user.id))
 
 

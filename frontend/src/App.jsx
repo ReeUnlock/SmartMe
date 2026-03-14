@@ -32,6 +32,13 @@ const ChallengesPageWrapper = lazy(() => import("./components/dashboard/Challeng
 const AvatarSelectionPageWrapper = lazy(() => import("./components/affirmation/AvatarSelectionPageWrapper"));
 const LandingPage = lazy(() => import("./components/landing/LandingPage"));
 
+// Admin panel (lazy)
+const AdminRoute = lazy(() => import("./components/admin/AdminRoute"));
+const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./components/admin/AdminUsers"));
+const AdminUserDetail = lazy(() => import("./components/admin/AdminUserDetail"));
+const AdminFeedback = lazy(() => import("./components/admin/AdminFeedback"));
+
 // Lazy load heavy global overlays (not needed on initial render)
 const SparkToast = lazy(() => import("./components/common/SparkToast"));
 const AchievementToast = lazy(() => import("./components/common/AchievementToast"));
@@ -93,6 +100,12 @@ function AppRoutes() {
           <Route path="/odznaki" element={<AchievementsPageWrapper />} />
           <Route path="/wyzwania" element={<ChallengesPageWrapper />} />
           <Route path="/postacie" element={<AvatarSelectionPageWrapper />} />
+        </Route>
+        <Route path="/admin" element={<AdminRoute />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="users/:id" element={<AdminUserDetail />} />
+          <Route path="feedback" element={<AdminFeedback />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
