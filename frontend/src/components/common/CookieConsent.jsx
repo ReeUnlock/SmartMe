@@ -35,7 +35,8 @@ export default function CookieConsent() {
       bottom={0}
       left={0}
       right={0}
-      zIndex={100}
+      zIndex={610}
+      pb={{ base: "calc(64px + env(safe-area-inset-bottom, 0px))", md: 0 }}
       bg="white"
       borderTop="1px solid"
       borderColor="gray.200"
