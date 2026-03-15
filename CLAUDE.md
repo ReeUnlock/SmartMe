@@ -103,7 +103,7 @@ frontend/src/
     useMicroFeedback.js — React hook, imperative CSS class trigger (zero re-renders)
     useRewardsSync.js   — server sync + localStorage migration for rewards system (called in DashboardPage)
   components/
-    layout/         — AppShell (gradient bg + animated blobs), BottomNav (mobile, 5 items, id="bottom-nav"), Sidebar (desktop, id="sidebar-nav"), Header (logo + info/settings icons)
+    layout/         — AppShell (gradient bg + animated blobs), BottomNav (mobile, 5 items, id="bottom-nav", colorful icons with opacity), Sidebar (desktop, id="sidebar-nav", colorful module icons, Przewodnik/Ustawienia/Wyloguj kolorowe), Header (logo + info/settings icons)
     auth/           — RegisterPage, LoginPage, ForgotPasswordPage, EmailVerificationPage, NewPasswordPage, SetupPage (redirect→/rejestracja), OnboardingPage (3 steps), ProtectedRoute
     calendar/       — Kalendarz (kolor: sky/błękit)
       CalendarPage.jsx    — główna strona, sekcje: przegląd dnia + przegląd miesiąca
@@ -117,7 +117,7 @@ frontend/src/
       QuickAddEditor.jsx  — edytor szablonów quick-add (BottomSheetDialog)
       eventIcons.js       — mapowanie emoji ikon
     shopping/       — Zakupy (kolor: sage/zieleń)
-      ShoppingPage.jsx       — lista list, tworzenie, EmptyState
+      ShoppingPage.jsx       — lista list pogrupowanych po dacie tworzenia (separatory z datą), tworzenie, EmptyState
       ShoppingListDetail.jsx — produkty pogrupowane, add/edit/reorder/clear/save-as-expense/templates
       ShoppingListCard.jsx   — karta listy
       ShoppingItemRow.jsx    — wiersz produktu (checkbox, edit, reorder, delete)
@@ -142,7 +142,7 @@ frontend/src/
       BucketItemFormDialog.jsx — formularz bucket item
     voice/          — VoiceFab (floating mic 72px, rose-peach gradient, fullscreen processing overlay), VoiceConfirmationDialog
     intro/          — Spotlight Tour system
-      SpotlightTour.jsx  — portal overlay: SVG mask spotlight, welcome card, step cards, swipe nav
+      SpotlightTour.jsx  — portal overlay: SVG mask spotlight, welcome card, step cards, swipe nav, warm rose glow shadow, 8px bullet points
       tourSteps.js       — 4 steps: welcome + voice-fab + navigation + reward-bar
     common/
       EmptyState.jsx         — reusable: icon + title + description + CTA (sm-empty-enter animation)
@@ -352,6 +352,8 @@ px={4} py={4}  (kompaktowe wiersze: p={3.5})
 - **Empty states**: `EmptyState` component — ikona w kolorze modułu `.300`, circle bg `.50`, nagłówek + ciepły tekst
 - **Loading**: `SmartMeLoader` component — three-dot breathing (color prop per moduł)
 - **Item rows**: `borderRadius="xl"` (nie "lg")
+- **Nav icons (inactive)**: kolorowe (module color) z obniżoną opacity (0.7 ikona, 0.75 tekst), nie gray — dotyczy Sidebar i BottomNav
+- **Sidebar footer**: Przewodnik (rose), Ustawienia (lavender), Wyloguj (peach) — każdy z własnym kolorem i hover bg
 - **Dialogi**: `BottomSheetDialog` — mobile bottom-sheet / desktop centered, `borderRadius="2xl"`, `shadow="xl"`, backdrop blur
 
 ## System nagród i celebracji (SmartMe)
@@ -487,7 +489,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - 4 kroki: welcome (centered card, logo, body, CTA) → voice-fab → navigation → reward-bar
 - Spotlight: SVG mask cutout + white ring around target element
 - Auto-opens on first dashboard visit (1200ms delay), per-user localStorage
-- Re-open: Header info icon (mobile) + Settings "Pomoc" section
+- Re-open: Header info icon (mobile) + Sidebar "Przewodnik" button (desktop) + Settings "Pomoc" section
 - Swipe navigation (50px threshold) + keyboard Escape to close
 - Welcome step: no spotlight, centered card with `whiteSpace: pre-line` body
 - Step counter excludes welcome step (1/3, 2/3, 3/3)
