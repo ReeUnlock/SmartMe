@@ -19,6 +19,8 @@ function PieChart({ data }) {
   const cx = size / 2, cy = size / 2, r = 70;
   let cumAngle = -90;
 
+  const singleCategory = data.length === 1 || data.filter((d) => d.total > 0).length === 1;
+
   const slices = data.map((d) => {
     const angle = (d.total / total) * 360;
     const startAngle = cumAngle;
@@ -41,9 +43,13 @@ function PieChart({ data }) {
   return (
     <Flex direction="column" align="center" gap={3}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {slices.map((s, i) => (
-          <path key={i} d={s.path} fill={s.category_color || "#9CA3AF"} opacity={0.85} />
-        ))}
+        {singleCategory ? (
+          <circle cx={cx} cy={cy} r={r} fill={data.find((d) => d.total > 0)?.category_color || "#9CA3AF"} opacity={0.85} />
+        ) : (
+          slices.map((s, i) => (
+            <path key={i} d={s.path} fill={s.category_color || "#9CA3AF"} opacity={0.85} />
+          ))
+        )}
         <circle cx={cx} cy={cy} r={35} fill="white" />
         <text x={cx} y={cy - 6} textAnchor="middle" fontSize="14" fontWeight="700" fill="#3B4A63">
           {total.toFixed(0)}
