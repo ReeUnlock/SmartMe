@@ -1,6 +1,7 @@
 import { Box, Container, Flex, Text, Button, SimpleGrid, VStack, HStack, Image } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import PricingSection from "../billing/PricingSection";
+import { isIOS } from "../../utils/platform";
 
 const FEATURES = [
   {
@@ -243,7 +244,7 @@ export default function LandingPage() {
     <Box bg="bg" minH="100dvh">
       <HeroSection />
       <FeaturesSection />
-      <PricingPageSection />
+      {!isIOS() && <PricingPageSection />}
       <LandingFooter />
     </Box>
   );

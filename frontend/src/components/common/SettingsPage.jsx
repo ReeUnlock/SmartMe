@@ -33,6 +33,7 @@ import useRewards from "../../hooks/useRewards";
 import useSoundSettings from "../../hooks/useSoundSettings";
 import { playSound } from "../../utils/soundManager";
 import { getSelectedAvatar, getAvatarConfig } from "../affirmation/avatarConfig";
+import { isIOS } from "../../utils/platform";
 import AvatarThumbnail from "../affirmation/AvatarThumbnail";
 import FeedbackDialog from "./FeedbackDialog";
 
@@ -517,8 +518,8 @@ export default function SettingsPage() {
       </Heading>
 
       <VStack gap="4" align="stretch">
-        {/* ── Upgrade success banner ── */}
-        {upgraded && (
+        {/* ── Upgrade success banner (hidden on iOS for App Store compliance) ── */}
+        {!isIOS() && upgraded && (
           <Box
             bg="green.50"
             borderRadius="2xl"
@@ -534,8 +535,8 @@ export default function SettingsPage() {
           </Box>
         )}
 
-        {/* ── Section: Subskrypcja (hidden until billing is ready) ── */}
-        {false && <SubscriptionSection />}
+        {/* ── Section: Subskrypcja (hidden until billing is ready + hidden on iOS) ── */}
+        {false && !isIOS() && <SubscriptionSection />}
 
         {/* ── Section A: Konto ── */}
         <SettingsCard>

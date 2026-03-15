@@ -46,11 +46,11 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SmartMe potrzebuje dostępu do mikrofonu, aby obsługiwać komendy głosowe.</string>
+	<string>SmartMe uses the microphone to recognize voice commands, allowing you to add events, expenses, and shopping items hands-free.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>SmartMe potrzebuje dostępu do aparatu, aby skanować paragony.</string>
+	<string>SmartMe uses the camera to scan and photograph receipts for automatic expense tracking.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SmartMe potrzebuje dostępu do zdjęć, aby wczytać paragon z galerii.</string>
+	<string>SmartMe accesses your photo library to select receipt images for expense tracking.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

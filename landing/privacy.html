@@ -28,65 +28,137 @@
     section { margin-bottom: 32px; }
     h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
     p { color: var(--text-secondary); line-height: 1.7; margin-bottom: 8px; }
+    ul { color: var(--text-secondary); line-height: 1.7; margin: 8px 0 12px 24px; }
+    li { margin-bottom: 4px; }
     .back { display: block; text-align: center; margin-top: 48px; font-weight: 600; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Polityka prywatności</h1>
-    <p class="date">Ostatnia aktualizacja: 13 marca 2026</p>
+    <p class="date">Ostatnia aktualizacja: 15 marca 2026</p>
 
     <section>
-      <h2>1. Administrator danych</h2>
-      <p>Administratorem danych osobowych jest SmartMe (WOA - Wellness Over All Sp. z o.o.). Kontakt: privacy@smartme.life.</p>
+      <h2>1. Informacje ogólne (General Information)</h2>
+      <p>Administratorem danych osobowych jest WOA - Wellness Over All Sp. z o.o., operator aplikacji SmartMe dostępnej pod adresem <a href="https://smartme.life">smartme.life</a> oraz w sklepach App Store i Google Play.</p>
+      <p>Niniejsza polityka prywatności opisuje, jakie dane zbieramy, jak je wykorzystujemy oraz jakie prawa Ci przysługują. Kontakt w sprawach prywatności: <a href="mailto:privacy@smartme.life">privacy@smartme.life</a>.</p>
     </section>
 
     <section>
-      <h2>2. Jakie dane zbieramy</h2>
-      <p>Zbieramy dane niezbędne do działania serwisu: adres email, hasło (zahaszowane), dane wprowadzone przez użytkownika (wydatki, wydarzenia, listy zakupów, cele) oraz anonimowe dane analityczne (PostHog, EU — tylko po zgodzie).</p>
+      <h2>2. Jakie dane zbieramy (Data We Collect)</h2>
+      <p>Zbieramy wyłącznie dane niezbędne do świadczenia usługi:</p>
+      <ul>
+        <li><strong>Dane konta</strong> — adres email i nazwa użytkownika podane podczas rejestracji. Hasło przechowywane jest w formie zahashowanej (bcrypt) i nigdy nie jest dostępne w postaci jawnej.</li>
+        <li><strong>Dane wprowadzone przez użytkownika</strong> — wydarzenia kalendarzowe, wydatki, listy zakupów, cele, kamienie milowe, bucket lista. Te dane należą do Ciebie i służą wyłącznie do działania aplikacji.</li>
+        <li><strong>Dane głosowe</strong> — nagranie audio z komendy głosowej jest przesyłane do naszego serwera, przetwarzane przez OpenAI Whisper (transkrypcja mowy na tekst), a następnie natychmiast usuwane. Ani SmartMe, ani OpenAI nie przechowują nagrań audio po zakończeniu przetwarzania.</li>
+        <li><strong>Zdjęcia paragonów</strong> — zdjęcie paragonu jest przesyłane do naszego serwera i przetwarzane lokalnie przez silnik OCR (Tesseract). Po odczytaniu danych (sklep, data, kwota) zdjęcie jest natychmiast usuwane. Zdjęcia nie są przechowywane na serwerze.</li>
+        <li><strong>Dane analityczne</strong> — anonimowe dane o użyciu aplikacji (PostHog, serwery EU) zbierane wyłącznie po wyrażeniu zgody (opt-in).</li>
+        <li><strong>Dane diagnostyczne</strong> — anonimowe raporty błędów (Sentry) pomagające nam naprawiać problemy techniczne.</li>
+      </ul>
     </section>
 
     <section>
-      <h2>3. Cel przetwarzania</h2>
-      <p>Dane przetwarzamy w celu: świadczenia usługi SmartMe, przetwarzania komend głosowych (OpenAI Whisper/GPT — dane nie są przechowywane przez OpenAI), analizy użycia (PostHog — tylko po zgodzie).</p>
+      <h2>3. Zewnętrzne usługi (Third-Party Services)</h2>
+      <p>SmartMe korzysta z następujących usług zewnętrznych:</p>
+      <ul>
+        <li><strong>OpenAI (Whisper + GPT-4o-mini)</strong> — przetwarzanie komend głosowych. Dane audio są przesyłane do API OpenAI w celu transkrypcji i nie są przechowywane przez OpenAI poza czasem przetwarzania żądania. <a href="https://openai.com/policies/privacy-policy">Polityka prywatności OpenAI</a>.</li>
+        <li><strong>PostHog</strong> — analityka użycia aplikacji. Serwery w Unii Europejskiej (eu.posthog.com). Zbieranie danych rozpoczyna się wyłącznie po wyrażeniu zgody przez użytkownika (cookie consent). <a href="https://posthog.com/privacy">Polityka prywatności PostHog</a>.</li>
+        <li><strong>Sentry</strong> — monitoring błędów i stabilności aplikacji. Raporty są anonimowe i nie zawierają danych osobowych. <a href="https://sentry.io/privacy/">Polityka prywatności Sentry</a>.</li>
+        <li><strong>Stripe</strong> — obsługa płatności (planowana funkcja Pro). Aktualnie nieaktywna — żadne dane płatnicze nie są zbierane. Gdy funkcja zostanie uruchomiona, Stripe będzie przetwarzał dane płatnicze zgodnie ze standardem PCI DSS. <a href="https://stripe.com/privacy">Polityka prywatności Stripe</a>.</li>
+        <li><strong>Resend</strong> — wysyłka emaili transakcyjnych (weryfikacja konta, reset hasła, powitanie). <a href="https://resend.com/legal/privacy-policy">Polityka prywatności Resend</a>.</li>
+      </ul>
     </section>
 
     <section>
-      <h2>4. Hosting i przechowywanie</h2>
-      <p>Wszystkie dane przechowywane są w centrach danych na terenie Unii Europejskiej. Baza danych: PostgreSQL (EU, Hetzner). Analityka: PostHog EU (eu.posthog.com).</p>
+      <h2>4. Jak używamy danych (How We Use Data)</h2>
+      <p>Dane przetwarzamy wyłącznie w celu:</p>
+      <ul>
+        <li>Świadczenia usługi SmartMe — umożliwienie korzystania z kalendarza, wydatków, zakupów, celów i komend głosowych.</li>
+        <li>Uwierzytelniania i bezpieczeństwa konta — rejestracja, logowanie, weryfikacja email, reset hasła.</li>
+        <li>Ulepszania aplikacji — anonimowa analityka użycia (tylko po zgodzie) i monitoring błędów.</li>
+        <li>Komunikacji — emaile transakcyjne (weryfikacja, reset hasła).</li>
+      </ul>
+      <p><strong>Nie sprzedajemy Twoich danych.</strong> Nie udostępniamy ich reklamodawcom. Nie wyświetlamy reklam. Nie profilujemy użytkowników w celach marketingowych.</p>
     </section>
 
     <section>
-      <h2>5. Twoje prawa (RODO)</h2>
-      <p>Masz prawo do: dostępu do danych, ich poprawienia, usunięcia, ograniczenia przetwarzania, przeniesienia danych oraz wniesienia sprzeciwu. Kontakt: privacy@smartme.life.</p>
+      <h2>5. Przechowywanie danych (Data Retention)</h2>
+      <p>Twoje dane przechowywane są na serwerach w Unii Europejskiej (Hetzner, Niemcy) tak długo, jak posiadasz aktywne konto w SmartMe.</p>
+      <p>Dane analityczne (PostHog) przechowywane są na serwerach EU (eu.posthog.com).</p>
+      <p>Dane głosowe i zdjęcia paragonów przetwarzane są w czasie rzeczywistym i nie są przechowywane na naszych serwerach.</p>
+      <p>Po usunięciu konta wszystkie Twoje dane są trwale usuwane z naszych serwerów w ciągu 30 dni.</p>
     </section>
 
     <section>
-      <h2>6. Usuwanie danych</h2>
-      <p>Użytkownik może usunąć konto w dowolnym momencie w ustawieniach aplikacji. Po usunięciu wszystkie dane są trwale kasowane.</p>
+      <h2>6. Usunięcie konta (Account Deletion)</h2>
+      <p>Możesz usunąć swoje konto i wszystkie powiązane dane w dowolnym momencie. Instrukcja:</p>
+      <ul>
+        <li>Otwórz aplikację SmartMe</li>
+        <li>Przejdź do <strong>Ustawienia</strong></li>
+        <li>Przewiń do sekcji <strong>Strefa ostrożności</strong></li>
+        <li>Kliknij <strong>Resetuj konto</strong></li>
+        <li>Potwierdź hasłem i zatwierdź w oknie dialogowym</li>
+      </ul>
+      <p>Po usunięciu konta trwale kasowane są wszystkie dane: wydarzenia, wydatki, listy zakupów, cele, nagrody, ustawienia i sam rekord użytkownika. Dane są usuwane z serwerów w ciągu 30 dni. Tej operacji nie można cofnąć.</p>
+      <p>Możesz również poprosić o usunięcie danych pisząc na <a href="mailto:privacy@smartme.life">privacy@smartme.life</a>.</p>
     </section>
 
     <section>
-      <h2>7. Pliki cookies</h2>
-      <p>Używamy wyłącznie niezbędnych cookies (sesja JWT, autoryzacja) oraz opcjonalnych cookies analitycznych (PostHog) — te ostatnie tylko po wyrażeniu zgody. Szczegóły w naszej <a href="/cookies.html">Polityce cookies</a>.</p>
+      <h2>7. Twoje prawa — RODO (Your Rights — GDPR)</h2>
+      <p>Zgodnie z Rozporządzeniem o Ochronie Danych Osobowych (RODO) przysługują Ci następujące prawa:</p>
+      <ul>
+        <li><strong>Prawo dostępu</strong> — możesz uzyskać informację o przetwarzanych danych.</li>
+        <li><strong>Prawo do sprostowania</strong> — możesz poprawić nieprawidłowe dane.</li>
+        <li><strong>Prawo do usunięcia</strong> — możesz żądać usunięcia swoich danych (patrz sekcja 6).</li>
+        <li><strong>Prawo do ograniczenia przetwarzania</strong> — możesz ograniczyć sposób, w jaki przetwarzamy Twoje dane.</li>
+        <li><strong>Prawo do przenoszenia danych</strong> — możesz otrzymać swoje dane w ustrukturyzowanym formacie.</li>
+        <li><strong>Prawo do sprzeciwu</strong> — możesz sprzeciwić się przetwarzaniu danych w określonych celach.</li>
+        <li><strong>Prawo do cofnięcia zgody</strong> — zgodę na analitykę (PostHog) możesz cofnąć w dowolnym momencie.</li>
+      </ul>
+      <p>W celu realizacji swoich praw skontaktuj się z nami: <a href="mailto:privacy@smartme.life">privacy@smartme.life</a>. Odpowiemy w ciągu 30 dni.</p>
     </section>
 
     <section>
-      <h2>8. Podmioty trzecie</h2>
-      <p>Korzystamy z: OpenAI (transkrypcja głosowa, parsowanie intencji), PostHog EU (analityka), Sentry (monitoring błędów). Każdy z tych podmiotów przetwarza dane zgodnie z RODO.</p>
+      <h2>8. Pliki cookies (Cookies)</h2>
+      <p>SmartMe używa wyłącznie:</p>
+      <ul>
+        <li><strong>Niezbędne cookies</strong> — token JWT do autoryzacji sesji. Bez nich aplikacja nie może działać.</li>
+        <li><strong>Opcjonalne cookies analityczne</strong> — PostHog (EU). Zbierane wyłącznie po wyrażeniu zgody w bannerze cookie consent. Możesz cofnąć zgodę w dowolnym momencie.</li>
+      </ul>
+      <p>Szczegóły w naszej <a href="/cookies.html">Polityce cookies</a>.</p>
     </section>
 
     <section>
-      <h2>9. Bezpieczeństwo</h2>
-      <p>Stosujemy szyfrowanie HTTPS, rate limiting, security headers, GZip. Hasła przechowywane jako bcrypt hash. Nigdy nie logujemy danych osobowych.</p>
+      <h2>9. Prywatność dzieci (Children's Privacy)</h2>
+      <p>SmartMe nie jest skierowana do dzieci poniżej 13 roku życia. Nie zbieramy świadomie danych osobowych od dzieci. Jeśli dowiesz się, że Twoje dziecko przekazało nam dane osobowe, skontaktuj się z nami pod adresem <a href="mailto:privacy@smartme.life">privacy@smartme.life</a>, a dane zostaną niezwłocznie usunięte.</p>
     </section>
 
     <section>
-      <h2>10. Zmiany w polityce</h2>
-      <p>O wszelkich zmianach w polityce prywatności informujemy z 14-dniowym wyprzedzeniem.</p>
+      <h2>10. Bezpieczeństwo (Security)</h2>
+      <p>Stosujemy odpowiednie środki techniczne i organizacyjne w celu ochrony Twoich danych:</p>
+      <ul>
+        <li>Szyfrowanie HTTPS (TLS) dla wszystkich połączeń</li>
+        <li>Hasła przechowywane jako hash bcrypt</li>
+        <li>Ograniczanie częstotliwości żądań (rate limiting)</li>
+        <li>Nagłówki bezpieczeństwa HTTP (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)</li>
+        <li>Nigdy nie logujemy danych osobowych w logach serwera</li>
+      </ul>
     </section>
 
-    <a href="/" class="back">← Powrót do strony głównej</a>
+    <section>
+      <h2>11. Zmiany w polityce (Changes to This Policy)</h2>
+      <p>O istotnych zmianach w polityce prywatności informujemy z 14-dniowym wyprzedzeniem za pośrednictwem emaila lub powiadomienia w aplikacji.</p>
+    </section>
+
+    <section>
+      <h2>12. Kontakt (Contact)</h2>
+      <p>W sprawach dotyczących prywatności i ochrony danych osobowych:</p>
+      <p>WOA - Wellness Over All Sp. z o.o.<br />
+      Email: <a href="mailto:privacy@smartme.life">privacy@smartme.life</a><br />
+      Strona: <a href="https://smartme.life">smartme.life</a></p>
+    </section>
+
+    <a href="/" class="back">&larr; Powrót do strony głównej</a>
   </div>
 </body>
 </html>

@@ -217,7 +217,7 @@ milestones          — kamienie milowe (title, is_completed, goal_id CASCADE)
 bucket_items        — bucket lista (title, category, is_completed, completed_date)
 subscriptions       — Stripe billing (user_id, plan, status, stripe_customer_id, stripe_subscription_id, current_period_start, current_period_end)
 feedback            — feedback z opcjonalnym user_id (message, category: bug/idea/opinion/broken, email, user_agent, user_id)
-user_rewards        — rewards persistence per user (sparks, level, streak, streak_last_date, xp, achievements JSONB, challenges_state JSONB, avatar_key, seen_avatar_unlocks JSONB)
+user_rewards        — rewards persistence per user (sparks, level, streak, streak_last_date, xp, achievements JSON dict, challenges_state JSON dict, avatar_key, seen_avatar_unlocks JSON list)
 admin_api_keys      — admin API keys (key_hash SHA-256, label, created_at, last_used_at)
 ```
 
