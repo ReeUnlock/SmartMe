@@ -140,7 +140,6 @@ async def scan_receipt(
     logger.info(
         f"Receipt parsed: store={result.get('store_name')}, "
         f"date={result.get('date')}, total={result.get('total')}, "
-        f"items={len(result.get('items', []))}, "
         f"confidence={result.get('confidence', 'unknown')}"
     )
 

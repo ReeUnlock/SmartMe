@@ -1,4 +1,8 @@
-"""Heuristic-based parser for Polish receipt OCR text."""
+"""Heuristic-based parser for Polish receipt OCR text.
+
+Extracts: store name, date, total amount, suggested category.
+Does NOT parse individual items — only the final total.
+"""
 
 import logging
 import re
@@ -38,93 +42,88 @@ DATE_PATTERNS = [
     (r"(\d{2})[.\-/](\d{2})[.\-/](\d{2})\b", "%d%m%y"),
 ]
 
-# Price pattern: digits with comma or dot as decimal separator
-PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*$")
-# Price pattern anywhere in line (for total/item matching)
+# Price pattern for total lines (handles OCR spaces around separator)
+PRICE_TOTAL_RE = re.compile(r"(\d+)\s*[,.]\s*(\d{2})")
+# Price pattern anywhere in line
 PRICE_ANYWHERE_RE = re.compile(r"(\d+)[,.](\d{2})")
-# Line that looks like an item: text followed by price
-# Pattern 1: simple "Name 12,99" or "Name 12,99A" (basic receipt line)
-ITEM_LINE_RE = re.compile(
-    r"^(.+?)\s+(\d+)[,.](\d{2})\s*[A-Za-z]?\s*$"
-)
-# Pattern 2: Biedronka/Lidl format "Name C 2 x6,49 12,98C" — qty × unit price → COMPUTE total
-# Captures qty and unit price separately for multiplication (OCR often garbles the line total)
-ITEM_MULTI_PRICE_RE = re.compile(
-    r"^(.+?)\s+[A-Z]?\s*(\d+)\s*[xX×\*]\s*(\d+)[,.](\d{2})"
-)
-# Pattern 4: price anywhere on line with VAT letter suffix — "Name 29,97C"
-ITEM_VAT_SUFFIX_RE = re.compile(
-    r"^(.+?)\s+(\d+)[,.](\d{2})[A-Za-z]\s*$"
-)
-# Quantity prefix: "2 x", "2x", "2 szt", "2,5 x"
-QTY_PREFIX_RE = re.compile(r"^\d+[,.]?\d*\s*[xX×\*]\s*")
-# Skip lines that are clearly not items
+
+# Lines to skip in fallback price detection
 SKIP_PATTERNS = [
     r"^NIP\b", r"^PARAGON\b", r"^FISKALNY\b", r"^KASA\b", r"#Kasa\b",
     r"^KASJER\b", r"Kasjer\b", r"^SPRZ", r"^DATA\b", r"^\d{2}[:\-]\d{2}",
-    r"PTU\b", r"VAT\b", r"^RABAT\b", r"^OPUST\b",  # PTU/VAT anywhere in line
+    r"PTU\b", r"VAT\b", r"^RABAT\b", r"^OPUST\b",
     r"^RESZTA\b", r"GOT[ÓOÔÖ]WK[AĄ]", r"^KARTA\b", r"^VISA\b",
     r"^MASTERCARD\b", r"ZMIANA\b",
     r"^WYDRUK\b", r"DZIE[ŃN]KUJE", r"ZAPRASZAMY",
     r"^-+$", r"^=+$", r"^\*+$", r"^#{2,}",
-    # Discount/summary lines (OPUSTY ŁĄCZNIE = total discount summary, not per-item)
     r"OPUSTY\s*[ŁL]", r"^[SŚ]p[:\s]", r"^Promocj",
     r"ROZLICZENIE", r"Nr\s+transakcji", r"^Numer\b",
     r"UDZIELONO", r"Udz\w*\s+[łlŁL]", r"^Udz\b", r"^MOJE\s", r"OSZCZ[ĘE]DNO",
     r"^NIEFISKALNY", r"nr:\s*\d", r"sys\.\s*\d",
     r"^\d{10,}",  # long number sequences (barcodes, NIP values)
-    r"[A-Z]\d{1,2}[=xX]\s*\d",  # VAT summary lines like "A23x=2,42" or "Sp: A=12,92"
-    r"SUMA\s*PTU",  # "SUMA PTU=6,06"
-    r"^RESZTA\s+GOT", r"PLN\s*$",  # "RESZTA GOTÓWKA", trailing "PLN"
-    r"RABAT[ÓO]W", r"[łlŁL][aą]cznie\s+rabat",  # "łącznie rabatów"
-    r"cznie\s+rabat",  # OCR garble: "tzcznie rabatów" etc.
-    r"^[A-Z][=:]\s*\d",  # "A=12,92", "C=60,91" (VAT subtotals)
+    r"[A-Z]\d{1,2}[=xX]\s*\d",  # VAT summary lines
+    r"SUMA\s*PTU",
+    r"^RESZTA\s+GOT", r"PLN\s*$",
+    r"RABAT[ÓO]W", r"[łlŁL][aą]cznie\s+rabat",
+    r"cznie\s+rabat",
+    r"^[A-Z][=:]\s*\d",  # "A=12,92" VAT subtotals
+    r"^\d+[,.]\d{2}\s*$",  # standalone price
+    r"^[0O]PUST\b",
+    r"OPODATKOWAN",
+    r"^DO\s*ZAP[ŁL]ATY",
+    r"Kwota\s+[A-Z]\s+\d",  # VAT rate breakdown: "Kwota A 23,00%"
+    r"Podatek\b",
+    r"\d+\s*[xX×]\s*\d",  # quantity × price (product lines)
+    r"\d+[,.]\d{2}[A-Z]$",  # price ending with VAT category letter (7,50C)
+    r"CHLEB|MLEKO|MASŁO|CUKIER|MĄKA|SER\b|WĘDL",  # common product names
 ]
 
 
 def parse_receipt(raw_text: str) -> dict:
     """Parse OCR text into structured receipt data.
 
+    Extracts store, date, total only (no individual items).
     Always returns a result dict — never raises.
-    Includes a 'confidence' field: 'good', 'partial', 'weak', 'none'.
     """
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+    # DEBUG: log all lines for diagnosis
+    logger.info(f"Receipt OCR raw lines ({len(lines)}):")
+    for i, line in enumerate(lines):
+        logger.info(f"  [{i:2d}] {line!r}")
 
     store_name = _detect_store(lines)
     date = _detect_date(raw_text)
     total = _detect_total(lines)
-    items = _detect_items(lines, total)
 
-    # Fallback: if no total found via keywords, try summing items
-    if total is None and items:
-        items_sum = round(sum(item["price"] for item in items), 2)
-        if items_sum > 0:
-            total = items_sum
-            logger.info(f"Receipt parser: total estimated from item sum: {items_sum}")
+    # Fallback 1: payment math (GOTÓWKA - RESZTA)
+    if total is None:
+        total = _detect_total_from_payment(lines)
+        if total is not None:
+            logger.info(f"Receipt parser: total from payment math: {total}")
 
-    # Fallback: if still no total, find the largest price on any line
+    # Fallback 2: largest price on non-skip lines
     if total is None:
         total = _fallback_largest_price(lines)
         if total is not None:
             logger.info(f"Receipt parser: total fallback to largest price: {total}")
 
-    # Suggest expense category based on store name and items
-    suggested_category = _suggest_category(store_name, items)
+    # Suggest expense category based on store name
+    suggested_category = _suggest_category(store_name)
 
     # Compute confidence
-    confidence = _compute_confidence(store_name, date, total, items, raw_text)
+    confidence = _compute_confidence(store_name, date, total, raw_text)
 
     logger.info(
         f"Receipt parser: store={store_name}, date={date}, total={total}, "
-        f"items={len(items)}, confidence={confidence}, "
-        f"suggested_category={suggested_category}, lines={len(lines)}"
+        f"confidence={confidence}, suggested_category={suggested_category}, "
+        f"lines={len(lines)}"
     )
 
     return {
         "store_name": store_name,
         "date": date,
         "total": total,
-        "items": items,
         "raw_text": raw_text,
         "confidence": confidence,
         "suggested_category": suggested_category,
@@ -135,7 +134,6 @@ def _compute_confidence(
     store_name: str | None,
     date: str | None,
     total: float | None,
-    items: list[dict],
     raw_text: str,
 ) -> str:
     """Rate the overall parse quality."""
@@ -146,13 +144,11 @@ def _compute_confidence(
         score += 1
     if total is not None and total > 0:
         score += 2  # total is the most important field
-    if len(items) >= 1:
-        score += 1
 
     if len(raw_text.strip()) < 20:
         return "none"
 
-    if score >= 4:
+    if score >= 3:
         return "good"
     if score >= 2:
         return "partial"
@@ -168,12 +164,24 @@ def _normalize_pl(text: str) -> str:
 
 
 def _detect_store(lines: list[str]) -> str | None:
-    """Detect store name from receipt text."""
-    full_text_upper = " ".join(lines[:10]).upper()
+    """Detect store name from receipt text.
+
+    First looks for known stores in the header area. Then falls back to
+    heuristic detection, anchoring on PARAGON FISKALNY to skip background noise.
+    """
+    # Find the header area: everything before "PARAGON FISKALNY" (or first 10 lines)
+    header_end = min(10, len(lines))
+    for i, line in enumerate(lines[:20]):
+        if re.search(r"PARAGON|FISKALNY", line, re.IGNORECASE):
+            header_end = i
+            break
+
+    # Use lines before PARAGON FISKALNY for store detection (skip noise)
+    header_lines = lines[:max(header_end, 3)]
+    full_text_upper = " ".join(header_lines).upper()
     full_text_norm = _normalize_pl(full_text_upper)
 
-    # Check known stores (use the first canonical match)
-    # Try exact match first, then normalized (diacritic-stripped) match
+    # Check known stores
     seen = set()
     for store in KNOWN_STORES:
         key = store.upper()
@@ -182,26 +190,34 @@ def _detect_store(lines: list[str]) -> str | None:
         seen.add(key)
         if key in full_text_upper:
             return store
-        # Fuzzy: strip diacritics (OCR often adds/removes them)
         if _normalize_pl(key) in full_text_norm:
             return store
 
-    # Fallback: smarter heuristic for unknown stores
-    # Skip patterns for legal entities, addresses, and metadata
+    # Also check known stores in lines right after PARAGON FISKALNY header
+    # (some receipts put store name after the header)
+    extended_upper = " ".join(lines[:min(header_end + 3, len(lines))]).upper()
+    extended_norm = _normalize_pl(extended_upper)
+    for store in KNOWN_STORES:
+        key = store.upper()
+        if key in extended_upper or _normalize_pl(key) in extended_norm:
+            return store
+
+    # Fallback: heuristic for unknown stores (only search header area)
     _store_skip_re = re.compile(
         r"Sp\.\s*z\s*o\.?\s*o\.?|S\.A\.|s\.c\.|S\.K\.A\.|D\.I\.P\."
         r"|^ul\.|^al\.|^\d{2}-\d{3}"
         r"|NIP|PARAGON|FISKALNY",
         re.IGNORECASE,
     )
-    # Prefer lines with these business-type keywords
     _store_prefer_re = re.compile(
         r"Sklep|Market|Apteka|Restauracja|Kawiarnia|Przychodnia|Stacja",
         re.IGNORECASE,
     )
+    # Noise filter: lines with too many punctuation/symbols are OCR garbage
+    _noise_re = re.compile(r"^[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]*$")
 
     candidates = []
-    for line in lines[:7]:
+    for line in header_lines:
         cleaned = line.strip()
         if len(cleaned) < 3 or len(cleaned) > 40:
             continue
@@ -209,17 +225,20 @@ def _detect_store(lines: list[str]) -> str | None:
             continue
         if _store_skip_re.search(cleaned):
             continue
-        # Skip lines that are mostly digits (phone numbers, NIP values)
+        if _noise_re.match(cleaned):
+            continue
         if sum(c.isdigit() for c in cleaned) > len(cleaned) * 0.6:
+            continue
+        # Skip lines that are mostly punctuation/symbols (OCR garbage from backgrounds)
+        alpha_count = sum(c.isalpha() for c in cleaned)
+        if alpha_count < len(cleaned) * 0.4:
             continue
         candidates.append(cleaned)
 
-    # Return preferred match first (Sklep, Market, Przychodnia, etc.)
     for c in candidates:
         if _store_prefer_re.search(c):
             return c
 
-    # Otherwise return first candidate
     if candidates:
         return candidates[0]
 
@@ -245,35 +264,56 @@ def _detect_date(text: str) -> str | None:
 def _detect_total(lines: list[str]) -> float | None:
     """Detect total amount from receipt using keyword matching.
 
-    Uses priority tiers: SUMA/RAZEM/DO ZAPŁATY are high-priority,
-    WPŁATA/GOTÓWKA/NALEŻNOŚĆ are low-priority (payment, not total).
-    High-priority match always wins over low-priority.
+    Strategy:
+    1. Full-text direct extraction (handles OCR line-break garbles)
+    2. Line-by-line high-priority keyword matching
+    3. Line-by-line low-priority fallback (WPŁATA etc.)
     """
-    # High-priority: actual total keywords
-    # NOTE: KWOTA removed (matches "Kwota PTU B 8%"), TOTAL removed (matches item lines)
+    full_text = "\n".join(lines)
+
+    # ── PASS 0: Direct full-text extraction ──────────────────────────
+    direct_patterns = [
+        r"SU[MNH]A\s*PLN\s*:?\s*(\d+)\s*[,.]\s*(\d{2})",
+        r"RAZEM\s*:?\s*(\d+)\s*[,.]\s*(\d{2})",
+        r"DO\s*ZAP[ŁL]ATY\s*:?\s*(\d+)\s*[,.]\s*(\d{2})",
+        r"SU[MNH]A\s*[:\s]\s*(\d+)\s*[,.]\s*(\d{2})",
+    ]
+    vat_context_re = re.compile(
+        r"SUMA\s*PTU|PTU\s*=|SPRZEDA[ŻZ]\s+OPODATKOWANA|^[SŚ]p[:\s]",
+        re.IGNORECASE,
+    )
+
+    for pat in direct_patterns:
+        for m in re.finditer(pat, full_text, re.IGNORECASE):
+            matched_text = m.group(0).upper()
+            if "PTU" in matched_text or "OPODATKOWANA" in matched_text:
+                continue
+            value = float(f"{m.group(1)}.{m.group(2)}")
+            if 0 < value < 50000:
+                logger.info(f"Receipt total: direct extraction found {value} via '{pat}'")
+                return value
+
+    # ── PASS 1+2: Line-by-line keyword matching ─────────────────────
     high_priority = [
         r"SUMA\s+PLN", r"SUMA\b[:\s]", r"RAZEM\b", r"DO\s*ZAP[ŁL]ATY",
         r"[ŁL]([AĄ])CZNA", r"WARTO[ŚS][ĆC]\s*BRUTTO",
         r"SPRZEDA[ŻZ]\s*BRUTTO", r"NALE[ŻZ]NO[ŚS][ĆC]",
-        # OCR misreads
         r"SUNA\b", r"RAZEN\b", r"SUflA\b", r"SUHA\b", r"SU[MN]A\b",
         r"SUfl[AĄ]\b", r"SUNIA\b",
     ]
-    # Low-priority: payment-related (use only as fallback)
     low_priority = [
         r"WP[ŁL]ATA\b",
     ]
-    # Lines to EXCLUDE from total detection (payment lines, not totals)
     exclude_patterns = [
         r"GOT[ÓOÔÖ]WK[AĄ]", r"RESZTA", r"KARTA\b", r"VISA\b",
         r"MASTERCARD\b", r"SUMA\s*PTU",
-        r"SPRZEDA[ŻZ]\s+OPODATKOWANA",  # net amount by VAT group
-        r"^[SŚ]p[:\s]",                  # "Sp: A=12,92 B=9,99"
-        r"[A-Z][=:]\s*\d",               # "A=12,92" VAT subtotals
-        r"KWOTA\s+PTU",                   # "Kwota PTU B 8%"
-        r"KWOTA\s+[A-Z]\s+\d",           # "Kwota A 23,00%"
-        r"PTU\s+[A-Z]\s+\d",             # "PTU C 5%"
-        r"PODATEK\s+PTU",                 # "Podatek PTU"
+        r"SPRZEDA[ŻZ]\s+OPODATKOWANA",
+        r"^[SŚ]p[:\s]",
+        r"[A-Z][=:]\s*\d",
+        r"KWOTA\s+PTU",
+        r"KWOTA\s+[A-Z]\s+\d",
+        r"PTU\s+[A-Z]\s+\d",
+        r"PODATEK\s+PTU",
     ]
     exclude_re = re.compile("|".join(exclude_patterns), re.IGNORECASE)
 
@@ -282,11 +322,10 @@ def _detect_total(lines: list[str]) -> float | None:
         pattern = "|".join(patterns)
         for i, line in enumerate(lines):
             upper = line.upper()
-            # Skip payment lines
             if exclude_re.search(upper):
                 continue
             if re.search(pattern, upper, re.IGNORECASE):
-                prices = PRICE_ANYWHERE_RE.findall(line)
+                prices = PRICE_TOTAL_RE.findall(line)
                 if prices:
                     whole, decimal = prices[-1]
                     value = float(f"{whole}.{decimal}")
@@ -296,7 +335,7 @@ def _detect_total(lines: list[str]) -> float | None:
                         if best is None or value > best:
                             best = value
                 elif i + 1 < len(lines):
-                    prices = PRICE_ANYWHERE_RE.findall(lines[i + 1])
+                    prices = PRICE_TOTAL_RE.findall(lines[i + 1])
                     if prices:
                         whole, decimal = prices[-1]
                         value = float(f"{whole}.{decimal}")
@@ -307,20 +346,69 @@ def _detect_total(lines: list[str]) -> float | None:
                                 best = value
         return best
 
-    # Try high-priority first (first match wins — SUMA PLN appears once on receipts)
     total = _find_total_in_lines(high_priority, first_match=True)
     if total is not None:
         return total
 
-    # Fall back to low-priority (keep largest for ambiguous keywords)
     return _find_total_in_lines(low_priority)
 
 
-def _fallback_largest_price(lines: list[str]) -> float | None:
-    """Last-resort fallback: find the largest price on any line.
+def _detect_total_from_payment(lines: list[str]) -> float | None:
+    """Compute total from payment lines: GOTÓWKA - RESZTA or KARTA amount.
 
-    Skips metadata lines, sub-zloty amounts, and absurdly large values.
+    Common on Polish receipts when SUMA line is garbled by OCR.
     """
+    payment_re = re.compile(
+        r"GOT[ÓOÔÖ]WK[AĄ]|KARTA\b|VISA\b|MASTERCARD\b",
+        re.IGNORECASE,
+    )
+    change_re = re.compile(r"RESZTA", re.IGNORECASE)
+
+    payment_amount = None
+    change_amount = None
+
+    for line in lines:
+        prices = PRICE_ANYWHERE_RE.findall(line)
+        if not prices:
+            continue
+
+        upper = line.upper()
+
+        if change_re.search(upper):
+            # Take the first price on RESZTA line
+            whole, decimal = prices[0]
+            val = float(f"{whole}.{decimal}")
+            if 0 < val < 50000:
+                change_amount = val
+        elif payment_re.search(upper):
+            # Take the first price on payment line
+            whole, decimal = prices[0]
+            val = float(f"{whole}.{decimal}")
+            if 0 < val < 50000:
+                payment_amount = val
+
+    if payment_amount is not None and change_amount is not None:
+        total = round(payment_amount - change_amount, 2)
+        if total > 0:
+            logger.info(
+                f"Receipt payment math: {payment_amount} - {change_amount} = {total}"
+            )
+            return total
+
+    # Card payment (no change) — use card amount directly
+    # But only if it's a reasonable amount (not a garbled number)
+    if payment_amount is not None and change_amount is None:
+        # Check if any line explicitly says KARTA (card = exact amount, no change)
+        for line in lines:
+            if re.search(r"KARTA\b|VISA\b|MASTERCARD\b", line, re.IGNORECASE):
+                logger.info(f"Receipt payment: card payment {payment_amount}")
+                return payment_amount
+
+    return None
+
+
+def _fallback_largest_price(lines: list[str]) -> float | None:
+    """Last-resort fallback: find the largest price on any line."""
     skip_re = re.compile("|".join(SKIP_PATTERNS), re.IGNORECASE)
     all_prices = []
 
@@ -343,137 +431,9 @@ def _fallback_largest_price(lines: list[str]) -> float | None:
     return largest
 
 
-def _detect_items(lines: list[str], total: float | None) -> list[dict]:
-    """Detect individual items from receipt lines.
-
-    Tries multiple regex patterns to handle different Polish receipt formats:
-    - Simple: "Product Name 12,99"
-    - Biedronka/Lidl: "Product C 3 x9,99 29,97C"
-    - With VAT suffix: "Product 29,97C"
-    - Discounts: "OPUST -4,00"
-    """
-    items = []
-    skip_re = re.compile("|".join(SKIP_PATTERNS), re.IGNORECASE)
-    total_re = re.compile("|".join(TOTAL_KEYWORDS), re.IGNORECASE)
-
-    # Discount line: "OPUST -4,00", "AD OPUST - 4,00", etc.
-    discount_re = re.compile(r"(?:OPUST|RABAT|ZNIZKA|ZNIŻKA)\w*\s*-?\s*(\d+)[,.](\d{2})", re.IGNORECASE)
-    # Standalone negative price line: "-4,00"
-    neg_price_re = re.compile(r"^-\s*(\d+)[,.](\d{2})\s*$")
-
-    # Simple item patterns (no qty×price computation needed)
-    simple_patterns = [
-        ITEM_LINE_RE,         # "Name 12,99" or "Name 12,99A"
-        ITEM_VAT_SUFFIX_RE,   # "Name 29,97C"
-    ]
-
-    for raw_line in lines:
-        # Strip leading OCR noise (|, !, ;, *, etc.)
-        line = re.sub(r"^[|!;:*#\-\s]+", "", raw_line).strip()
-        if not line:
-            continue
-
-        # Detect discount lines BEFORE skip_re (which now skips OPUST)
-        # But skip summary lines — "OPUSTY ŁĄCZNIE", "Udzielono łącznie rabatów"
-        upper_line = line.upper()
-        is_summary_discount = bool(
-            re.search(r"OPUSTY\s*[ŁL]", upper_line, re.IGNORECASE)
-            or re.search(r"[łlŁL][aą]cznie\s+rabat", line, re.IGNORECASE)
-            or re.search(r"cznie\s+rabat", line, re.IGNORECASE)
-            or re.search(r"UDZIELONO", upper_line)
-        )
-        if not is_summary_discount:
-            disc_match = discount_re.search(line)
-            if disc_match:
-                whole, decimal = disc_match.group(1), disc_match.group(2)
-                disc_value = float(f"{whole}.{decimal}")
-                if 0 < disc_value < 1000:  # sanity
-                    items.append({"name": "Rabat", "price": -disc_value})
-                continue
-
-        # Standalone negative price: "-4,00"
-        neg_match = neg_price_re.match(line)
-        if neg_match:
-            whole, decimal = neg_match.group(1), neg_match.group(2)
-            disc_value = float(f"{whole}.{decimal}")
-            if 0 < disc_value < 1000:
-                items.append({"name": "Rabat", "price": -disc_value})
-            continue
-
-        if skip_re.search(line):
-            continue
-        if total_re.search(line.upper()):
-            continue
-        if len(line) < 4:
-            continue
-
-        # Try qty × unit_price pattern FIRST (Biedronka/Lidl)
-        # COMPUTE price from qty × unit — don't trust OCR'd line total
-        name = None
-        price = None
-        multi_match = ITEM_MULTI_PRICE_RE.match(line)
-        if multi_match:
-            name = multi_match.group(1).strip()
-            qty = int(multi_match.group(2))
-            unit_whole = multi_match.group(3)
-            unit_decimal = multi_match.group(4)
-            unit_price = float(f"{unit_whole}.{unit_decimal}")
-            price = round(qty * unit_price, 2)
-            logger.debug(f"Receipt parser: qty×price: {qty} × {unit_price} = {price} for '{name}'")
-
-        # Try simple patterns
-        if price is None:
-            for pattern in simple_patterns:
-                match = pattern.match(line)
-                if match:
-                    name = match.group(1).strip()
-                    whole = match.group(2)
-                    decimal = match.group(3)
-                    price = float(f"{whole}.{decimal}")
-                    break
-
-        # Fallback: if no pattern matched but line has prices, take the LAST price
-        if price is None:
-            all_prices = PRICE_ANYWHERE_RE.findall(line)
-            if all_prices and len(line) > 6:
-                # Extract name as everything before the first price
-                first_price_match = PRICE_ANYWHERE_RE.search(line)
-                if first_price_match and first_price_match.start() > 2:
-                    name = line[:first_price_match.start()].strip()
-                    whole, decimal = all_prices[-1]  # last price = line total
-                    price = float(f"{whole}.{decimal}")
-
-        if name is None or price is None:
-            continue
-
-        # Skip if price equals total (it's the total line, not an item)
-        if total and abs(price - total) < 0.01:
-            continue
-
-        # Clean up item name
-        name = QTY_PREFIX_RE.sub("", name).strip()
-        # Remove VAT letter prefix/suffix and trailing single letters
-        name = re.sub(r"\s+[A-Z]\s*$", "", name)
-        name = re.sub(r"^[A-Z]\s+", "", name)
-        name = re.sub(r"\s+", " ", name)
-
-        if len(name) < 2:
-            continue
-        if re.match(r"^[A-Z]{1,3}\d*$", name):
-            continue
-
-        if price > 0:
-            items.append({"name": name, "price": price})
-
-    return items
-
-
 # ─── Category suggestion ─────────────────────────────────────────────
-# Maps store names → default expense category names (from expense_categories)
-# Categories: Jedzenie, Transport, Rozrywka, Zdrowie, Dom, Ubrania, Rachunki, Edukacja, Inne
 
 STORE_CATEGORY_MAP = {
-    # Grocery / food → Jedzenie
     "Biedronka": "Jedzenie", "Lidl": "Jedzenie", "Kaufland": "Jedzenie",
     "Auchan": "Jedzenie", "Carrefour": "Jedzenie", "Tesco": "Jedzenie",
     "Netto": "Jedzenie", "Dino": "Jedzenie", "Stokrotka": "Jedzenie",
@@ -484,22 +444,15 @@ STORE_CATEGORY_MAP = {
     "Aldi": "Jedzenie", "Makro": "Jedzenie", "Selgros": "Jedzenie",
     "Spar": "Jedzenie", "ABC": "Jedzenie", "Groszek": "Jedzenie",
     "Duży Ben": "Jedzenie", "Topaz": "Jedzenie",
-    # Health / beauty → Zdrowie
     "Rossmann": "Zdrowie", "Hebe": "Zdrowie",
-    # Fuel / transport → Transport
     "Orlen": "Transport", "BP": "Transport", "Shell": "Transport",
     "Circle K": "Transport",
-    # Home / DIY → Dom
     "Castorama": "Dom", "Leroy Merlin": "Dom", "IKEA": "Dom",
     "Jysk": "Dom", "Action": "Dom",
-    # Electronics → Dom (closest fit)
     "Media Expert": "Dom", "Media Markt": "Dom", "RTV Euro AGD": "Dom",
-    # Clothing → Ubrania
     "Reserved": "Ubrania", "H&M": "Ubrania", "Zara": "Ubrania",
     "CCC": "Ubrania", "Pepco": "Ubrania",
-    # Entertainment / books → Rozrywka
     "Empik": "Rozrywka",
-    # Restaurants / cafes → Jedzenie
     "Starbucks": "Jedzenie", "Costa Coffee": "Jedzenie",
     "McDonald's": "Jedzenie", "KFC": "Jedzenie", "Burger King": "Jedzenie",
     "Subway": "Jedzenie", "Pizza Hut": "Jedzenie", "Domino's": "Jedzenie",
@@ -507,24 +460,15 @@ STORE_CATEGORY_MAP = {
 }
 
 
-def _suggest_category(
-    store_name: str | None,
-    items: list[dict],
-) -> str | None:
-    """Suggest an expense category based on store name.
-
-    Returns the category name (matching default expense_categories)
-    or None if no confident match.
-    """
+def _suggest_category(store_name: str | None) -> str | None:
+    """Suggest an expense category based on store name."""
     if not store_name:
         return None
 
-    # Direct store match (case-insensitive)
     for known_store, category in STORE_CATEGORY_MAP.items():
         if known_store.upper() == store_name.upper():
             return category
 
-    # Partial match (store name contains known store)
     store_upper = store_name.upper()
     for known_store, category in STORE_CATEGORY_MAP.items():
         if known_store.upper() in store_upper:

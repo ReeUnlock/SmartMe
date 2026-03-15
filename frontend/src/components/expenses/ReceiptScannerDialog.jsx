@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Box, Flex, Text, VStack, Icon, Input, Heading } from "@chakra-ui/react";
-import { LuCamera, LuImage, LuReceipt, LuTrash2, LuPlus, LuCheck, LuChevronLeft, LuTriangleAlert } from "react-icons/lu";
+import { LuCamera, LuImage, LuReceipt, LuCheck, LuChevronLeft, LuTriangleAlert } from "react-icons/lu";
 import BottomSheetDialog, { DialogActions } from "../common/BottomSheetDialog";
 import SmartMeLoader from "../common/SmartMeLoader";
 import DateInput from "../common/DateInput";
@@ -11,8 +11,8 @@ import { compressImage } from "../../utils/imageCompressor";
 const STEPS = { PICK: "pick", SCANNING: "scanning", DRAFT: "draft" };
 
 const CONFIDENCE_INFO = {
-  good: null, // no banner needed
-  partial: "Część danych mogła zostać odczytana niedokładnie. Sprawdź kwotę i produkty.",
+  good: null,
+  partial: "Część danych mogła zostać odczytana niedokładnie. Sprawdź kwotę.",
   weak: "Odczytano niewiele danych z paragonu. Uzupełnij brakujące pola ręcznie.",
   none: "Nie udało się rozpoznać danych paragonu. Wprowadź dane ręcznie.",
 };
@@ -26,7 +26,6 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
   const [storeName, setStoreName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [total, setTotal] = useState("");
-  const [items, setItems] = useState([]);
   const [categoryId, setCategoryId] = useState(null);
   const [paidById, setPaidById] = useState(null);
   const [rawText, setRawText] = useState("");
@@ -46,7 +45,6 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
     setStoreName("");
     setDate(new Date().toISOString().split("T")[0]);
     setTotal("");
-    setItems([]);
     setCategoryId(null);
     setPaidById(null);
     setRawText("");
@@ -66,7 +64,6 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
     setStep(STEPS.SCANNING);
 
     try {
-      // Compress
       let compressed;
       try {
         compressed = await compressImage(file);
@@ -75,13 +72,12 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
         throw new Error("Nie udało się przetworzyć zdjęcia. Spróbuj inny plik.");
       }
 
-      // Upload & OCR
       let result;
       try {
         result = await scanReceipt(compressed);
       } catch (apiErr) {
         console.error("[ReceiptScanner] API scan failed:", apiErr);
-        throw apiErr; // re-throw — already has user-facing message from backend
+        throw apiErr;
       }
 
       console.info("[ReceiptScanner] OCR result:", {
@@ -89,30 +85,17 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
         store: result.store_name,
         date: result.date,
         total: result.total,
-        items: result.items?.length ?? 0,
         rawTextLength: result.raw_text?.length ?? 0,
       });
 
-      // Populate draft — always go to DRAFT step even with partial results
+      // Populate draft
       setStoreName(result.store_name || "");
       setDate(result.date || "");
       setTotal(result.total != null ? String(result.total) : "");
-
-      // Build items list — add "Pozostałe" if scanned items don't cover full total
-      const ocrItems = result.items || [];
-      const ocrTotal = result.total;
-      if (ocrTotal != null && ocrTotal > 0 && ocrItems.length > 0) {
-        const itemsSum = ocrItems.reduce((s, i) => s + (i.price || 0), 0);
-        const diff = Math.round((ocrTotal - itemsSum) * 100) / 100;
-        if (diff >= 0.01) {
-          ocrItems.push({ name: "Pozostałe", price: diff });
-        }
-      }
-      setItems(ocrItems);
       setRawText(result.raw_text || "");
       setConfidence(result.confidence || "none");
 
-      // Auto-select suggested category if available
+      // Auto-select suggested category
       if (result.suggested_category && categories?.length) {
         const match = categories.find(
           (c) => c.name.toLowerCase() === result.suggested_category.toLowerCase()
@@ -134,38 +117,15 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
     e.target.value = "";
   };
 
-  const handleAddItem = () => {
-    setItems([...items, { name: "", price: 0 }]);
-  };
-
-  const handleUpdateItem = (index, field, value) => {
-    const updated = [...items];
-    updated[index] = { ...updated[index], [field]: field === "price" ? parseFloat(value) || 0 : value };
-    setItems(updated);
-  };
-
-  const handleRemoveItem = (index) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const totalVal = parseFloat(total);
     if (!totalVal || totalVal <= 0) return;
     if (!date) return;
 
-    // Build description from store + items
-    const parts = [];
-    if (storeName) parts.push(storeName);
-    if (items.length > 0) {
-      const itemNames = items.filter(i => i.name).map(i => i.name).slice(0, 3);
-      if (itemNames.length > 0) parts.push(itemNames.join(", "));
-      if (items.length > 3) parts.push(`+${items.length - 3}`);
-    }
-
     onSubmitExpenses({
       amount: totalVal,
-      description: parts.join(" — ") || "Paragon",
+      description: storeName || "Paragon",
       date,
       category_id: categoryId,
       paid_by_id: paidById,
@@ -337,12 +297,12 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
           </Flex>
         )}
 
-        {/* Store name */}
+        {/* Store name / description */}
         <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>
-          Sklep
+          {"Opis"}
         </Text>
         <Input
-          placeholder={"np. Biedronka"}
+          placeholder={"np. Biedronka, Apteka"}
           value={storeName}
           onChange={(e) => setStoreName(e.target.value)}
           size="sm" mb={2.5} bg="gray.50" borderRadius="lg"
@@ -384,69 +344,6 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
             {"Nie udało się odczytać daty — wybierz ręcznie"}
           </Text>
         )}
-
-        {/* Items */}
-        {items.length > 0 && (
-          <Box mb={2.5}>
-            <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1.5}>
-              {"Produkty"}
-            </Text>
-            <VStack gap={1.5} align="stretch">
-              {items.map((item, idx) => {
-                const isDiscount = item.price < 0;
-                return (
-                <Flex key={idx} gap={2} align="center">
-                  <Input
-                    value={item.name}
-                    onChange={(e) => handleUpdateItem(idx, "name", e.target.value)}
-                    placeholder="Nazwa"
-                    size="sm" flex={1} borderRadius="lg"
-                    fontSize="xs"
-                    bg={isDiscount ? "green.50" : "gray.50"}
-                    borderColor={isDiscount ? "green.200" : "gray.200"}
-                    color={isDiscount ? "green.600" : undefined}
-                    _focus={{ bg: "white", borderColor: "peach.400" }}
-                  />
-                  <Input
-                    value={item.price != null ? item.price : ""}
-                    onChange={(e) => handleUpdateItem(idx, "price", e.target.value)}
-                    placeholder={"zł"}
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    size="sm" w="80px" borderRadius="lg"
-                    fontSize="xs" textAlign="right"
-                    bg={isDiscount ? "green.50" : "gray.50"}
-                    borderColor={isDiscount ? "green.200" : "gray.200"}
-                    color={isDiscount ? "green.600" : undefined}
-                    _focus={{ bg: "white", borderColor: "peach.400" }}
-                  />
-                  <Flex
-                    as="button" type="button"
-                    onClick={() => handleRemoveItem(idx)}
-                    align="center" justify="center"
-                    color="gray.300" cursor="pointer"
-                    _hover={{ color: "red.400" }}
-                    flexShrink={0}
-                  >
-                    <Icon as={LuTrash2} boxSize={3.5} />
-                  </Flex>
-                </Flex>
-                );
-              })}
-            </VStack>
-          </Box>
-        )}
-
-        {/* Add item button */}
-        <Flex
-          as="button" type="button" onClick={handleAddItem}
-          align="center" gap={1.5} color="peach.500" fontSize="xs" fontWeight="600"
-          cursor="pointer" mb={2.5} _hover={{ color: "peach.600" }}
-        >
-          <Icon as={LuPlus} boxSize={3.5} />
-          <Text>{"Dodaj produkt"}</Text>
-        </Flex>
 
         {/* Category */}
         {categories?.length > 0 && (
@@ -533,7 +430,7 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
             align="center" gap={1.5}
             bg="peach.400" color="white" fontWeight="600"
             px={5} py={2} borderRadius="xl" cursor="pointer" fontSize="sm"
-            opacity={!total || isSaving ? 0.5 : 1}
+            opacity={!total || !date || isSaving ? 0.5 : 1}
             _hover={{ bg: "peach.500" }} transition="all 0.15s"
           >
             <Icon as={LuCheck} boxSize={4} />
