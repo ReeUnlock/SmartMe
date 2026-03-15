@@ -173,12 +173,12 @@ frontend/src/
     admin/          — panel admina (ciemny motyw gray.900, osobny od SmartMe UI)
       AdminRoute.jsx          — guard (sessionStorage/localStorage admin_key check)
       AdminLoginPage.jsx      — formularz klucza API + "Zapamiętaj na 30 dni" checkbox (localStorage z expiry)
-      AdminLayout.jsx         — sidebar (240px) + topbar + content, logout czyści oba storage
-      AdminDashboard.jsx      — karty KPI + top costly users + feedback breakdown
+      AdminLayout.jsx         — sidebar (240px) + topbar + content (overflow:auto for mobile scroll), logout czyści oba storage
+      AdminDashboard.jsx      — karty KPI (klikalne: users→/admin/users, feedback→/admin/feedback) + top costly users + feedback breakdown
       AdminUsers.jsx          — tabela userów z search/filtr/sort/paginacja + usuwanie usera (modal z potwierdzeniem)
       AdminUserDetail.jsx     — szczegóły usera (aktywność, AI koszty, nagrody, ostatnie dane) + strefa niebezpieczna (usuwanie)
       AdminFeedback.jsx       — lista feedbacków z filtrem kategorii + modal szczegółów
-      components/StatCard.jsx — karta KPI
+      components/StatCard.jsx — karta KPI (opcjonalny onClick z hover effect)
       components/PlanBadge.jsx — badge Free/Pro
       components/CostBadge.jsx — badge kosztu USD (zielony/żółty/pomarańczowy)
       components/DeleteUserDialog.jsx — dialog potwierdzenia usunięcia usera (wpisz email aby potwierdzić)
@@ -550,7 +550,7 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 | Strona | Ścieżka | Opis |
 |--------|---------|------|
 | Login | `/admin` (bez klucza) | Ciemny formularz, waliduje klucz przez `/api/admin/health`, checkbox "Zapamiętaj na 30 dni" |
-| Dashboard | `/admin` | 8 kart KPI, top costly users, feedback breakdown, aktywność 7d/30d |
+| Dashboard | `/admin` | 8 kart KPI (klikalne: users, feedback), top costly users, feedback breakdown, aktywność 7d/30d |
 | Users | `/admin/users` | Tabela z search (debounce 300ms), filtr plan, sort, paginacja, usuwanie usera (modal) |
 | User detail | `/admin/users/:id` | Aktywność, AI koszty, nagrody, ostatnie wydatki/wydarzenia, subskrypcja, strefa niebezpieczna (usuwanie) |
 | Feedback | `/admin/feedback` | Filtr kategorii, tabela, modal z pełną treścią + user_agent |
