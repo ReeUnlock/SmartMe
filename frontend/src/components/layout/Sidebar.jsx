@@ -8,8 +8,10 @@ import {
   LuTarget,
   LuSettings,
   LuLogOut,
+  LuSparkles,
 } from "react-icons/lu";
 import { useAuth } from "../../hooks/useAuth";
+import useIntroTour from "../../hooks/useIntroTour";
 
 const navItems = [
   { path: "/kalendarz", label: "Kalendarz", icon: LuCalendar, color: "sky.500", activeBg: "sky.50", textColor: "sky.700" },
@@ -22,6 +24,7 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const logout = useAuth((s) => s.logout);
+  const openTour = useIntroTour((s) => s.openTour);
   const [logoLoaded, setLogoLoaded] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
@@ -96,12 +99,15 @@ export default function Sidebar() {
               <Icon
                 as={item.icon}
                 boxSize="5"
-                color={isActive ? item.color : "gray.400"}
+                color={item.color}
+                opacity={isActive ? 1 : 0.7}
+                strokeWidth={isActive ? "2.5" : "1.8"}
               />
               <Text
                 fontSize="sm"
-                fontWeight={isActive ? "600" : "normal"}
-                color={isActive ? item.textColor : "gray.500"}
+                fontWeight={isActive ? "600" : "500"}
+                color={isActive ? item.textColor : item.color}
+                opacity={isActive ? 1 : 0.75}
               >
                 {item.label}
               </Text>
@@ -118,11 +124,24 @@ export default function Sidebar() {
           py="2.5"
           borderRadius="xl"
           cursor="pointer"
-          _hover={{ bg: "gray.50" }}
+          _hover={{ bg: "rose.50" }}
+          onClick={openTour}
+        >
+          <Icon as={LuSparkles} boxSize="5" color="rose.300" />
+          <Text fontSize="sm" color="rose.400" fontWeight="500">Przewodnik</Text>
+        </Flex>
+        <Flex
+          align="center"
+          gap="3"
+          px="3"
+          py="2.5"
+          borderRadius="xl"
+          cursor="pointer"
+          _hover={{ bg: "lavender.50" }}
           onClick={() => navigate("/ustawienia")}
         >
-          <Icon as={LuSettings} boxSize="5" color="gray.400" />
-          <Text fontSize="sm" color="gray.500">Ustawienia</Text>
+          <Icon as={LuSettings} boxSize="5" color="lavender.400" />
+          <Text fontSize="sm" color="lavender.500" fontWeight="500">Ustawienia</Text>
         </Flex>
         <Flex
           align="center"
@@ -134,8 +153,8 @@ export default function Sidebar() {
           _hover={{ bg: "rose.50" }}
           onClick={logout}
         >
-          <Icon as={LuLogOut} boxSize="5" color="gray.400" />
-          <Text fontSize="sm" color="gray.500">Wyloguj</Text>
+          <Icon as={LuLogOut} boxSize="5" color="peach.400" />
+          <Text fontSize="sm" color="peach.500" fontWeight="500">Wyloguj</Text>
         </Flex>
       </VStack>
     </Box>

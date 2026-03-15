@@ -49,6 +49,25 @@ export default function ShoppingPage() {
     }
   };
 
+  const groupedLists = (() => {
+    if (!lists?.length) return [];
+
+    const groups = {};
+    [...lists]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .forEach((list) => {
+        const dateKey = new Date(list.created_at).toLocaleDateString("pl-PL", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        if (!groups[dateKey]) groups[dateKey] = [];
+        groups[dateKey].push(list);
+      });
+
+    return Object.entries(groups);
+  })();
+
   if (selectedListId) {
     return (
       <Box className="sm-slide-right">
@@ -98,13 +117,31 @@ export default function ShoppingPage() {
         />
       ) : (
         <VStack gap={3} align="stretch">
-          {lists.map((list) => (
-            <ShoppingListCard
-              key={list.id}
-              list={list}
-              onClick={() => setSelectedListId(list.id)}
-              onDelete={() => handleDelete(list.id)}
-            />
+          {groupedLists.map(([dateLabel, groupLists], groupIndex) => (
+            <Box key={dateLabel}>
+              <Flex align="center" gap={3} mb={2} mt={groupIndex === 0 ? 0 : 2}>
+                <Text
+                  fontSize="xs"
+                  fontWeight="600"
+                  color="sage.400"
+                  whiteSpace="nowrap"
+                  letterSpacing="0.03em"
+                >
+                  {dateLabel}
+                </Text>
+                <Box flex="1" h="1px" bg="sage.100" borderRadius="full" />
+              </Flex>
+              <VStack gap={3} align="stretch">
+                {groupLists.map((list) => (
+                  <ShoppingListCard
+                    key={list.id}
+                    list={list}
+                    onClick={() => setSelectedListId(list.id)}
+                    onDelete={() => handleDelete(list.id)}
+                  />
+                ))}
+              </VStack>
+            </Box>
           ))}
         </VStack>
       )}

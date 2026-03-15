@@ -161,7 +161,7 @@ export default function SpotlightTour({ steps, isOpen, onFinish }) {
             ref={cardRef}
             bg="white"
             borderRadius="2xl"
-            shadow="0 4px 24px 0 rgba(0,0,0,0.12)"
+            shadow="0 8px 32px 0 rgba(255, 138, 138, 0.18), 0 2px 12px 0 rgba(0,0,0,0.08)"
             p={6}
             maxW="320px"
             w="calc(100vw - 32px)"
@@ -282,7 +282,7 @@ export default function SpotlightTour({ steps, isOpen, onFinish }) {
         width={`min(${CARD_MAX_W}px, calc(100vw - ${CARD_MARGIN * 2}px))`}
         bg="white"
         borderRadius="2xl"
-        shadow="0 4px 24px 0 rgba(0,0,0,0.12)"
+        shadow="0 8px 32px 0 rgba(255, 138, 138, 0.18), 0 2px 12px 0 rgba(0,0,0,0.08)"
         p={5}
         className="sm-page-enter"
         key={current}
@@ -307,12 +307,13 @@ export default function SpotlightTour({ steps, isOpen, onFinish }) {
           {step.hints.map((hint, i) => (
             <Flex key={i} align="flex-start" gap={2}>
               <Box
-                w="5px"
-                h="5px"
+                w="8px"
+                h="8px"
                 borderRadius="full"
-                bg={step.gradient || step.color}
-                mt="7px"
                 flexShrink={0}
+                mt="6px"
+                opacity={0.8}
+                bg={step.gradient ? undefined : step.color}
                 style={step.gradient ? { background: step.gradient } : undefined}
               />
               <Text fontSize="sm" color="textSecondary" lineHeight="tall">

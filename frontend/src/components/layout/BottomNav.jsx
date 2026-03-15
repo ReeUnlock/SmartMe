@@ -79,7 +79,7 @@ export default memo(function BottomNav() {
                   boxSize="18px"
                   color={isActive ? item.color : item.muted}
                   strokeWidth={isActive ? "2.5" : "1.8"}
-                  opacity={isActive ? 1 : 0.55}
+                  opacity={isActive ? 1 : 0.7}
                   style={{
                     transition: `all ${DURATION_CSS.toast} ${EASING.out}`,
                     transform: isActive ? "scale(1.08)" : "scale(1)",
@@ -90,7 +90,7 @@ export default memo(function BottomNav() {
                 fontSize="2xs"
                 fontWeight={isActive ? "700" : "600"}
                 color={isActive ? item.color : item.muted}
-                opacity={isActive ? 1 : 0.65}
+                opacity={isActive ? 1 : 0.75}
                 lineHeight="1"
                 style={{
                   transition: `all ${DURATION_CSS.toast} ${EASING.out}`,
