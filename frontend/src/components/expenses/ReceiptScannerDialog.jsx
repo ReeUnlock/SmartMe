@@ -95,7 +95,7 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
 
       // Populate draft — always go to DRAFT step even with partial results
       setStoreName(result.store_name || "");
-      setDate(result.date || new Date().toISOString().split("T")[0]);
+      setDate(result.date || "");
       setTotal(result.total != null ? String(result.total) : "");
 
       // Build items list — add "Pozostałe" if scanned items don't cover full total
@@ -152,6 +152,7 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
     e.preventDefault();
     const totalVal = parseFloat(total);
     if (!totalVal || totalVal <= 0) return;
+    if (!date) return;
 
     // Build description from store + items
     const parts = [];
@@ -374,10 +375,15 @@ export default function ReceiptScannerDialog({ open, onClose, onSubmitExpenses, 
         )}
 
         {/* Date */}
-        <Text fontSize="2xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.5px" mb={1}>
+        <Text fontSize="2xs" fontWeight="600" color={!date ? "orange.500" : "gray.500"} textTransform="uppercase" letterSpacing="0.5px" mb={1}>
           Data
         </Text>
-        <DateInput value={date} onChange={setDate} accentColor="peach" mb={2.5} />
+        <DateInput value={date} onChange={setDate} accentColor="peach" mb={!date ? 1 : 2.5} />
+        {!date && (
+          <Text fontSize="2xs" color="orange.500" mb={2}>
+            {"Nie udało się odczytać daty — wybierz ręcznie"}
+          </Text>
+        )}
 
         {/* Items */}
         {items.length > 0 && (

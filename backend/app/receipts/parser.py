@@ -16,23 +16,24 @@ KNOWN_STORES = [
     "Action", "Jysk", "Reserved", "H&M", "Zara", "CCC", "Empik",
     "Orlen", "BP", "Shell", "Circle K", "Aldi", "Makro", "Selgros",
     "Spar", "ABC", "Groszek", "Duży Ben", "Topaz",
+    "Starbucks", "Costa Coffee", "McDonald's", "KFC", "Burger King",
+    "Subway", "Pizza Hut", "Domino's", "Żappka",
 ]
 
 TOTAL_KEYWORDS = [
-    r"SUMA\b", r"RAZEM\b", r"DO\s*ZAP[ŁL]ATY",
-    r"[ŁL]([AĄ])CZNA", r"TOTAL\b", r"KWOTA\b",
-    r"WARTO[ŚS][ĆC]\s*BRUTTO", r"SPRZEDA[ŻZ]\s*BRUTTO",
-    r"WP[ŁL]ATA\b", r"NALE[ŻZ]NO[ŚS][ĆC]",
+    r"SUMA\s+PLN", r"SUMA\b[:\s]", r"RAZEM\b", r"DO\s*ZAP[ŁL]ATY",
+    r"[ŁL]([AĄ])CZNA", r"WARTO[ŚS][ĆC]\s*BRUTTO",
+    r"SPRZEDA[ŻZ]\s*BRUTTO", r"WP[ŁL]ATA\b", r"NALE[ŻZ]NO[ŚS][ĆC]",
     # Common OCR misreads of SUMA/RAZEM
     r"SUNA\b", r"RAZEN\b", r"SUflA\b", r"SUHA\b", r"SU[MN]A\b",
     r"SUfl[AĄ]\b", r"SUNIA\b",
 ]
 
 DATE_PATTERNS = [
+    # YYYY-MM-DD (most unambiguous, common on modern Polish receipts — try first)
+    (r"(20\d{2})[.\-/](\d{2})[.\-/](\d{2})", "%Y%m%d"),
     # DD-MM-YYYY or DD.MM.YYYY or DD/MM/YYYY
     (r"(\d{2})[.\-/](\d{2})[.\-/](20\d{2})", "%d%m%Y"),
-    # YYYY-MM-DD
-    (r"(20\d{2})[.\-/](\d{2})[.\-/](\d{2})", "%Y%m%d"),
     # DD-MM-YY
     (r"(\d{2})[.\-/](\d{2})[.\-/](\d{2})\b", "%d%m%y"),
 ]
@@ -185,19 +186,42 @@ def _detect_store(lines: list[str]) -> str | None:
         if _normalize_pl(key) in full_text_norm:
             return store
 
-    # Fallback: first non-trivial line that looks like a name
-    for line in lines[:5]:
+    # Fallback: smarter heuristic for unknown stores
+    # Skip patterns for legal entities, addresses, and metadata
+    _store_skip_re = re.compile(
+        r"Sp\.\s*z\s*o\.?\s*o\.?|S\.A\.|s\.c\.|S\.K\.A\.|D\.I\.P\."
+        r"|^ul\.|^al\.|^\d{2}-\d{3}"
+        r"|NIP|PARAGON|FISKALNY",
+        re.IGNORECASE,
+    )
+    # Prefer lines with these business-type keywords
+    _store_prefer_re = re.compile(
+        r"Sklep|Market|Apteka|Restauracja|Kawiarnia|Przychodnia|Stacja",
+        re.IGNORECASE,
+    )
+
+    candidates = []
+    for line in lines[:7]:
         cleaned = line.strip()
-        if len(cleaned) < 3:
+        if len(cleaned) < 3 or len(cleaned) > 40:
             continue
         if re.match(r"^[\d\s\-=*#.]+$", cleaned):
             continue
-        if re.match(r"^NIP\b", cleaned, re.IGNORECASE):
+        if _store_skip_re.search(cleaned):
             continue
         # Skip lines that are mostly digits (phone numbers, NIP values)
         if sum(c.isdigit() for c in cleaned) > len(cleaned) * 0.6:
             continue
-        return cleaned
+        candidates.append(cleaned)
+
+    # Return preferred match first (Sklep, Market, Przychodnia, etc.)
+    for c in candidates:
+        if _store_prefer_re.search(c):
+            return c
+
+    # Otherwise return first candidate
+    if candidates:
+        return candidates[0]
 
     return None
 
@@ -226,11 +250,11 @@ def _detect_total(lines: list[str]) -> float | None:
     High-priority match always wins over low-priority.
     """
     # High-priority: actual total keywords
+    # NOTE: KWOTA removed (matches "Kwota PTU B 8%"), TOTAL removed (matches item lines)
     high_priority = [
-        r"SUMA\b", r"RAZEM\b", r"DO\s*ZAP[ŁL]ATY",
-        r"[ŁL]([AĄ])CZNA", r"TOTAL\b", r"KWOTA\b",
-        r"WARTO[ŚS][ĆC]\s*BRUTTO", r"SPRZEDA[ŻZ]\s*BRUTTO",
-        r"NALE[ŻZ]NO[ŚS][ĆC]",
+        r"SUMA\s+PLN", r"SUMA\b[:\s]", r"RAZEM\b", r"DO\s*ZAP[ŁL]ATY",
+        r"[ŁL]([AĄ])CZNA", r"WARTO[ŚS][ĆC]\s*BRUTTO",
+        r"SPRZEDA[ŻZ]\s*BRUTTO", r"NALE[ŻZ]NO[ŚS][ĆC]",
         # OCR misreads
         r"SUNA\b", r"RAZEN\b", r"SUflA\b", r"SUHA\b", r"SU[MN]A\b",
         r"SUfl[AĄ]\b", r"SUNIA\b",
@@ -243,10 +267,17 @@ def _detect_total(lines: list[str]) -> float | None:
     exclude_patterns = [
         r"GOT[ÓOÔÖ]WK[AĄ]", r"RESZTA", r"KARTA\b", r"VISA\b",
         r"MASTERCARD\b", r"SUMA\s*PTU",
+        r"SPRZEDA[ŻZ]\s+OPODATKOWANA",  # net amount by VAT group
+        r"^[SŚ]p[:\s]",                  # "Sp: A=12,92 B=9,99"
+        r"[A-Z][=:]\s*\d",               # "A=12,92" VAT subtotals
+        r"KWOTA\s+PTU",                   # "Kwota PTU B 8%"
+        r"KWOTA\s+[A-Z]\s+\d",           # "Kwota A 23,00%"
+        r"PTU\s+[A-Z]\s+\d",             # "PTU C 5%"
+        r"PODATEK\s+PTU",                 # "Podatek PTU"
     ]
     exclude_re = re.compile("|".join(exclude_patterns), re.IGNORECASE)
 
-    def _find_total_in_lines(patterns):
+    def _find_total_in_lines(patterns, first_match=False):
         best = None
         pattern = "|".join(patterns)
         for i, line in enumerate(lines):
@@ -259,23 +290,29 @@ def _detect_total(lines: list[str]) -> float | None:
                 if prices:
                     whole, decimal = prices[-1]
                     value = float(f"{whole}.{decimal}")
-                    if 0 < value < 50000 and (best is None or value > best):
-                        best = value
+                    if 0 < value < 50000:
+                        if first_match:
+                            return value
+                        if best is None or value > best:
+                            best = value
                 elif i + 1 < len(lines):
                     prices = PRICE_ANYWHERE_RE.findall(lines[i + 1])
                     if prices:
                         whole, decimal = prices[-1]
                         value = float(f"{whole}.{decimal}")
-                        if 0 < value < 50000 and (best is None or value > best):
-                            best = value
+                        if 0 < value < 50000:
+                            if first_match:
+                                return value
+                            if best is None or value > best:
+                                best = value
         return best
 
-    # Try high-priority first
-    total = _find_total_in_lines(high_priority)
+    # Try high-priority first (first match wins — SUMA PLN appears once on receipts)
+    total = _find_total_in_lines(high_priority, first_match=True)
     if total is not None:
         return total
 
-    # Fall back to low-priority
+    # Fall back to low-priority (keep largest for ambiguous keywords)
     return _find_total_in_lines(low_priority)
 
 
@@ -462,6 +499,11 @@ STORE_CATEGORY_MAP = {
     "CCC": "Ubrania", "Pepco": "Ubrania",
     # Entertainment / books → Rozrywka
     "Empik": "Rozrywka",
+    # Restaurants / cafes → Jedzenie
+    "Starbucks": "Jedzenie", "Costa Coffee": "Jedzenie",
+    "McDonald's": "Jedzenie", "KFC": "Jedzenie", "Burger King": "Jedzenie",
+    "Subway": "Jedzenie", "Pizza Hut": "Jedzenie", "Domino's": "Jedzenie",
+    "Żappka": "Jedzenie",
 }
 
 
