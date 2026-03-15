@@ -4,8 +4,11 @@ import { Box, Flex, Heading, Text, Input, Button, VStack } from "@chakra-ui/reac
 import { LuShieldCheck, LuArrowLeft } from "react-icons/lu";
 import { adminApi } from "../../api/admin";
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
 export default function AdminLoginPage() {
   const [key, setKey] = useState("");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -20,7 +23,12 @@ export default function AdminLoginPage() {
     sessionStorage.setItem("admin_key", key.trim());
     try {
       await adminApi.health();
-      // Key is valid — reload to enter admin
+      // Key is valid
+      if (remember) {
+        localStorage.setItem("admin_key", key.trim());
+        localStorage.setItem("admin_key_expires", String(Date.now() + THIRTY_DAYS_MS));
+        sessionStorage.removeItem("admin_key");
+      }
       window.location.href = "/admin";
     } catch {
       sessionStorage.removeItem("admin_key");
@@ -74,6 +82,25 @@ export default function AdminLoginPage() {
               size="lg"
             />
           </Box>
+
+          <Flex
+            as="label"
+            align="center"
+            gap={2}
+            cursor="pointer"
+            w="100%"
+            userSelect="none"
+          >
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              style={{ accentColor: "#3B82F6", width: 16, height: 16 }}
+            />
+            <Text fontSize="sm" color="gray.400">
+              {"Pamiętaj mnie przez 30 dni"}
+            </Text>
+          </Flex>
 
           {error && (
             <Text color="red.400" fontSize="sm">

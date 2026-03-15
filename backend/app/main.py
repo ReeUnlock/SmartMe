@@ -83,28 +83,51 @@ app.include_router(admin_router)
 
 # ── last_seen_at middleware ────────────────────────────────────────────────
 
+# Paths to skip for last_seen tracking (public/internal endpoints)
+_SKIP_LAST_SEEN_PREFIXES = (
+    "/api/health",
+    "/api/admin",
+    "/api/billing/webhooks",
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/setup",
+    "/api/auth/verify-email",
+    "/api/auth/resend-verification",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+    "/api/auth/test-",
+    "/api/feedback",
+    "/api/billing/plans",
+)
+
+from app.auth.security import decode_access_token
+
+
 def _update_last_seen(user_id: int):
     """Background task: update last_seen_at for the authenticated user."""
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         db.execute(
             text("UPDATE users SET last_seen_at = :now WHERE id = :uid"),
             {"now": datetime.now(timezone.utc), "uid": user_id},
         )
         db.commit()
-        db.close()
     except Exception:
+        db.rollback()
         logger.debug("Failed to update last_seen_at", exc_info=True)
+    finally:
+        db.close()
 
 
 @app.middleware("http")
 async def track_last_seen(request: Request, call_next):
     response = await call_next(request)
-    # Extract user_id from JWT if present (non-blocking)
+    path = request.url.path
+    if not path.startswith("/api/") or path.startswith(_SKIP_LAST_SEEN_PREFIXES):
+        return response
     auth = request.headers.get("authorization", "")
     if auth.startswith("Bearer "):
         token = auth[7:]
-        from app.auth.security import decode_access_token
         user_id = decode_access_token(token)
         if user_id:
             response.background = BackgroundTask(_update_last_seen, user_id)

@@ -14,6 +14,7 @@ from app.admin.schemas import (
     GlobalStats,
     FeedbackListResponse,
     AdminHealthResponse,
+    DeleteUserResponse,
 )
 from app.admin.service import (
     get_users_list,
@@ -74,6 +75,25 @@ def get_user(
             detail="User not found",
         )
     return result
+
+
+@router.delete("/users/{user_id}", response_model=DeleteUserResponse)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _key=Depends(verify_admin_key),
+):
+    """Delete a user and all their data (cascade)."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    email = user.email
+    db.delete(user)
+    db.commit()
+    return DeleteUserResponse(deleted=True, user_id=user_id, email=email)
 
 
 @router.get("/stats", response_model=GlobalStats)

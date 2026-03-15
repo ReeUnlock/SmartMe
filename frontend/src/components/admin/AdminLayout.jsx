@@ -20,6 +20,7 @@ import {
   LuX,
   LuShieldCheck,
 } from "react-icons/lu";
+import { clearAdminKey } from "../../api/admin";
 
 const NAV_ITEMS = [
   { path: "/admin", label: "Dashboard", icon: LuLayoutDashboard, exact: true },
@@ -32,7 +33,7 @@ function SidebarContent({ onClose }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    sessionStorage.removeItem("admin_key");
+    clearAdminKey();
     navigate("/admin");
   };
 

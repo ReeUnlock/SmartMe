@@ -100,3 +100,9 @@ class AdminHealthResponse(BaseModel):
     status: str
     db_users: int
     timestamp: str
+
+
+class DeleteUserResponse(BaseModel):
+    deleted: bool
+    user_id: int
+    email: str

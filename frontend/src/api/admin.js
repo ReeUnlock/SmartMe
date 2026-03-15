@@ -2,8 +2,23 @@ const ADMIN_API = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/admin`
   : "/api/admin";
 
-function getAdminKey() {
-  return sessionStorage.getItem("admin_key");
+export function getAdminKey() {
+  const session = sessionStorage.getItem("admin_key");
+  if (session) return session;
+
+  const stored = localStorage.getItem("admin_key");
+  const expires = localStorage.getItem("admin_key_expires");
+  if (stored && expires && Date.now() < parseInt(expires)) return stored;
+
+  localStorage.removeItem("admin_key");
+  localStorage.removeItem("admin_key_expires");
+  return null;
+}
+
+export function clearAdminKey() {
+  sessionStorage.removeItem("admin_key");
+  localStorage.removeItem("admin_key");
+  localStorage.removeItem("admin_key_expires");
 }
 
 async function adminFetch(path, options = {}) {
@@ -17,7 +32,7 @@ async function adminFetch(path, options = {}) {
     },
   });
   if (res.status === 403) {
-    sessionStorage.removeItem("admin_key");
+    clearAdminKey();
     window.location.href = "/admin";
     throw new Error("Unauthorized");
   }
@@ -31,4 +46,5 @@ export const adminApi = {
   users: (params) => adminFetch(`/users?${new URLSearchParams(params)}`),
   user: (id) => adminFetch(`/users/${id}`),
   feedback: (params) => adminFetch(`/feedback?${new URLSearchParams(params)}`),
+  deleteUser: (id) => adminFetch(`/users/${id}`, { method: "DELETE" }),
 };

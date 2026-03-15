@@ -2,7 +2,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import func, case
+from sqlalchemy import func, case, or_
 from sqlalchemy.orm import Session
 
 from app.auth.models import User
@@ -110,7 +110,10 @@ def get_users_list(
         like = f"%{search}%"
         query = query.filter((User.email.ilike(like)) | (User.username.ilike(like)))
     if plan:
-        query = query.filter(User.plan == plan)
+        if plan == "free":
+            query = query.filter(or_(User.plan == "free", User.plan == None))
+        else:
+            query = query.filter(User.plan == plan)
 
     # Total count
     total = query.count()
@@ -261,7 +264,7 @@ def get_global_stats(db: Session) -> dict:
     total_users = db.query(func.count(User.id)).scalar() or 0
     verified_users = db.query(func.count(User.id)).filter(User.is_email_verified == True).scalar() or 0
     pro_users = db.query(func.count(User.id)).filter(User.plan == "pro").scalar() or 0
-    free_users = total_users - pro_users
+    free_users = db.query(func.count(User.id)).filter(or_(User.plan == "free", User.plan == None)).scalar() or 0
 
     new_7d = db.query(func.count(User.id)).filter(User.created_at >= seven_days_ago).scalar() or 0
     new_30d = db.query(func.count(User.id)).filter(User.created_at >= thirty_days_ago).scalar() or 0

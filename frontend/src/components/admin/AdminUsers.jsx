@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -12,10 +12,11 @@ import {
   Table,
   Spinner,
 } from "@chakra-ui/react";
-import { LuSearch, LuChevronLeft, LuChevronRight } from "react-icons/lu";
+import { LuSearch, LuChevronLeft, LuChevronRight, LuTrash2 } from "react-icons/lu";
 import { adminApi } from "../../api/admin";
 import PlanBadge from "./components/PlanBadge";
 import CostBadge from "./components/CostBadge";
+import DeleteUserDialog from "./components/DeleteUserDialog";
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -48,12 +49,15 @@ const PLAN_OPTIONS = [
 
 export default function AdminUsers() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [plan, setPlan] = useState("");
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("created_at");
   const [sortDir, setSortDir] = useState("desc");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const perPage = 50;
 
   // Debounce search
@@ -98,6 +102,21 @@ export default function AdminUsers() {
   const users = data?.users || [];
   const total = data?.total || 0;
   const pages = data?.pages || 1;
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await adminApi.deleteUser(deleteTarget.id);
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+      setDeleteTarget(null);
+    } catch {
+      // keep dialog open on error
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Box>
@@ -247,18 +266,32 @@ export default function AdminUsers() {
                     {user.rewards_level != null ? `${user.rewards_level}` : "—"}
                   </Table.Cell>
                   <Table.Cell>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      color="blue.400"
-                      _hover={{ bg: "blue.500/10" }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/users/${user.id}`);
-                      }}
-                    >
-                      {"Szczegóły"}
-                    </Button>
+                    <HStack gap={1}>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="blue.400"
+                        _hover={{ bg: "blue.500/10" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/users/${user.id}`);
+                        }}
+                      >
+                        {"Szczegóły"}
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="red.400"
+                        _hover={{ bg: "red.500/10" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(user);
+                        }}
+                      >
+                        <LuTrash2 size={14} />
+                      </Button>
+                    </HStack>
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -304,6 +337,39 @@ export default function AdminUsers() {
               <LuChevronRight />
             </Button>
           </HStack>
+        </Flex>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <Flex
+          position="fixed"
+          inset={0}
+          zIndex={50}
+          align="center"
+          justify="center"
+          onClick={() => !deleting && setDeleteTarget(null)}
+        >
+          <Box position="absolute" inset={0} bg="blackAlpha.700" />
+          <Box
+            position="relative"
+            bg="gray.800"
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor="gray.700"
+            p={6}
+            w="100%"
+            maxW="440px"
+            mx={4}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DeleteUserDialog
+              email={deleteTarget.email}
+              loading={deleting}
+              onConfirm={handleDelete}
+              onCancel={() => setDeleteTarget(null)}
+            />
+          </Box>
         </Flex>
       )}
     </Box>

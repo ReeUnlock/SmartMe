@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
   Flex,
@@ -19,11 +20,13 @@ import {
   LuTarget,
   LuMic,
   LuScanLine,
+  LuTriangleAlert,
 } from "react-icons/lu";
 import { adminApi } from "../../api/admin";
 import { estimate_cost_breakdown } from "./utils";
 import PlanBadge from "./components/PlanBadge";
 import CostBadge from "./components/CostBadge";
+import DeleteUserDialog from "./components/DeleteUserDialog";
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -57,6 +60,9 @@ function InfoCard({ icon, label, value, color = "blue.400" }) {
 export default function AdminUserDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ["admin", "users", id],
@@ -84,6 +90,18 @@ export default function AdminUserDetail() {
   }
 
   const costBreakdown = estimate_cost_breakdown(user.voice_calls_total);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await adminApi.deleteUser(user.id);
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+      navigate("/admin/users");
+    } catch {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Box>
@@ -300,6 +318,44 @@ export default function AdminUserDetail() {
             <Text fontSize="sm" color="gray.200">{formatDate(user.subscription_end)}</Text>
           </Box>
         </Flex>
+      </Box>
+
+      {/* Danger zone */}
+      <Box
+        bg="gray.800"
+        borderRadius="xl"
+        borderWidth="1px"
+        borderColor="red.800"
+        p={5}
+        mt={6}
+      >
+        <Flex align="center" gap={2} mb={3}>
+          <LuTriangleAlert size={16} color="#F87171" />
+          <Heading size="sm" color="red.400">{"Strefa niebezpieczna"}</Heading>
+        </Flex>
+        <Text fontSize="sm" color="gray.400" mb={4}>
+          {"Usunięcie konta jest nieodwracalne. Wszystkie dane usera zostaną skasowane."}
+        </Text>
+
+        {!showDelete ? (
+          <Button
+            variant="outline"
+            borderColor="red.700"
+            color="red.400"
+            size="sm"
+            _hover={{ bg: "red.500/10", borderColor: "red.500" }}
+            onClick={() => setShowDelete(true)}
+          >
+            {"Usuń konto użytkownika"}
+          </Button>
+        ) : (
+          <DeleteUserDialog
+            email={user.email}
+            loading={deleting}
+            onConfirm={handleDelete}
+            onCancel={() => setShowDelete(false)}
+          />
+        )}
       </Box>
     </Box>
   );
