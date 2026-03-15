@@ -13,7 +13,7 @@ class UserRewards(Base):
     streak = Column(Integer, nullable=False, default=0, server_default="0")
     streak_last_date = Column(Date, nullable=True)
     xp = Column(Integer, nullable=False, default=0, server_default="0")
-    achievements = Column(JSON, nullable=False, default=list, server_default="[]")
+    achievements = Column(JSON, nullable=False, default=dict, server_default="{}")
     challenges_state = Column(JSON, nullable=False, default=dict, server_default="{}")
     avatar_key = Column(String(32), nullable=False, default="sol", server_default="sol")
     seen_avatar_unlocks = Column(JSON, nullable=False, default=list, server_default="[]")

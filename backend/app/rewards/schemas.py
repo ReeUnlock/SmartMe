@@ -9,7 +9,7 @@ class RewardsOut(BaseModel):
     streak: int
     streak_last_date: Optional[date] = None
     xp: int
-    achievements: list[Any]
+    achievements: Any
     challenges_state: dict[str, Any]
     avatar_key: str
     seen_avatar_unlocks: list[Any]
@@ -23,7 +23,7 @@ class RewardsUpdate(BaseModel):
     streak: Optional[int] = None
     streak_last_date: Optional[date] = None
     xp: Optional[int] = None
-    achievements: Optional[list[Any]] = None
+    achievements: Optional[Any] = None
     challenges_state: Optional[dict[str, Any]] = None
     avatar_key: Optional[str] = None
     seen_avatar_unlocks: Optional[list[Any]] = None
