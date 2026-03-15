@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 
-export default function StatCard({ label, value, icon, color = "blue.400" }) {
+export default function StatCard({ label, value, icon, color = "blue.400", onClick }) {
   return (
     <Box
       bg="gray.800"
@@ -8,6 +8,12 @@ export default function StatCard({ label, value, icon, color = "blue.400" }) {
       p={5}
       borderWidth="1px"
       borderColor="gray.700"
+      {...(onClick && {
+        onClick,
+        cursor: "pointer",
+        _hover: { borderColor: "gray.600", bg: "gray.750" },
+        transition: "all 0.15s",
+      })}
     >
       <Flex justify="space-between" align="flex-start">
         <Box>

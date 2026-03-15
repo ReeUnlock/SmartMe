@@ -87,6 +87,7 @@ export default function AdminDashboard() {
           value={stats.total_users}
           icon={<LuUsers />}
           color="blue.400"
+          onClick={() => navigate("/admin/users")}
         />
         <StatCard
           label="Aktywni (7d)"
@@ -127,6 +128,7 @@ export default function AdminDashboard() {
           value={stats.total_feedback}
           icon={<LuMessageSquare />}
           color="pink.400"
+          onClick={() => navigate("/admin/feedback")}
         />
         <StatCard
           label="Łączny koszt AI"

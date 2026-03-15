@@ -187,7 +187,7 @@ export default function AdminLayout({ children }) {
       )}
 
       {/* Main content */}
-      <Box flex={1} ml={{ base: 0, lg: "240px" }}>
+      <Box flex={1} ml={{ base: 0, lg: "240px" }} h="100vh" overflow="auto">
         {/* Topbar */}
         <Flex
           h="60px"
