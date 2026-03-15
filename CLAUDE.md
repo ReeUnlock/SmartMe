@@ -37,7 +37,7 @@ backend/app/
   plans/            — cele (manual/savings/spending_limit), milestones, bucket lista
   feedback/         — feedback z opcjonalnym user_id (bug/idea/opinion/broken)
   voice/            — transkrypcja (Whisper) + parsowanie intencji (GPT) + executors + calendar_validator + prompts.py
-  receipts/         — OCR paragonów (Tesseract pol), heurystyczny parser (sklep, data, suma, produkty)
+  receipts/         — OCR paragonów (Tesseract pol), heurystyczny parser (sklep, data, suma), auto-crop OpenCV
   common/           — TimestampMixin, pagination, email.py (Resend transactional emails)
   billing/          — Stripe billing: checkout, portal, webhooks, subscription model, feature limits
   rewards/          — backend persistence for rewards system (models.py, router.py, schemas.py) — GET/PATCH /api/rewards
@@ -512,18 +512,22 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 
 ## Receipt OCR (Faza 5)
 - `POST /api/receipts/scan` — upload image (multipart) → Tesseract OCR (pol) → heurystyczny parser → structured result
+- **Nie parsuje pozycji/itemów** — wyciąga tylko: sklep, data, suma końcowa, sugerowana kategoria
 - Max image: 10 MB, formaty: JPEG, PNG, WebP, HEIC/HEIF (+ `application/octet-stream` z magic-byte sniffing)
-- Pipeline: EXIF transpose → resize (max 2000px) → grayscale → autocontrast → denoise → adaptive threshold → Tesseract (psm=4, single column)
+- **Pipeline**: EXIF transpose → resize (max 2000px) → grayscale → autocontrast → **auto-crop (OpenCV contour detection)** → denoise → adaptive threshold → Tesseract (psm=4, single column)
+- **Auto-crop**: OpenCV edge detection + contour finding wykrywa prostokąt paragonu na tle (blat, stół) i wycina go, eliminując szum z tekstury tła. Aktywuje się gdy kontur to 15-90% powierzchni obrazu.
+- **Dual-pass OCR**: Pass 1 (adaptive threshold, psm=4) + Pass 2 (bottom 70% crop, light denoise, psm=6) — pass 2 uruchamiany gdy pass 1 nie zawiera keywords SUMA/RAZEM
 - Parser: 60+ znanych sklepów PL (fuzzy matching z normalizacją polskich znaków) + 9 fast-food/kawiarnie (Starbucks, McDonald's, KFC, etc.)
+- **Store detection**: kotwiczenie na "PARAGON FISKALNY" — szuka nazwy sklepu w liniach nagłówkowych (przed PARAGON), filtruje garbage OCR (linie z niskim % liter)
 - **Date detection**: YYYY-MM-DD (first priority), DD.MM.YYYY, DD.MM.YY — unambiguous format tried first
-- **Total detection**: priority-based, first-match-wins for high-priority — SUMA PLN/SUMA:/RAZEM/DO ZAPŁATY (high) → WPŁATA (low, largest-wins) → suma itemów → largest price
+- **Total detection**: priority-based, first-match-wins for high-priority — SUMA PLN/SUMA:/RAZEM/DO ZAPŁATY (high) → WPŁATA (low, largest-wins) → **payment math (GOTÓWKA - RESZTA)** → largest price (fallback)
+- **Payment math fallback**: jeśli SUMA jest nieczytelna, oblicza total z GOTÓWKA - RESZTA lub bierze kwotę KARTA/VISA/MASTERCARD
 - **Total excludes**: GOTÓWKA/RESZTA/KARTA/SUMA PTU/SPRZEDAŻ OPODATKOWANA/Kwota PTU/PTU [A-Z]/Podatek PTU/Sp:/A=12,92 (VAT subtotals)
-- **Store fallback**: skips legal entities (Sp. z o.o., S.A., D.I.P.), addresses (ul., al., postal codes); prefers lines with business keywords (Sklep, Market, Przychodnia, Apteka, Kawiarnia, Stacja); max 40 chars
-- **Skip patterns**: GOTÓWKA, Sp: (VAT subtotals), Udzielono, #Kasa, Kasjer, łącznie rabat, A=12,92 (VAT lines)
-- **Discounts**: per-item OPUST captured as Rabat; summary lines (OPUSTY ŁĄCZNIE, Udzielono łącznie) skipped
+- **Skip patterns**: GOTÓWKA, Sp: (VAT subtotals), Udzielono, #Kasa, Kasjer, łącznie rabat, A=12,92 (VAT lines), product lines (ilość×cena, 7,50C)
 - **Confidence scoring**: `good`/`partial`/`weak`/`none` — zwracane w response, frontend wyświetla odpowiedni banner
 - **Specific error types**: `TesseractNotFoundError`, `LanguagePackMissingError`, `ImageFormatError`, `EmptyOCRError` → różne HTTP kody i user-facing messages
 - Frontend: ReceiptScannerDialog (3 kroki: pick → scanning → draft review), client-side kompresja (max 1920px, JPEG 0.85)
+- Frontend: pojedynczy wydatek (bez listy itemów) — opis (storeName), kwota, data, kategoria, kto płaci
 - Frontend partial results: zawsze przechodzi do draft (nawet bez total), confidence banner, orange highlight na brakującej kwocie i dacie
 - Frontend date=null: NIE wypełnia dzisiejszą datą — zostawia puste z orange hintem "Nie udało się odczytać daty", submit zablokowany bez daty
 - Integracja: Dashboard "Skanuj paragon" card + Lista ikona paragonu → draft → createExpense + rewards
