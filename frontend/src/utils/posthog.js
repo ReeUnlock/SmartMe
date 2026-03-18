@@ -1,9 +1,11 @@
 import posthog from "posthog-js";
+import { isIOS } from "./platform";
 
 let initialized = false;
 
 export function initPostHog() {
   if (initialized) return;
+  if (isIOS()) return;
   const key = import.meta.env.VITE_POSTHOG_KEY;
   const host = import.meta.env.VITE_POSTHOG_HOST || "https://eu.i.posthog.com";
   if (!key) return;

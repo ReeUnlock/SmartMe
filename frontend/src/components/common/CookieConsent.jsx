@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { initPostHog } from "../../utils/posthog";
+import { isIOS } from "../../utils/platform";
 
 const CONSENT_KEY = "smartme_cookie_consent";
 
@@ -8,6 +9,7 @@ export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    if (isIOS()) return;
     const consent = localStorage.getItem(CONSENT_KEY);
     if (!consent) {
       setVisible(true);
