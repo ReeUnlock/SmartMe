@@ -59,7 +59,7 @@ const queryClient = new QueryClient({
         const msg = error?.message || "";
         if (msg === "Nieautoryzowany") return;
         // Don't show generic error toast for limit errors (handled by LimitReachedModal)
-        if (error?.body?.error === "shopping_limit_reached" || error?.body?.error === "voice_limit_reached") return;
+        if (typeof error?.body?.error === "string" && error.body.error.endsWith("_limit_reached")) return;
         useErrorToast.getState().show(
           "Nie udało się wykonać tej operacji. Spróbuj ponownie."
         );

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getEvents, createEvent, updateEvent, deleteEvent } from "../api/calendar";
 import { useEventHistory } from "./useEventHistory";
+import { useLimitModal } from "../components/common/LimitReachedModal";
 
 export function useEvents(start, end) {
   return useQuery({
@@ -20,6 +21,13 @@ export function useCreateEvent() {
         eventData: createdEvent,
       });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+    onError: (err) => {
+      if (err.status === 403 && err.body?.error === "calendar_limit_reached") {
+        useLimitModal.getState().open(
+          "Osiągnęłaś limit 10 wydarzeń w kalendarzu. Przejdź na Pro, aby dodawać bez ograniczeń."
+        );
+      }
     },
   });
 }

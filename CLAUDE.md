@@ -300,15 +300,16 @@ Wszystkie endpointy pod `/api/`. Wymagają JWT oprócz `/api/auth/register`, `/a
 - Graceful no-op gdy `RESEND_API_KEY` jest pusty (dev mode)
 
 ### Feature limits (billing/limits.py)
-**Limity egzekwowane w API** (voice: 429, shopping: 403)
+**Limity egzekwowane w API** (voice: 429, reszta: 403)
 
 | Feature | Free | Pro | Egzekwowane |
 |---------|------|-----|-------------|
-| voice_commands_per_day | 1 | Bez limitu | TAK (voice/router.py) |
-| shopping_lists | 3 | Bez limitu | TAK (shopping/router.py) |
+| voice_commands_per_day | 1 | Bez limitu | TAK (voice/router.py, 429) |
+| shopping_lists | 3 aktywne | Bez limitu | TAK (shopping/router.py, 403) |
+| calendar_events | 10 | Bez limitu | TAK (calendar/router.py, 403) |
+| goals | 1 aktywny | Bez limitu | TAK (plans/router.py, 403) |
+| bucket_items | 1 aktywny | Bez limitu | TAK (plans/router.py, 403) |
 | expenses_per_month | Bez limitu | Bez limitu | — |
-| calendar_events | Bez limitu | Bez limitu | — |
-| goals | Bez limitu | Bez limitu | — |
 | receipt_scans_per_month | Bez limitu | Bez limitu | — |
 
 ### Kluczowa logika biznesowa

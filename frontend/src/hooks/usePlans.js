@@ -5,6 +5,7 @@ import {
   getBucketItems, createBucketItem, updateBucketItem, deleteBucketItem, toggleBucketItem,
   getPlansSummary,
 } from "../api/plans";
+import { useLimitModal } from "../components/common/LimitReachedModal";
 
 // ─── Summary ──────────────────────────────────────
 
@@ -39,6 +40,13 @@ export function useCreateGoal() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["goals"] });
       qc.invalidateQueries({ queryKey: ["plans-summary"] });
+    },
+    onError: (err) => {
+      if (err.status === 403 && err.body?.error === "goals_limit_reached") {
+        useLimitModal.getState().open(
+          "Osiągnęłaś limit 1 aktywnego celu. Przejdź na Pro, aby dodawać cele bez ograniczeń."
+        );
+      }
     },
   });
 }
@@ -128,6 +136,13 @@ export function useCreateBucketItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bucket-items"] });
       qc.invalidateQueries({ queryKey: ["plans-summary"] });
+    },
+    onError: (err) => {
+      if (err.status === 403 && err.body?.error === "bucket_limit_reached") {
+        useLimitModal.getState().open(
+          "Osiągnęłaś limit 1 pozycji na liście marzeń. Przejdź na Pro, aby dodawać bez ograniczeń."
+        );
+      }
     },
   });
 }

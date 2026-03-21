@@ -40,7 +40,7 @@ class ApiError extends Error {
 function isLimitError(data) {
   const detail = data?.detail;
   if (typeof detail === "object" && detail !== null) {
-    return detail.error === "voice_limit_reached" || detail.error === "shopping_limit_reached";
+    return typeof detail.error === "string" && detail.error.endsWith("_limit_reached");
   }
   return false;
 }

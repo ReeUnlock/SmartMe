@@ -8,6 +8,7 @@ import {
 } from "@chakra-ui/react";
 import { LuLock } from "react-icons/lu";
 import { create } from "zustand";
+import { isIOS } from "../../utils/platform";
 import BottomSheetDialog from "./BottomSheetDialog";
 
 export const useLimitModal = create((set) => ({
@@ -20,9 +21,10 @@ export const useLimitModal = create((set) => ({
 export default function LimitReachedModal() {
   const { isOpen, message, close } = useLimitModal();
   const navigate = useNavigate();
+  const ios = isIOS();
 
   return (
-    <BottomSheetDialog isOpen={isOpen} onClose={close}>
+    <BottomSheetDialog open={isOpen} onClose={close}>
       <VStack gap="4" py={2} align="center">
         <Box
           w="56px"
@@ -50,22 +52,33 @@ export default function LimitReachedModal() {
           {message}
         </Text>
 
-        <Button
-          w="100%"
-          size="md"
-          bgGradient="to-r"
-          gradientFrom="rose.400"
-          gradientTo="peach.400"
-          color="white"
-          _hover={{ opacity: 0.9 }}
-          borderRadius="xl"
-          onClick={() => {
-            close();
-            navigate("/ustawienia");
-          }}
-        >
-          {"Przejdź na Pro"}
-        </Button>
+        {ios ? (
+          <Box w="100%" bg="rose.50" borderRadius="xl" p={3} textAlign="center">
+            <Text fontSize="sm" color="rose.700" fontWeight="600">
+              {"Odblokuj SmartMe Pro"}
+            </Text>
+            <Text fontSize="xs" color="rose.600" mt={1}>
+              {"Odwiedź smartme.life w przeglądarce, aby aktywować plan Pro."}
+            </Text>
+          </Box>
+        ) : (
+          <Button
+            w="100%"
+            size="md"
+            bgGradient="to-r"
+            gradientFrom="rose.400"
+            gradientTo="peach.400"
+            color="white"
+            _hover={{ opacity: 0.9 }}
+            borderRadius="xl"
+            onClick={() => {
+              close();
+              navigate("/ustawienia");
+            }}
+          >
+            {"Przejdź na Pro"}
+          </Button>
+        )}
 
         <Button
           w="100%"

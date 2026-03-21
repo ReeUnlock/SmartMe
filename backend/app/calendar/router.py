@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -52,6 +53,25 @@ def create_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # ── Calendar event limit (Free: 10, Pro: unlimited) ──
+    from app.billing.limits import get_limit
+    plan = getattr(current_user, "plan", "free") or "free"
+    limit = get_limit(plan, "calendar_events")
+    if limit is not None and limit < 999999:
+        total_events = db.query(func.count(Event.id)).filter(
+            Event.user_id == current_user.id,
+        ).scalar() or 0
+        if total_events >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "calendar_limit_reached",
+                    "message": f"Osiągnięto limit {limit} wydarzeń w kalendarzu",
+                    "limit": limit,
+                    "plan": plan,
+                },
+            )
+
     # Check for duplicate event type on the same day
     event_date = data.start_at.date()
     day_start = datetime(event_date.year, event_date.month, event_date.day, tzinfo=timezone.utc)

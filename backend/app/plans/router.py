@@ -126,6 +126,26 @@ def create_goal(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # ── Goal limit (Free: 1 active, Pro: unlimited) ──
+    from app.billing.limits import get_limit
+    plan = getattr(current_user, "plan", "free") or "free"
+    limit = get_limit(plan, "goals")
+    if limit is not None and limit < 999999:
+        active_goals = db.query(func.count(Goal.id)).filter(
+            Goal.user_id == current_user.id,
+            Goal.is_completed == False,
+        ).scalar() or 0
+        if active_goals >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "goals_limit_reached",
+                    "message": f"Osiągnięto limit {limit} aktywnych celów",
+                    "limit": limit,
+                    "plan": plan,
+                },
+            )
+
     goal = Goal(**data.model_dump(), user_id=current_user.id)
     db.add(goal)
     db.commit()
@@ -288,6 +308,26 @@ def create_bucket_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # ── Bucket list limit (Free: 1 active, Pro: unlimited) ──
+    from app.billing.limits import get_limit
+    plan = getattr(current_user, "plan", "free") or "free"
+    limit = get_limit(plan, "bucket_items")
+    if limit is not None and limit < 999999:
+        active_items = db.query(func.count(BucketItem.id)).filter(
+            BucketItem.user_id == current_user.id,
+            BucketItem.is_completed == False,
+        ).scalar() or 0
+        if active_items >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "bucket_limit_reached",
+                    "message": f"Osiągnięto limit {limit} aktywnych pozycji na liście marzeń",
+                    "limit": limit,
+                    "plan": plan,
+                },
+            )
+
     item = BucketItem(**data.model_dump(), user_id=current_user.id)
     db.add(item)
     db.commit()

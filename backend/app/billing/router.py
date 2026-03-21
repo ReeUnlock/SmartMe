@@ -35,21 +35,21 @@ _FEATURES: list[PlanFeature] = [
         pro_value="Bez limitu",
     ),
     PlanFeature(
-        key="expenses_per_month",
-        name_pl="Wydatki / miesiąc",
-        free_value="Bez limitu",
-        pro_value="Bez limitu",
-    ),
-    PlanFeature(
         key="calendar_events",
         name_pl="Wydarzenia w kalendarzu",
-        free_value="Bez limitu",
+        free_value="10",
         pro_value="Bez limitu",
     ),
     PlanFeature(
         key="goals",
         name_pl="Aktywne cele",
-        free_value="Bez limitu",
+        free_value="1",
+        pro_value="Bez limitu",
+    ),
+    PlanFeature(
+        key="bucket_items",
+        name_pl="Lista marzeń",
+        free_value="1",
         pro_value="Bez limitu",
     ),
     PlanFeature(
