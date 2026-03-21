@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SmartMe — aplikacja do zarządzania życiem głosem | Cele, wydatki, kalendarz</title>
-  <meta name="description" content="SmartMe to pierwsza polska aplikacja, w której zarządzasz życiem głosem. Dodaj wydatek, zaplanuj dzień, stwórz listę zakupów — jedną komendą, bez klikania." />
-  <meta name="keywords" content="aplikacja do zarządzania życiem głosem, aplikacja do planowania życia, aplikacja do celów i nawyków, aplikacja do kontroli wydatków, aplikacja do produktywności, sterowanie głosem aplikacja, aplikacja self improvement, aplikacja rozwoju osobistego" />
-  <meta property="og:title" content="SmartMe — zarządzaj życiem jedną komendą głosową" />
+  <title>SmartMe — aplikacja do zarządzania obowiązkami głosem | Cele, wydatki, kalendarz</title>
+  <meta name="description" content="SmartMe to pierwsza polska aplikacja, w której zarządzasz obowiązkami głosem. Dodaj wydatek, zaplanuj dzień, stwórz listę zakupów — jedną komendą, bez klikania." />
+  <meta name="keywords" content="aplikacja do zarządzania obowiązkami głosem, aplikacja do planowania obowiązków, aplikacja do celów i nawyków, aplikacja do kontroli wydatków, aplikacja do produktywności, sterowanie głosem aplikacja, aplikacja self improvement, aplikacja rozwoju osobistego" />
+  <meta property="og:title" content="SmartMe — zarządzaj obowiązkami jedną komendą głosową" />
   <meta property="og:description" content="Kalendarz, wydatki, zakupy, cele — wszystko głosem. Zero klikania, zero tracenia czasu." />
   <meta property="og:image" content="https://smartme.life/assets/logo-smartme.png" />
   <meta property="og:url" content="https://smartme.life" />
@@ -14,7 +14,7 @@
   <meta property="og:locale" content="pl_PL" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="SmartMe — zarządzaj życiem jedną komendą głosową" />
+  <meta name="twitter:title" content="SmartMe — zarządzaj obowiązkami jedną komendą głosową" />
   <meta name="twitter:description" content="Kalendarz, wydatki, zakupy, cele — wszystko głosem. Zero klikania, zero tracenia czasu." />
   <link rel="canonical" href="https://smartme.life" />
   <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -648,13 +648,13 @@
       display: flex; justify-content: center;
     }
     .life-os-visual .character-image {
-      max-height: 420px; object-fit: contain;
+      max-height: 520px; object-fit: contain;
       filter: drop-shadow(0 20px 60px rgba(255,255,255,0.3));
     }
 
     @media (min-width: 768px) {
       .life-os .container { grid-template-columns: 1fr 1fr; }
-      .life-os-visual .character-image { max-height: 480px; }
+      .life-os-visual .character-image { max-height: 620px; }
     }
 
     /* ===== SOCIAL PROOF ===== */
@@ -717,6 +717,79 @@
       font-size: 14px; color: var(--text-medium);
     }
     .download-cta .dl-badges span { display: flex; align-items: center; gap: 4px; }
+
+    /* ===== PRICING ===== */
+    .pricing { padding: 80px 0; background: var(--gradient-hero); position: relative; overflow: hidden; }
+    .pricing .blob-deco {
+      position: absolute; width: 400px; height: 400px; border-radius: 50%;
+      background: rgba(155,213,197,0.12); filter: blur(100px);
+      bottom: -150px; left: -150px; pointer-events: none;
+    }
+    .pricing .container { position: relative; }
+    .pricing-grid {
+      display: grid; grid-template-columns: 1fr; gap: 24px;
+      max-width: 880px; margin: 48px auto 0;
+    }
+    @media (min-width: 768px) {
+      .pricing-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .pricing-card {
+      border-radius: 24px; background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.6);
+      box-shadow: 0 8px 32px rgba(59,74,99,0.06); padding: 36px 28px;
+      display: flex; flex-direction: column; gap: 20px; position: relative;
+      transition: all 0.2s;
+    }
+    .pricing-card:hover { box-shadow: 0 12px 40px rgba(255,138,138,0.12); }
+    .pricing-card.featured {
+      border: 2px solid var(--primary-light);
+      box-shadow: 0 8px 32px rgba(255,138,138,0.15);
+    }
+    .pricing-card.featured::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(135deg, #FF8A8A, #F9915E); border-radius: 24px 24px 0 0;
+    }
+    .pricing-card-header { display: flex; align-items: center; justify-content: space-between; }
+    .pricing-card-name { font-family: 'Nunito', sans-serif; font-size: 24px; font-weight: 800; }
+    .pricing-badge {
+      background: rgba(255,138,138,0.1); color: var(--primary-dark);
+      font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 50px;
+    }
+    .pricing-price { font-family: 'Nunito', sans-serif; font-size: 40px; font-weight: 900; line-height: 1; }
+    .pricing-period { font-size: 15px; color: var(--text-medium); margin-top: 4px; }
+    .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+    .pricing-features li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; color: var(--text-medium);
+    }
+    .pricing-features li .check {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .pricing-features li .check.yes { background: rgba(155,213,197,0.2); color: #5BAD9D; }
+    .pricing-features li .check.no { background: rgba(130,148,170,0.1); color: #8294AA; }
+    .pricing-divider { height: 1px; background: rgba(255,138,138,0.12); margin: 4px 0; }
+    .pricing-tiers { display: flex; flex-direction: column; gap: 10px; }
+    .pricing-tier-btn {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-radius: 16px; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+      background: linear-gradient(135deg, #FF8A8A, #F9915E); color: #fff;
+      box-shadow: 0 4px 16px rgba(255,138,138,0.3); transition: all 0.2s;
+    }
+    .pricing-tier-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,138,138,0.4); }
+    .pricing-tier-btn .tier-price { font-weight: 800; }
+    .pricing-free-btn {
+      display: block; text-align: center; padding: 14px 20px; border-radius: 16px;
+      border: 2px solid rgba(130,148,170,0.2); background: transparent;
+      font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+      color: var(--text-medium); cursor: default;
+    }
+    .pricing-note {
+      text-align: center; font-size: 13px; color: var(--text-medium);
+      max-width: 480px; margin: 32px auto 0;
+    }
 
     /* ===== FAQ ===== */
     .faq { padding: 80px 0; }
@@ -794,6 +867,7 @@
       <div class="navbar-links">
         <a href="#features">Funkcje</a>
         <a href="#screenshots">Screenshoty</a>
+        <a href="#pricing">Cennik</a>
         <a href="#faq">FAQ</a>
       </div>
       <div class="navbar-actions">
@@ -810,6 +884,7 @@
     <button class="close-btn" onclick="this.parentElement.classList.remove('open')" aria-label="Zamknij">&times;</button>
     <a href="#features" onclick="this.parentElement.classList.remove('open')">Funkcje</a>
     <a href="#screenshots" onclick="this.parentElement.classList.remove('open')">Screenshoty</a>
+    <a href="#pricing" onclick="this.parentElement.classList.remove('open')">Cennik</a>
     <a href="#faq" onclick="this.parentElement.classList.remove('open')">FAQ</a>
     <a href="#download" class="btn btn-primary" onclick="this.parentElement.classList.remove('open')">Pobierz</a>
   </div>
@@ -823,7 +898,7 @@
         <div class="hero-badge">
           <span class="mic-pulse">🎙️</span> Sterowanie głosem
         </div>
-        <h1>Zarządzaj swoim życiem<br>jedną <span class="gradient-text">komendą głosową</span></h1>
+        <h1>Zarządzaj swoimi obowiązkami<br>jedną <span class="gradient-text">komendą głosową</span></h1>
         <p class="subtitle">Powiedz apce co chcesz zapisać w swoim kalendarzu, stwórz nową listę zakupów i monitoruj wydatki tak szybko i łatwo jak nigdy dotąd — bez spisywania, bez tracenia czasu.</p>
 
         <!-- Voice demo card -->
@@ -851,7 +926,7 @@
 
       <div class="hero-visual">
         <div class="character-wrapper">
-          <img src="assets/modelka_smartme_header.png" alt="SmartMe - aplikacja do zarządzania życiem" class="character-image" loading="eager" />
+          <img src="assets/modelka_smartme_header.png" alt="SmartMe - aplikacja do zarządzania obowiązkami" class="character-image" loading="eager" />
         </div>
         <!-- Floating info cards -->
         <div class="floating-card hero-float-card float-expenses">
@@ -897,7 +972,7 @@
   <section class="problem">
     <div class="container">
       <h2 class="section-title">Dlaczego tak trudno ogarnąć te wszystkie zadania?</h2>
-      <p class="section-subtitle">Codzienne obowiązki są rozproszone po dziesiątkach aplikacji. A każda wymaga klikania, wpisywania, szukania…</p>
+      <p class="section-subtitle">Codzienne obowiązki są rozproszone po dziesiątkach aplikacji.<br>A każda wymaga klikania, wpisywania, szukania…</p>
 
       <div class="problem-grid">
         <div class="problem-card">
@@ -940,8 +1015,8 @@
 
       <div class="problem-cta">
         <h3>Dlatego powstało <span class="gradient-text">SmartMe</span>.</h3>
-        <p>Powiedz co chcesz zrobić — aplikacja zrobi resztę.</p>
-        <a href="#download" class="btn btn-primary">Pobierz za darmo →</a>
+        <p>Powiedz co chcesz zrobić — aplikacja zrobi resztę.<br>Korzystaj z przeglądarki lub zainstaluj na telefonie — wszystko się synchronizuje.</p>
+        <a href="https://app.smartme.life/login" class="btn btn-primary">Sprawdź jak działa →</a>
       </div>
     </div>
   </section>
@@ -1070,10 +1145,10 @@
           <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
         <p class="voice-tagline">Zero klikania. Zero tracenia czasu.<br>Jedna komenda — wszystko gotowe.</p>
-        <a href="#download" class="btn btn-white">Zacznij teraz →</a>
+        <a href="https://app.smartme.life/login" class="btn btn-white">Zacznij teraz →</a>
       </div>
       <div class="life-os-visual">
-        <img src="assets/modelka_smartme_1.png" alt="SmartMe - aplikacja do zarządzania życiem" class="character-image" loading="lazy" />
+        <img src="assets/modelka_smartme_1.png" alt="SmartMe - aplikacja do zarządzania obowiązkami" class="character-image" loading="lazy" />
       </div>
     </div>
   </section>
@@ -1084,7 +1159,7 @@
       <div class="sp-header">
         <div class="sp-stars">⭐⭐⭐⭐⭐</div>
         <div class="sp-rating">4.9 / 5 w ocenach użytkowników</div>
-        <p class="sp-count">Ponad 10 000 osób zarządza życiem z SmartMe</p>
+        <p class="sp-count">Ponad 10 000 osób zarządza obowiązkami z SmartMe</p>
       </div>
 
       <div class="testimonials-grid">
@@ -1118,7 +1193,7 @@
     <div class="blob-deco"></div>
     <div class="container">
       <div class="download-cta-visual">
-        <img src="assets/modelka_smartme_2.png" alt="SmartMe - aplikacja do zarządzania życiem" class="character-image" loading="lazy" />
+        <img src="assets/modelka_smartme_2.png" alt="SmartMe - aplikacja do zarządzania obowiązkami" class="character-image" loading="lazy" />
       </div>
       <div class="download-cta-content">
       <h2>Zarządzaj swoim kalendarzem i zadaniami tak szybko i łatwo jak nigdy wcześniej</h2>
@@ -1144,6 +1219,74 @@
     </div>
   </section>
 
+  <!-- PRICING -->
+  <section id="pricing" class="pricing">
+    <div class="blob-deco"></div>
+    <div class="container">
+      <h2 class="section-title">Proste plany, bez ukrytych opłat</h2>
+      <p class="section-subtitle">Zacznij za darmo. Przejdź na Pro, gdy potrzebujesz więcej.</p>
+
+      <div class="pricing-grid">
+        <!-- FREE -->
+        <div class="pricing-card">
+          <div class="pricing-card-header">
+            <span class="pricing-card-name">Free</span>
+          </div>
+          <div>
+            <div class="pricing-price">Za darmo</div>
+            <div class="pricing-period">na zawsze</div>
+          </div>
+          <ul class="pricing-features">
+            <li><span class="check yes">✓</span> 1 komenda głosowa dziennie</li>
+            <li><span class="check yes">✓</span> 3 aktywne listy zakupów</li>
+            <li><span class="check yes">✓</span> 10 wydarzeń w kalendarzu</li>
+            <li><span class="check yes">✓</span> 1 aktywny cel</li>
+            <li><span class="check yes">✓</span> 1 pozycja na liście marzeń</li>
+            <li><span class="check yes">✓</span> Wydatki i budżet bez limitu</li>
+            <li><span class="check yes">✓</span> Skaner paragonów</li>
+            <li><span class="check yes">✓</span> System nagród i wyzwań</li>
+          </ul>
+          <div class="pricing-free-btn">Twój obecny plan</div>
+        </div>
+
+        <!-- PRO -->
+        <div class="pricing-card featured">
+          <div class="pricing-card-header">
+            <span class="pricing-card-name">Pro</span>
+            <span class="pricing-badge">Najpopularniejszy</span>
+          </div>
+          <div>
+            <div class="pricing-price">od 25 zł<span style="font-size:18px;font-weight:600;color:var(--text-medium)">/mies.</span></div>
+            <div class="pricing-period">płatność jednorazowa za okres</div>
+          </div>
+          <ul class="pricing-features">
+            <li><span class="check yes">✓</span> <strong>Nieograniczone</strong> komendy głosowe</li>
+            <li><span class="check yes">✓</span> <strong>Nieograniczone</strong> listy zakupów</li>
+            <li><span class="check yes">✓</span> <strong>Nieograniczone</strong> wydarzenia</li>
+            <li><span class="check yes">✓</span> <strong>Nieograniczone</strong> cele i lista marzeń</li>
+            <li><span class="check yes">✓</span> Wydatki i budżet bez limitu</li>
+            <li><span class="check yes">✓</span> Skaner paragonów</li>
+            <li><span class="check yes">✓</span> System nagród i wyzwań</li>
+            <li><span class="check yes">✓</span> Priorytetowe wsparcie</li>
+          </ul>
+          <div class="pricing-divider"></div>
+          <div class="pricing-tiers">
+            <a href="https://app.smartme.life/ustawienia" class="pricing-tier-btn">
+              <span>3 miesiące</span>
+              <span class="tier-price">99 zł</span>
+            </a>
+            <a href="https://app.smartme.life/ustawienia" class="pricing-tier-btn" style="background:linear-gradient(135deg,#FF6B6B,#E85D5D);">
+              <span>12 miesięcy <span style="font-size:12px;opacity:0.85">— oszczędzasz 26%</span></span>
+              <span class="tier-price">299 zł</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <p class="pricing-note">Anulowanie w dowolnym momencie. 14 dni na zwrot. Płatność przez Stripe — bezpieczna i szyfrowana.</p>
+    </div>
+  </section>
+
   <!-- FAQ -->
   <section id="faq" class="faq">
     <div class="container">
@@ -1163,7 +1306,7 @@
             Czy SmartMe jest darmowe?
             <span class="faq-toggle">+</span>
           </summary>
-          <p class="faq-answer">Tak, SmartMe jest dostępne bezpłatnie na App Store i Google Play.</p>
+          <p class="faq-answer">SmartMe ma darmowy plan Free z podstawowymi funkcjami — 1 komenda głosowa dziennie, 3 listy zakupów, 10 wydarzeń. Plan Pro (od 99 zł / 3 miesiące) usuwa wszystkie limity. <a href="#pricing" style="color:var(--primary);font-weight:600;">Porównaj plany →</a></p>
         </details>
 
         <details class="faq-item">
@@ -1214,6 +1357,7 @@
           <h4>Aplikacja</h4>
           <a href="#features">Funkcje</a>
           <a href="#screenshots">Screenshoty</a>
+          <a href="#pricing">Cennik</a>
           <a href="#faq">FAQ</a>
         </div>
         <div class="footer-col">
