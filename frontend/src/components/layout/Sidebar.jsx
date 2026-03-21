@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Box, Flex, Icon, Text, VStack, Heading } from "@chakra-ui/react";
+import { Box, Flex, Icon, Text, VStack, Heading, Badge } from "@chakra-ui/react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   LuCalendar,
   LuShoppingCart,
@@ -12,6 +13,7 @@ import {
 } from "react-icons/lu";
 import { useAuth } from "../../hooks/useAuth";
 import useIntroTour from "../../hooks/useIntroTour";
+import { getSubscription } from "../../api/billing";
 
 const navItems = [
   { path: "/kalendarz", label: "Kalendarz", icon: LuCalendar, color: "sky.500", activeBg: "sky.50", textColor: "sky.700" },
@@ -27,6 +29,12 @@ export default function Sidebar() {
   const openTour = useIntroTour((s) => s.openTour);
   const [logoLoaded, setLogoLoaded] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const { data: sub } = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: getSubscription,
+    staleTime: 60_000,
+  });
+  const isPro = sub?.plan === "pro";
 
   return (
     <Box
@@ -76,6 +84,21 @@ export default function Sidebar() {
           >
             SmartMe
           </Heading>
+        )}
+        {sub && (
+          <Badge
+            mt="2"
+            alignSelf="flex-start"
+            borderRadius="full"
+            px={2}
+            py={0.5}
+            fontSize="2xs"
+            fontWeight="bold"
+            bg={isPro ? "peach.50" : "gray.100"}
+            color={isPro ? "peach.500" : "gray.500"}
+          >
+            {isPro ? "Pro" : "Free"}
+          </Badge>
         )}
       </Box>
 

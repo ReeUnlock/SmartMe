@@ -295,6 +295,7 @@ Wszystkie endpointy pod `/api/`. Wymagają JWT oprócz `/api/auth/register`, `/a
 - `send_welcome(to, name)` — po weryfikacji emaila
 - `send_upgrade_confirmation(to, name)` — po upgrade do Pro
 - `send_downgrade_notice(to, name)` — po anulowaniu/wygaśnięciu Pro
+- `send_payment_failed(to, name)` — po nieudanej płatności (past_due)
 - `send_support_message(from_email, message)` — forwarding do support@smartme.life
 - Graceful no-op gdy `RESEND_API_KEY` jest pusty (dev mode)
 
@@ -642,7 +643,8 @@ Reakcje: 7 typów zdarzeń × 4 avatary, każdy z unikalną osobowością i pul�
 - **Status**: Sprint 1 (billing) — limity egzekwowane, UI subskrypcji odblokowane na web, iOS compliance info
 - **Sprint 0**: migracja `257290e4561e` — `users.plan` + `subscriptions` table ✓
 - **Sprint 1**: egzekwowanie limitów voice (1/dzień) + shopping (3 listy), UI subskrypcji z 2 tierami (99zł/3M, 299zł/12M), LimitReachedModal, iOS info section, PricingTier schema, ApiError class w client.js
-- **Blokery przed pierwszym płacącym klientem**: stworzenie produktów w Stripe Dashboard (3M + 12M), wpisanie price IDs do env, uruchomienie migracji na prod, Stripe live mode, backup DB
+- **Sprint 1 polish**: post-checkout refresh (invalidate query), upgrade=cancelled banner, past_due warning, send_payment_failed email, plan badge w Sidebar, shopping counter (X/3), price_id validation, privacy policy (Stripe + Resend + kontakt), terms (zwroty 14 dni, anulowanie)
+- **Blokery przed pierwszym płacącym klientem**: stworzenie produktów w Stripe Dashboard (3M + 12M), wpisanie price IDs do env, uruchomienie migracji na prod, Stripe live mode, backup DB, Android signed build + Google Play workflow
 
 ## Testy
 - **Backend auth**: 62 testy pytest (lifecycle ×13, walidacja ×22, rate limiting ×4, token security ×8, password edge cases ×9, account deletion ×3, public endpoints ×3)

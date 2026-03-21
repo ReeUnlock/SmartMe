@@ -158,6 +158,29 @@ def send_downgrade_notice(to: str, name: str) -> bool:
     return _send(to, "Subskrypcja Pro wygasła", html)
 
 
+def send_payment_failed(to: str, name: str) -> bool:
+    """Send email when subscription payment fails."""
+    html = _wrap_html(f"""
+        <h2 style="font-family:'Nunito',sans-serif;font-size:22px;margin:0 0 16px;">Problem z płatnością</h2>
+        <p style="line-height:1.7;color:#5A6B82;">
+            Cześć {name}, ostatnia próba pobrania płatności za SmartMe Pro nie powiodła się.
+            Zaktualizuj metodę płatności, aby zachować dostęp do funkcji Pro.
+        </p>
+        <p style="line-height:1.7;color:#5A6B82;">
+            Stripe automatycznie ponowi próbę w ciągu kilku dni. Jeśli płatność nie powiedzie się ponownie,
+            Twoje konto zostanie przełączone na plan Free.
+        </p>
+        <div style="text-align:center;margin:28px 0;">
+            <a href="{settings.FRONTEND_URL}/ustawienia" style="display:inline-block;padding:14px 36px;
+               background:linear-gradient(135deg,#F783AC,#F9915E);color:#fff;
+               border-radius:9999px;font-weight:700;text-decoration:none;font-size:16px;">
+                Zarządzaj subskrypcją
+            </a>
+        </div>
+    """)
+    return _send(to, "Problem z płatnością — SmartMe Pro", html)
+
+
 def send_support_message(from_email: str, message: str) -> bool:
     """Forward support/contact message to support@smartme.life."""
     r = _get_resend()

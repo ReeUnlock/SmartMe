@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Box, Flex, Heading, Text, Icon, VStack } from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
 import { LuPlus, LuShoppingCart } from "react-icons/lu";
 import SmartMeLoader from "../common/SmartMeLoader";
 import EmptyState from "../common/EmptyState";
 import { useShoppingLists, useCreateList, useDeleteList, useAddItem } from "../../hooks/useShopping";
+import { getSubscription } from "../../api/billing";
 import ShoppingListCard from "./ShoppingListCard";
 import ShoppingListDetail from "./ShoppingListDetail";
 import NewListDialog from "./NewListDialog";
@@ -15,6 +17,13 @@ export default function ShoppingPage() {
   const addItemMut = useAddItem();
   const [selectedListId, setSelectedListId] = useState(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const { data: sub } = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: getSubscription,
+    staleTime: 60_000,
+  });
+  const isFree = !sub || sub.plan === "free";
+  const activeLists = lists?.filter((l) => !l.is_completed)?.length || 0;
 
   const handleCreate = async (name, storeName = null, templateItems = null) => {
     try {
@@ -82,9 +91,16 @@ export default function ShoppingPage() {
   return (
     <Box px={{ base: 0, md: 6 }} py={{ base: 0, md: 4 }} maxW="600px" mx="auto" w="100%" overflow="hidden">
       <Flex align="center" justify="space-between" mb={5}>
-        <Heading size={{ base: "lg", md: "xl" }} color="sage.700" fontFamily="'Nunito', sans-serif">
-          Zakupy
-        </Heading>
+        <Flex align="baseline" gap={2}>
+          <Heading size={{ base: "lg", md: "xl" }} color="sage.700" fontFamily="'Nunito', sans-serif">
+            Zakupy
+          </Heading>
+          {isFree && lists?.length > 0 && (
+            <Text fontSize="xs" color={activeLists >= 3 ? "orange.500" : "gray.400"} fontWeight="500">
+              {`${activeLists}/3`}
+            </Text>
+          )}
+        </Flex>
         <Flex
           align="center"
           gap={2}

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.auth.models import User
 from app.billing.models import Subscription
-from app.common.email import send_upgrade_confirmation, send_downgrade_notice
+from app.common.email import send_upgrade_confirmation, send_downgrade_notice, send_payment_failed
 
 logger = logging.getLogger(__name__)
 
@@ -210,12 +210,17 @@ class BillingService:
         logger.info("Subscription deleted, user %s downgraded", sub.user_id)
 
     def _handle_payment_failed(self, data: dict) -> None:
-        """Mark subscription as past_due on payment failure."""
+        """Mark subscription as past_due on payment failure and notify user."""
         stripe_sub_id = data.get("subscription")
         sub = self._find_by_stripe_sub_id(stripe_sub_id)
         if not sub:
             return
 
         sub.status = "past_due"
+
+        user = self.db.query(User).filter(User.id == sub.user_id).first()
+        if user:
+            send_payment_failed(user.email, user.username)
+
         self.db.flush()
         logger.warning("Payment failed for user %s", sub.user_id)

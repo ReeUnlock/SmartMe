@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getPlans } from "../../api/billing";
 import {
   Box,
   Heading,
@@ -397,12 +398,13 @@ function SubscriptionSection() {
 
   const { data: plans } = useQuery({
     queryKey: ["billing", "plans"],
-    queryFn: () => import("../../api/billing").then((m) => m.getPlans()),
+    queryFn: getPlans,
     staleTime: 60 * 60 * 1000,
   });
 
   const plan = sub?.plan || "free";
   const isPro = plan === "pro";
+  const isPastDue = sub?.status === "past_due";
   const tiers = plans?.pro?.pricing_tiers || [];
 
   const handleUpgrade = async (priceId) => {
@@ -453,6 +455,17 @@ function SubscriptionSection() {
         </HStack>
       </Flex>
 
+      {isPastDue && (
+        <Box p={3} bg="orange.50" borderRadius="xl" borderWidth="1px" borderColor="orange.200" mb="2">
+          <Text fontWeight="500" fontSize="sm" color="orange.700">
+            {"Problem z płatnością"}
+          </Text>
+          <Text fontSize="xs" color="orange.600" mt={1}>
+            {"Ostatnia płatność nie powiodła się. Zaktualizuj metodę płatności, aby zachować plan Pro."}
+          </Text>
+        </Box>
+      )}
+
       {isPro ? (
         <VStack align="stretch" gap="2">
           {sub?.current_period_end && (
@@ -479,7 +492,7 @@ function SubscriptionSection() {
           <Text fontSize="xs" color="gray.400" lineHeight="tall">
             {"Odblokuj nieograniczone komendy głosowe i listy zakupów."}
           </Text>
-          {tiers.map((tier) => (
+          {tiers.filter((t) => t.price_id).map((tier) => (
             <Button
               key={tier.period}
               size="sm"
@@ -495,20 +508,10 @@ function SubscriptionSection() {
               {`Pro — ${tier.price_pln} zł ${tier.label}`}
             </Button>
           ))}
-          {tiers.length === 0 && (
-            <Button
-              size="sm"
-              bgGradient="to-r"
-              gradientFrom="rose.400"
-              gradientTo="peach.400"
-              color="white"
-              _hover={{ opacity: 0.9 }}
-              borderRadius="xl"
-              onClick={() => handleUpgrade()}
-              loading={!!loadingTier}
-            >
-              {"Ulepsz do Pro"}
-            </Button>
+          {tiers.filter((t) => t.price_id).length === 0 && (
+            <Text fontSize="xs" color="gray.400" fontStyle="italic">
+              {"Subskrypcja Pro będzie dostępna wkrótce."}
+            </Text>
           )}
         </VStack>
       )}
@@ -559,14 +562,30 @@ function IOSSubscriptionInfo() {
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const level = useRewards((s) => s.level);
   const avatarKey = getSelectedAvatar(level);
   const avatarConfig = getAvatarConfig(avatarKey);
   const openTour = useIntroTour((s) => s.openTour);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
-  const upgraded = searchParams.get("upgrade") === "success" || searchParams.get("upgraded") === "true";
+
+  const upgradeParam = searchParams.get("upgrade") || "";
+  const upgraded = upgradeParam === "success" || searchParams.get("upgraded") === "true";
+  const cancelled = upgradeParam === "cancelled";
+
+  // Force refresh subscription data after checkout redirect
+  useEffect(() => {
+    if (upgraded || cancelled) {
+      queryClient.invalidateQueries({ queryKey: ["billing", "subscription"] });
+      // Clean URL params after 5s
+      const timer = setTimeout(() => {
+        setSearchParams({}, { replace: true });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [upgraded, cancelled, queryClient, setSearchParams]);
 
   return (
     <Box maxW="520px" mx="auto">
@@ -594,6 +613,23 @@ export default function SettingsPage() {
           >
             <Text fontSize="sm" color="green.600" fontWeight="600">
               {"Gratulacje! Twój plan Pro jest aktywny."}
+            </Text>
+          </Box>
+        )}
+
+        {/* ── Upgrade cancelled banner ── */}
+        {!isIOS() && cancelled && (
+          <Box
+            bg="orange.50"
+            borderRadius="2xl"
+            px={5}
+            py={4}
+            borderWidth="1px"
+            borderColor="orange.100"
+            className="sm-card-enter"
+          >
+            <Text fontSize="sm" color="orange.600" fontWeight="600">
+              {"Płatność anulowana. Możesz spróbować ponownie w dowolnym momencie."}
             </Text>
           </Box>
         )}
