@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Index
+from sqlalchemy import Column, Date, Integer, String, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -22,6 +22,9 @@ class User(Base, TimestampMixin):
     voice_calls_total = Column(Integer, nullable=False, default=0, server_default="0")
     receipt_scans_total = Column(Integer, nullable=False, default=0, server_default="0")
     login_count = Column(Integer, nullable=False, default=0, server_default="0")
+    # Daily voice command counter (reset when date changes)
+    voice_calls_today = Column(Integer, nullable=False, default=0, server_default="0")
+    voice_calls_today_date = Column(Date, nullable=True)
 
     auth_tokens = relationship("AuthToken", back_populates="user", cascade="all, delete-orphan")
 

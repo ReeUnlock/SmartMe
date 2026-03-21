@@ -2,15 +2,17 @@
 Billing endpoints — plans, Stripe checkout/portal, webhooks.
 """
 import logging
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.auth.models import User
 from app.auth.dependencies import get_current_user
+from app.config import settings as cfg
 from app.billing.schemas import (
-    PlansResponse, PlanInfo, PlanFeature,
+    PlansResponse, PlanInfo, PlanFeature, PricingTier,
     CheckoutSessionResponse, PortalSessionResponse, SubscriptionOut,
 )
 from app.billing.service import BillingService
@@ -21,39 +23,39 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 _FEATURES: list[PlanFeature] = [
     PlanFeature(
+        key="voice_commands_per_day",
+        name_pl="Komendy głosowe / dzień",
+        free_value="1",
+        pro_value="Bez limitu",
+    ),
+    PlanFeature(
         key="shopping_lists",
-        name_pl="Listy zakupów",
-        free_value="10",
+        name_pl="Aktywne listy zakupów",
+        free_value="3",
         pro_value="Bez limitu",
     ),
     PlanFeature(
         key="expenses_per_month",
         name_pl="Wydatki / miesiąc",
-        free_value="100",
+        free_value="Bez limitu",
         pro_value="Bez limitu",
     ),
     PlanFeature(
         key="calendar_events",
         name_pl="Wydarzenia w kalendarzu",
-        free_value="50",
+        free_value="Bez limitu",
         pro_value="Bez limitu",
     ),
     PlanFeature(
         key="goals",
         name_pl="Aktywne cele",
-        free_value="5",
-        pro_value="Bez limitu",
-    ),
-    PlanFeature(
-        key="voice_commands_per_day",
-        name_pl="Komendy głosowe / dzień",
-        free_value="20",
+        free_value="Bez limitu",
         pro_value="Bez limitu",
     ),
     PlanFeature(
         key="receipt_scans",
         name_pl="Skany paragonów / miesiąc",
-        free_value="10",
+        free_value="Bez limitu",
         pro_value="Bez limitu",
     ),
 ]
@@ -62,9 +64,13 @@ _FEATURES: list[PlanFeature] = [
 @router.get("/plans", response_model=PlansResponse)
 async def get_plans():
     """Public endpoint — returns pricing info for landing/pricing page."""
+    pro_tiers = [
+        PricingTier(period="3m", price_pln=99, label="na 3 miesiące", price_id=cfg.STRIPE_PRICE_3M),
+        PricingTier(period="12m", price_pln=299, label="na rok", price_id=cfg.STRIPE_PRICE_12M),
+    ]
     return PlansResponse(
         free=PlanInfo(plan="free", price_monthly_pln=0, features=_FEATURES),
-        pro=PlanInfo(plan="pro", price_monthly_pln=29, features=_FEATURES),
+        pro=PlanInfo(plan="pro", price_monthly_pln=0, features=_FEATURES, pricing_tiers=pro_tiers),
     )
 
 
@@ -92,6 +98,7 @@ def get_subscription(
 
 @router.post("/checkout", response_model=CheckoutSessionResponse)
 def create_checkout(
+    price_id: Optional[str] = Body(None, embed=True),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -102,9 +109,18 @@ def create_checkout(
             detail="Masz już plan Pro.",
         )
 
+    # Validate price_id against allowed prices
+    allowed_prices = {cfg.STRIPE_PRICE_3M, cfg.STRIPE_PRICE_12M, cfg.STRIPE_PRICE_ID_PRO}
+    allowed_prices.discard("")
+    if price_id and price_id not in allowed_prices:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nieprawidłowy identyfikator ceny.",
+        )
+
     svc = BillingService(db)
     try:
-        result = svc.create_checkout_session(current_user)
+        result = svc.create_checkout_session(current_user, price_id=price_id)
         db.commit()
         return CheckoutSessionResponse(**result)
     except ValueError as e:

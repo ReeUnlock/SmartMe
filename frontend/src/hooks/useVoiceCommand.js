@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { processVoiceCommand, executeVoiceAction } from "../api/voice";
 import { useEventHistory } from "./useEventHistory";
 import { getModulesForActions, invalidateModuleQueries } from "../services/appService";
+import { useLimitModal } from "../components/common/LimitReachedModal";
 
 function getSupportedMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
@@ -136,6 +137,14 @@ export const useVoiceCommand = create((set, get) => ({
             isProcessing: false,
           });
         } catch (err) {
+          // Handle voice limit reached (429)
+          if (err.status === 429 && err.body?.error === "voice_limit_reached") {
+            useLimitModal.getState().open(
+              "Wykorzystałaś dzienny limit komendy głosowej. Przejdź na Pro, aby odblokować nielimitowane komendy."
+            );
+            set({ isProcessing: false });
+            return;
+          }
           set({ error: err.message || "Błąd przetwarzania komendy głosowej", isProcessing: false });
         }
       };

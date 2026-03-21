@@ -1,21 +1,21 @@
 """Feature limits per plan — Free vs Pro."""
 
 FREE_LIMITS: dict[str, int] = {
-    "shopping_lists": 10,
-    "expenses_per_month": 100,
-    "calendar_events": 50,
-    "goals": 5,
-    "voice_commands_per_day": 20,
-    "receipt_scans_per_month": 10,
+    "voice_commands_per_day": 1,
+    "shopping_lists": 3,
+    "expenses_per_month": 999999,
+    "calendar_events": 999999,
+    "goals": 999999,
+    "receipt_scans_per_month": 999999,
 }
 
 PRO_LIMITS: dict[str, int | None] = {
-    "shopping_lists": None,
-    "expenses_per_month": None,
-    "calendar_events": None,
-    "goals": None,
-    "voice_commands_per_day": None,
-    "receipt_scans_per_month": None,
+    "voice_commands_per_day": 999999,
+    "shopping_lists": 999999,
+    "expenses_per_month": 999999,
+    "calendar_events": 999999,
+    "goals": 999999,
+    "receipt_scans_per_month": 999999,
 }
 
 

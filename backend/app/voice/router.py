@@ -106,6 +106,30 @@ async def process_voice(
     current_user: User = Depends(get_current_user),
 ):
     """Transcribe audio and parse intent into proposed actions."""
+    # ── Voice command limit (Free: 1/day, Pro: unlimited) ──
+    from app.billing.limits import get_limit
+    plan = getattr(current_user, "plan", "free") or "free"
+    limit = get_limit(plan, "voice_commands_per_day")
+    if limit is not None and limit < 999999:
+        today = datetime.now(timezone.utc).date()
+        stored_date = getattr(current_user, "voice_calls_today_date", None)
+        if stored_date != today:
+            # New day — reset counter
+            current_user.voice_calls_today = 0
+            current_user.voice_calls_today_date = today
+            db.flush()
+        today_calls = current_user.voice_calls_today or 0
+        if today_calls >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "error": "voice_limit_reached",
+                    "message": "Dzienny limit komend głosowych wyczerpany",
+                    "limit": limit,
+                    "plan": plan,
+                },
+            )
+
     _check_openai_key()
     _validate_audio_file(audio)
 
@@ -180,8 +204,14 @@ async def process_voice(
                     "Walidacja dat nie powiodła się — sprawdź daty ręcznie przed potwierdzeniem."
                 )
 
-    # Increment voice calls counter
+    # Increment voice calls counters
     current_user.voice_calls_total = (current_user.voice_calls_total or 0) + 1
+    today = datetime.now(timezone.utc).date()
+    if getattr(current_user, "voice_calls_today_date", None) != today:
+        current_user.voice_calls_today = 1
+        current_user.voice_calls_today_date = today
+    else:
+        current_user.voice_calls_today = (current_user.voice_calls_today or 0) + 1
     db.commit()
 
     return VoiceProcessResponse(transcript=transcript, actions=actions)

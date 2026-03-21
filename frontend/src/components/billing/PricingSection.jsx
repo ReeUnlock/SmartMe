@@ -6,7 +6,7 @@ import PricingCard from "./PricingCard";
 import SmartMeLoader from "../common/SmartMeLoader";
 
 export default function PricingSection({ currentPlan = "free" }) {
-  const [upgrading, setUpgrading] = useState(false);
+  const [upgradingTier, setUpgradingTier] = useState(null);
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ["billing", "plans"],
@@ -14,13 +14,13 @@ export default function PricingSection({ currentPlan = "free" }) {
     staleTime: 60 * 60 * 1000,
   });
 
-  const handleUpgrade = async () => {
-    setUpgrading(true);
+  const handleUpgrade = async (priceId) => {
+    setUpgradingTier(priceId);
     try {
-      const { url } = await createCheckoutSession();
+      const { url } = await createCheckoutSession(priceId);
       window.location.href = url;
     } catch {
-      setUpgrading(false);
+      setUpgradingTier(null);
     }
   };
 
@@ -28,15 +28,29 @@ export default function PricingSection({ currentPlan = "free" }) {
     return <SmartMeLoader color="rose.400" label={"Ładowanie planów..."} />;
   }
 
+  const tiers = plans.pro.pricing_tiers || [];
+
   return (
-    <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+    <SimpleGrid columns={{ base: 1, md: tiers.length > 0 ? 3 : 2 }} gap={6}>
       <PricingCard plan={plans.free} isCurrent={currentPlan === "free"} />
-      <PricingCard
-        plan={plans.pro}
-        isCurrent={currentPlan === "pro"}
-        onUpgrade={handleUpgrade}
-        isLoading={upgrading}
-      />
+      {tiers.map((tier) => (
+        <PricingCard
+          key={tier.period}
+          plan={plans.pro}
+          tier={tier}
+          isCurrent={currentPlan === "pro"}
+          onUpgrade={() => handleUpgrade(tier.price_id)}
+          isLoading={upgradingTier === tier.price_id}
+        />
+      ))}
+      {tiers.length === 0 && (
+        <PricingCard
+          plan={plans.pro}
+          isCurrent={currentPlan === "pro"}
+          onUpgrade={() => handleUpgrade()}
+          isLoading={!!upgradingTier}
+        />
+      )}
     </SimpleGrid>
   );
 }

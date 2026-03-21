@@ -61,23 +61,26 @@ class BillingService:
         self.db.flush()
         return customer.id
 
-    def create_checkout_session(self, user: User) -> dict:
+    def create_checkout_session(self, user: User, price_id: str | None = None) -> dict:
         """Create a Stripe Checkout session for Pro upgrade."""
         if not settings.STRIPE_SECRET_KEY:
             raise ValueError("Stripe not configured")
 
-        price_id = settings.STRIPE_PRICE_ID_PRO
+        # Resolve price ID: explicit param → legacy fallback
+        if not price_id:
+            price_id = settings.STRIPE_PRICE_ID_PRO
         if not price_id:
             raise ValueError("Stripe price ID not configured")
 
         customer_id = self._get_or_create_stripe_customer(user)
 
+        frontend_url = settings.FRONTEND_URL.rstrip("/")
         session = stripe.checkout.Session.create(
             customer=customer_id,
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
-            success_url="https://smartme.life/ustawienia?upgraded=true",
-            cancel_url="https://smartme.life/ustawienia?cancelled=true",
+            success_url=f"{frontend_url}/ustawienia?upgrade=success",
+            cancel_url=f"{frontend_url}/ustawienia?upgrade=cancelled",
             client_reference_id=str(user.id),
             metadata={"user_id": str(user.id)},
         )
@@ -89,9 +92,10 @@ class BillingService:
         """Create a Stripe Customer Portal session."""
         customer_id = self._get_or_create_stripe_customer(user)
 
+        frontend_url = settings.FRONTEND_URL.rstrip("/")
         session = stripe.billing_portal.Session.create(
             customer=customer_id,
-            return_url="https://smartme.life/ustawienia",
+            return_url=f"{frontend_url}/ustawienia",
         )
 
         return {"url": session.url}

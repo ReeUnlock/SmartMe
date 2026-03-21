@@ -11,8 +11,11 @@ export function getSubscription() {
 }
 
 /** Create Stripe Checkout session for Pro upgrade. */
-export function createCheckoutSession() {
-  return apiFetch("/billing/checkout", { method: "POST" });
+export function createCheckoutSession(priceId) {
+  return apiFetch("/billing/checkout", {
+    method: "POST",
+    body: JSON.stringify(priceId ? { price_id: priceId } : {}),
+  });
 }
 
 /** Create Stripe Customer Portal session. */

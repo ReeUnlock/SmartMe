@@ -1,7 +1,11 @@
 import { Box, Flex, Text, Badge, Button, VStack } from "@chakra-ui/react";
 
-export default function PricingCard({ plan, isCurrent, onUpgrade, isLoading }) {
+export default function PricingCard({ plan, tier, isCurrent, onUpgrade, isLoading }) {
   const isPro = plan.plan === "pro";
+
+  // Pricing: Free = "Za darmo", Pro uses tier (99 zł na 3 miesiące, 299 zł na rok)
+  const pricePln = tier ? tier.price_pln : 0;
+  const periodLabel = tier ? tier.label : null;
 
   return (
     <Box
@@ -49,16 +53,18 @@ export default function PricingCard({ plan, isCurrent, onUpgrade, isLoading }) {
         )}
       </Flex>
 
-      <Flex align="baseline" gap={1}>
-        <Text fontSize="3xl" fontWeight="extrabold" color="textPrimary">
-          {plan.price_monthly_pln === 0 ? "Za darmo" : `${plan.price_monthly_pln} zł`}
-        </Text>
-        {plan.price_monthly_pln > 0 && (
-          <Text fontSize="sm" color="textTertiary" fontWeight="normal">
-            {"/ mies."}
+      <Box>
+        <Flex align="baseline" gap={1}>
+          <Text fontSize="3xl" fontWeight="extrabold" color="textPrimary">
+            {pricePln === 0 ? "Za darmo" : `${pricePln} zł`}
+          </Text>
+        </Flex>
+        {periodLabel && (
+          <Text fontSize="sm" color="textTertiary" mt={0.5}>
+            {periodLabel}
           </Text>
         )}
-      </Flex>
+      </Box>
 
       <VStack gap={2} align="stretch" flex={1}>
         {plan.features.map((f) => (

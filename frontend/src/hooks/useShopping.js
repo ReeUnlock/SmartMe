@@ -5,6 +5,7 @@ import {
   reorderItems, getCategories, saveListAsExpense,
 } from "../api/shopping";
 import { useSuccessToast } from "../components/common/SuccessToast";
+import { useLimitModal } from "../components/common/LimitReachedModal";
 
 export function useShoppingLists() {
   return useQuery({
@@ -26,6 +27,13 @@ export function useCreateList() {
   return useMutation({
     mutationFn: createList,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["shopping-lists"] }),
+    onError: (err) => {
+      if (err.status === 403 && err.body?.error === "shopping_limit_reached") {
+        useLimitModal.getState().open(
+          "Osiągnęłaś limit 3 aktywnych list zakupów. Przejdź na Pro, aby tworzyć bez ograniczeń."
+        );
+      }
+    },
   });
 }
 

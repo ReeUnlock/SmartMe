@@ -1,6 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -152,6 +153,26 @@ def create_list(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # ── Shopping list limit (Free: 3 active, Pro: unlimited) ──
+    from app.billing.limits import get_limit
+    plan = getattr(current_user, "plan", "free") or "free"
+    limit = get_limit(plan, "shopping_lists")
+    if limit is not None and limit < 999999:
+        active_lists = db.query(func.count(ShoppingList.id)).filter(
+            ShoppingList.user_id == current_user.id,
+            ShoppingList.is_completed == False,
+        ).scalar() or 0
+        if active_lists >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "shopping_limit_reached",
+                    "message": f"Osiągnięto limit {limit} aktywnych list zakupów",
+                    "limit": limit,
+                    "plan": plan,
+                },
+            )
+
     sl = ShoppingList(**data.model_dump(), user_id=current_user.id)
     db.add(sl)
     db.commit()

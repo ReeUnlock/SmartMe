@@ -387,7 +387,7 @@ function SoundSettingsSection() {
 /* ── Subscription section ────────────────────────── */
 
 function SubscriptionSection() {
-  const [loading, setLoading] = useState(false);
+  const [loadingTier, setLoadingTier] = useState(null);
 
   const { data: sub } = useQuery({
     queryKey: ["billing", "subscription"],
@@ -395,26 +395,33 @@ function SubscriptionSection() {
     staleTime: 30_000,
   });
 
+  const { data: plans } = useQuery({
+    queryKey: ["billing", "plans"],
+    queryFn: () => import("../../api/billing").then((m) => m.getPlans()),
+    staleTime: 60 * 60 * 1000,
+  });
+
   const plan = sub?.plan || "free";
   const isPro = plan === "pro";
+  const tiers = plans?.pro?.pricing_tiers || [];
 
-  const handleUpgrade = async () => {
-    setLoading(true);
+  const handleUpgrade = async (priceId) => {
+    setLoadingTier(priceId || "default");
     try {
-      const { url } = await createCheckoutSession();
+      const { url } = await createCheckoutSession(priceId);
       window.location.href = url;
     } catch {
-      setLoading(false);
+      setLoadingTier(null);
     }
   };
 
   const handleManage = async () => {
-    setLoading(true);
+    setLoadingTier("portal");
     try {
       const { url } = await createPortalSession();
       window.location.href = url;
     } catch {
-      setLoading(false);
+      setLoadingTier(null);
     }
   };
 
@@ -462,7 +469,7 @@ function SubscriptionSection() {
             _hover={{ bg: "peach.50" }}
             borderRadius="xl"
             onClick={handleManage}
-            loading={loading}
+            loading={loadingTier === "portal"}
           >
             {"Zarządzaj subskrypcją"}
           </Button>
@@ -470,22 +477,78 @@ function SubscriptionSection() {
       ) : (
         <VStack align="stretch" gap="2">
           <Text fontSize="xs" color="gray.400" lineHeight="tall">
-            {"Odblokuj wszystkie limity — listy zakupów, wydatki, cele i więcej bez ograniczeń."}
+            {"Odblokuj nieograniczone komendy głosowe i listy zakupów."}
           </Text>
-          <Button
-            size="sm"
-            bgGradient="to-r"
-            gradientFrom="rose.400"
-            gradientTo="peach.400"
-            color="white"
-            _hover={{ opacity: 0.9 }}
-            borderRadius="xl"
-            onClick={handleUpgrade}
-            loading={loading}
-          >
-            {"Ulepsz do Pro — 29 zł/mies."}
-          </Button>
+          {tiers.map((tier) => (
+            <Button
+              key={tier.period}
+              size="sm"
+              bgGradient="to-r"
+              gradientFrom="rose.400"
+              gradientTo="peach.400"
+              color="white"
+              _hover={{ opacity: 0.9 }}
+              borderRadius="xl"
+              onClick={() => handleUpgrade(tier.price_id)}
+              loading={loadingTier === tier.price_id}
+            >
+              {`Pro — ${tier.price_pln} zł ${tier.label}`}
+            </Button>
+          ))}
+          {tiers.length === 0 && (
+            <Button
+              size="sm"
+              bgGradient="to-r"
+              gradientFrom="rose.400"
+              gradientTo="peach.400"
+              color="white"
+              _hover={{ opacity: 0.9 }}
+              borderRadius="xl"
+              onClick={() => handleUpgrade()}
+              loading={!!loadingTier}
+            >
+              {"Ulepsz do Pro"}
+            </Button>
+          )}
         </VStack>
+      )}
+    </SettingsCard>
+  );
+}
+
+/* ── iOS subscription info (Apple compliance — no checkout UI) ── */
+
+function IOSSubscriptionInfo() {
+  const { data: sub } = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: getSubscription,
+    staleTime: 30_000,
+  });
+  const isPro = sub?.plan === "pro";
+
+  return (
+    <SettingsCard>
+      <SectionTitle icon={LuCrown} color="peach.400">
+        {"Subskrypcja"}
+      </SectionTitle>
+      {isPro ? (
+        <Box p={3} bg="sage.50" borderRadius="xl">
+          <Text fontWeight="500" fontSize="sm" color="sage.700">
+            {"\u2713 SmartMe Pro \u2014 aktywny"}
+          </Text>
+          <Text fontSize="xs" color="sage.600" mt={1}>
+            {"Zarządzaj subskrypcją na smartme.life"}
+          </Text>
+        </Box>
+      ) : (
+        <Box p={3} bg="rose.50" borderRadius="xl" borderWidth="1px" borderColor="rose.200">
+          <Text fontWeight="500" fontSize="sm" color="rose.700">
+            {"SmartMe Pro"}
+          </Text>
+          <Text fontSize="xs" color="rose.600" mt={1}>
+            {"Aby odblokować nieograniczone komendy głosowe i listy zakupów, odwiedź smartme.life w przeglądarce."}
+          </Text>
+        </Box>
       )}
     </SettingsCard>
   );
@@ -503,7 +566,7 @@ export default function SettingsPage() {
   const openTour = useIntroTour((s) => s.openTour);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
-  const upgraded = searchParams.get("upgraded") === "true";
+  const upgraded = searchParams.get("upgrade") === "success" || searchParams.get("upgraded") === "true";
 
   return (
     <Box maxW="520px" mx="auto">
@@ -535,8 +598,11 @@ export default function SettingsPage() {
           </Box>
         )}
 
-        {/* ── Section: Subskrypcja (hidden until billing is ready + hidden on iOS) ── */}
-        {false && !isIOS() && <SubscriptionSection />}
+        {/* ── Section: Subskrypcja (web only — hidden on iOS per App Store 3.1.1) ── */}
+        {!isIOS() && <SubscriptionSection />}
+
+        {/* ── iOS: info about managing subscription via web ── */}
+        {isIOS() && <IOSSubscriptionInfo />}
 
         {/* ── Section A: Konto ── */}
         <SettingsCard>

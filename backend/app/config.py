@@ -22,6 +22,8 @@ class Settings:
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
     STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
     STRIPE_PRICE_ID_PRO: str = os.getenv("STRIPE_PRICE_ID_PRO", "")
+    STRIPE_PRICE_3M: str = os.getenv("STRIPE_PRICE_3M", "")
+    STRIPE_PRICE_12M: str = os.getenv("STRIPE_PRICE_12M", "")
     # Email (Resend)
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "SmartMe <noreply@smartme.life>")

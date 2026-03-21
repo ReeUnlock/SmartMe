@@ -9,10 +9,18 @@ class PlanFeature(BaseModel):
     pro_value: str
 
 
+class PricingTier(BaseModel):
+    period: str          # "3m" | "12m"
+    price_pln: int       # 99, 299
+    label: str           # "na 3 miesiące", "na rok"
+    price_id: str        # Stripe price ID
+
+
 class PlanInfo(BaseModel):
     plan: str
     price_monthly_pln: int
     features: list[PlanFeature]
+    pricing_tiers: list[PricingTier] = []
 
 
 class PlansResponse(BaseModel):

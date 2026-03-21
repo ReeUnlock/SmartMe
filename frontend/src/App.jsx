@@ -46,6 +46,7 @@ const CelebrationOverlay = lazy(() => import("./components/celebration/Celebrati
 const AvatarReaction = lazy(() => import("./components/affirmation/AvatarReaction"));
 const SuccessToast = lazy(() => import("./components/common/SuccessToast"));
 const CookieConsent = lazy(() => import("./components/common/CookieConsent"));
+const LimitReachedModal = lazy(() => import("./components/common/LimitReachedModal"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,8 @@ const queryClient = new QueryClient({
       onError: (error) => {
         const msg = error?.message || "";
         if (msg === "Nieautoryzowany") return;
+        // Don't show generic error toast for limit errors (handled by LimitReachedModal)
+        if (error?.body?.error === "shopping_limit_reached" || error?.body?.error === "voice_limit_reached") return;
         useErrorToast.getState().show(
           "Nie udało się wykonać tej operacji. Spróbuj ponownie."
         );
@@ -130,6 +133,7 @@ export default function App() {
             <ErrorToast />
             <Suspense fallback={null}>
               <CookieConsent />
+              <LimitReachedModal />
             </Suspense>
           </BrowserRouter>
         </QueryClientProvider>
